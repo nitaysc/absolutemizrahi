@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { DailyHeader } from "@/components/daily-header";
 import { TaskCard, TaskCategory } from "@/components/task-card";
-import { BottomNav } from "@/components/bottom-nav";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, PartyPopper, Loader2 } from "lucide-react";
 import { useDailyPlan } from "@/hooks/useDailyPlan";
@@ -98,8 +97,6 @@ export default function Today() {
           </motion.div>
         )}
       </div>
-      
-      <BottomNav />
     </div>
   );
 }

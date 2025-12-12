@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { BottomNav } from "@/components/bottom-nav";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Dumbbell, BookOpen, Sparkles, Flame, Target, TrendingUp, Loader2 } from "lucide-react";
@@ -205,8 +204,6 @@ export default function Stats() {
           </>
         )}
       </div>
-      
-      <BottomNav />
     </div>
   );
 }
