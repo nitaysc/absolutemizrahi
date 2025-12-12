@@ -14,7 +14,211 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      daily_plan_items: {
+        Row: {
+          category: string
+          completed_at: string | null
+          created_at: string | null
+          daily_plan_id: string
+          description: string | null
+          duration_min: number | null
+          id: string
+          is_done: boolean | null
+          log: Json | null
+          order_index: number | null
+          task_id: string | null
+          title: string
+        }
+        Insert: {
+          category: string
+          completed_at?: string | null
+          created_at?: string | null
+          daily_plan_id: string
+          description?: string | null
+          duration_min?: number | null
+          id?: string
+          is_done?: boolean | null
+          log?: Json | null
+          order_index?: number | null
+          task_id?: string | null
+          title: string
+        }
+        Update: {
+          category?: string
+          completed_at?: string | null
+          created_at?: string | null
+          daily_plan_id?: string
+          description?: string | null
+          duration_min?: number | null
+          id?: string
+          is_done?: boolean | null
+          log?: Json | null
+          order_index?: number | null
+          task_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_plan_items_daily_plan_id_fkey"
+            columns: ["daily_plan_id"]
+            isOneToOne: false
+            referencedRelation: "daily_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_plan_items_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "task_library"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_plans: {
+        Row: {
+          created_at: string | null
+          id: string
+          plan_date: string
+          rerolls_used: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          plan_date?: string
+          rerolls_used?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          plan_date?: string
+          rerolls_used?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_plans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          daily_time: string | null
+          display_name: string | null
+          email: string | null
+          equipment: Json | null
+          id: string
+          onboarding_complete: boolean | null
+          study_focus: Json | null
+          training_split: string | null
+          updated_at: string | null
+          workout_style: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          daily_time?: string | null
+          display_name?: string | null
+          email?: string | null
+          equipment?: Json | null
+          id: string
+          onboarding_complete?: boolean | null
+          study_focus?: Json | null
+          training_split?: string | null
+          updated_at?: string | null
+          workout_style?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          daily_time?: string | null
+          display_name?: string | null
+          email?: string | null
+          equipment?: Json | null
+          id?: string
+          onboarding_complete?: boolean | null
+          study_focus?: Json | null
+          training_split?: string | null
+          updated_at?: string | null
+          workout_style?: string | null
+        }
+        Relationships: []
+      }
+      streaks: {
+        Row: {
+          current_streak: number | null
+          id: string
+          last_completed_date: string | null
+          longest_streak: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          current_streak?: number | null
+          id?: string
+          last_completed_date?: string | null
+          longest_streak?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          current_streak?: number | null
+          id?: string
+          last_completed_date?: string | null
+          longest_streak?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "streaks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_library: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          difficulty: string | null
+          duration_min: number | null
+          id: string
+          metadata: Json | null
+          tags: Json | null
+          title: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          difficulty?: string | null
+          duration_min?: number | null
+          id?: string
+          metadata?: Json | null
+          tags?: Json | null
+          title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          difficulty?: string | null
+          duration_min?: number | null
+          id?: string
+          metadata?: Json | null
+          tags?: Json | null
+          title?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
