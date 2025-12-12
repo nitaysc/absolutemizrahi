@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { UserProfile } from "@/hooks/useUserProfile";
-import { Loader2 } from "lucide-react";
+import { Loader2, Dog } from "lucide-react";
 
 interface EditPreferencesSheetProps {
   open: boolean;
@@ -51,6 +52,7 @@ export function EditPreferencesSheet({
   const [dailyTime, setDailyTime] = useState("medium");
   const [trainingSplit, setTrainingSplit] = useState("ppl");
   const [studyFocus, setStudyFocus] = useState<string[]>([]);
+  const [hasDog, setHasDog] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -59,6 +61,7 @@ export function EditPreferencesSheet({
       setDailyTime(profile.daily_time || "medium");
       setTrainingSplit(profile.training_split || "ppl");
       setStudyFocus(profile.study_focus || []);
+      setHasDog(profile.has_dog || false);
     }
   }, [profile]);
 
@@ -70,6 +73,7 @@ export function EditPreferencesSheet({
       daily_time: dailyTime,
       training_split: trainingSplit,
       study_focus: studyFocus,
+      has_dog: hasDog,
     });
     setSaving(false);
     onOpenChange(false);
@@ -101,6 +105,21 @@ export function EditPreferencesSheet({
               className="bg-muted/50 border-border"
             />
           </div>
+
+          {/* Has Dog Toggle */}
+          <motion.div 
+            whileTap={{ scale: 0.98 }}
+            className="flex items-center justify-between p-4 rounded-xl bg-muted/30"
+          >
+            <div className="flex items-center gap-3">
+              <Dog className="w-5 h-5 text-primary" />
+              <div>
+                <Label className="text-sm font-medium">I have a dog</Label>
+                <p className="text-xs text-muted-foreground">Get dog walking and playtime tasks</p>
+              </div>
+            </div>
+            <Switch checked={hasDog} onCheckedChange={setHasDog} />
+          </motion.div>
 
           {/* Workout Style */}
           <div className="space-y-3">

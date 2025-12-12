@@ -13,6 +13,7 @@ export interface UserProfile {
   study_focus: string[] | null;
   equipment: string[] | null;
   onboarding_complete: boolean | null;
+  has_dog: boolean | null;
 }
 
 export function useUserProfile() {
@@ -47,6 +48,7 @@ export function useUserProfile() {
         ...data,
         study_focus: Array.isArray(data.study_focus) ? data.study_focus as string[] : [],
         equipment: Array.isArray(data.equipment) ? data.equipment as string[] : [],
+        has_dog: data.has_dog ?? false,
       });
     }
     setLoading(false);
