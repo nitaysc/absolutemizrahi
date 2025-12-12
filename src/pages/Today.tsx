@@ -1,15 +1,27 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { DailyHeader } from "@/components/daily-header";
 import { TaskCard, TaskCategory } from "@/components/task-card";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, PartyPopper, Loader2 } from "lucide-react";
 import { useDailyPlan } from "@/hooks/useDailyPlan";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 
 export default function Today() {
   const { user, loading: authLoading } = useAuth();
   const { plan, loading, streak, toggleTask, rerollPlan, completeDay } = useDailyPlan();
+  const { profile } = useUserProfile();
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update time every minute for greeting changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (authLoading) {
     return (
@@ -35,7 +47,8 @@ export default function Today() {
         <DailyHeader 
           streak={streak} 
           progress={progress}
-          date={new Date()}
+          date={currentTime}
+          displayName={profile?.display_name}
         />
 
         {/* Reroll Button */}

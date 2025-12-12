@@ -75,6 +75,54 @@
     --sidebar-border: 220 10% 12%;
     --sidebar-ring: 25 95% 53%;
   }
+
+  .light {
+    --background: 0 0% 98%;
+    --foreground: 220 15% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 10%;
+
+    --primary: 25 95% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 10% 94%;
+    --secondary-foreground: 220 15% 15%;
+
+    --muted: 220 10% 92%;
+    --muted-foreground: 220 10% 40%;
+
+    --accent: 220 10% 90%;
+    --accent-foreground: 220 15% 15%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 10% 88%;
+    --input: 220 10% 88%;
+    --ring: 25 95% 50%;
+
+    /* Gradients for light mode */
+    --gradient-dark: linear-gradient(180deg, hsl(0 0% 98%) 0%, hsl(220 10% 96%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(220 10% 98%) 100%);
+    --gradient-workout: linear-gradient(145deg, hsl(25 95% 53% / 0.08) 0%, hsl(25 95% 45% / 0.02) 100%);
+    --gradient-study: linear-gradient(145deg, hsl(200 100% 50% / 0.08) 0%, hsl(200 100% 40% / 0.02) 100%);
+    --gradient-productive: linear-gradient(145deg, hsl(145 80% 42% / 0.08) 0%, hsl(145 80% 35% / 0.02) 100%);
+    --gradient-rest: linear-gradient(145deg, hsl(280 75% 55% / 0.08) 0%, hsl(280 75% 45% / 0.02) 100%);
+    --gradient-mindset: linear-gradient(145deg, hsl(350 85% 55% / 0.08) 0%, hsl(350 85% 45% / 0.02) 100%);
+
+    /* Shadows for light mode */
+    --shadow-sm: 0 2px 8px hsl(220 15% 10% / 0.08);
+    --shadow-md: 0 8px 24px hsl(220 15% 10% / 0.12);
+    --shadow-glow-workout: 0 0 24px hsl(25 95% 53% / 0.2);
+    --shadow-glow-study: 0 0 24px hsl(200 100% 50% / 0.2);
+    --shadow-glow-productive: 0 0 24px hsl(145 80% 42% / 0.2);
+    --shadow-glow-rest: 0 0 24px hsl(280 75% 55% / 0.2);
+    --shadow-glow-mindset: 0 0 24px hsl(350 85% 55% / 0.2);
+  }
 }
 
 @layer base {
@@ -108,11 +156,23 @@
 
 @layer utilities {
   .glass {
-    @apply bg-card/70 backdrop-blur-2xl border border-white/[0.08] shadow-lg;
+    @apply bg-card/70 backdrop-blur-2xl shadow-lg;
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+
+  .light .glass {
+    @apply bg-card/80;
+    border: 1px solid hsl(var(--border) / 0.3);
   }
 
   .glass-strong {
-    @apply bg-card/90 backdrop-blur-3xl border border-white/[0.1] shadow-xl;
+    @apply bg-card/90 backdrop-blur-3xl shadow-xl;
+    border: 1px solid hsl(var(--border) / 0.6);
+  }
+
+  .light .glass-strong {
+    @apply bg-card/95;
+    border: 1px solid hsl(var(--border) / 0.4);
   }
 
   .text-gradient {
