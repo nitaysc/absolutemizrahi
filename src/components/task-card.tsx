@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
 import { Check, Clock, Dumbbell, BookOpen, Sparkles, Coffee, Heart } from "lucide-react";
-import { useState } from "react";
 
 export type TaskCategory = "workout" | "study" | "productive" | "rest" | "mindset";
 
@@ -68,12 +67,10 @@ export function TaskCard({
   onToggle,
   index = 0 
 }: TaskCardProps) {
-  const [completed, setCompleted] = useState(isCompleted);
   const config = categoryConfig[category];
   const Icon = config.icon;
 
   const handleToggle = () => {
-    setCompleted(!completed);
     onToggle?.(id);
   };
 
@@ -84,9 +81,9 @@ export function TaskCard({
       transition={{ duration: 0.4, delay: index * 0.1 }}
       whileTap={{ scale: 0.98 }}
       className={`
-        relative overflow-hidden rounded-xl border p-4
+        relative overflow-hidden rounded-xl border p-4 cursor-pointer
         ${config.border}
-        ${completed ? 'opacity-60' : config.glow}
+        ${isCompleted ? 'opacity-60' : config.glow}
         transition-all duration-300
       `}
       style={{ background: config.gradient }}
@@ -98,18 +95,18 @@ export function TaskCard({
           className={`
             flex-shrink-0 w-6 h-6 rounded-full border-2 
             flex items-center justify-center
-            ${completed 
-              ? `bg-${category} border-${category}` 
+            ${isCompleted 
+              ? `border-transparent` 
               : `border-muted-foreground/50`
             }
           `}
           style={{
-            backgroundColor: completed ? `hsl(var(--${category}))` : 'transparent',
-            borderColor: completed ? `hsl(var(--${category}))` : undefined,
+            backgroundColor: isCompleted ? `hsl(var(--${category}))` : 'transparent',
+            borderColor: isCompleted ? `hsl(var(--${category}))` : undefined,
           }}
           whileTap={{ scale: 0.8 }}
         >
-          {completed && (
+          {isCompleted && (
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
@@ -134,7 +131,7 @@ export function TaskCard({
               </span>
             )}
           </div>
-          <h3 className={`font-semibold text-foreground ${completed ? 'line-through' : ''}`}>
+          <h3 className={`font-semibold text-foreground ${isCompleted ? 'line-through' : ''}`}>
             {title}
           </h3>
           <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">

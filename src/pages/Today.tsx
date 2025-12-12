@@ -2,75 +2,33 @@ import { motion } from "framer-motion";
 import { DailyHeader } from "@/components/daily-header";
 import { TaskCard, TaskCategory } from "@/components/task-card";
 import { BottomNav } from "@/components/bottom-nav";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, PartyPopper } from "lucide-react";
-
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  category: TaskCategory;
-  duration?: number;
-  isCompleted: boolean;
-}
-
-const initialTasks: Task[] = [
-  {
-    id: "1",
-    title: "Push Day - Upper Body",
-    description: "Bench press 4x8, Overhead press 3x10, Dips 3x12, Tricep pushdowns",
-    category: "workout",
-    duration: 45,
-    isCompleted: false,
-  },
-  {
-    id: "2",
-    title: "Mathematics - Calculus Review",
-    description: "Practice integration by parts. Complete 10 problems from chapter 7.",
-    category: "study",
-    duration: 30,
-    isCompleted: false,
-  },
-  {
-    id: "3",
-    title: "Organize Digital Files",
-    description: "Clean up downloads folder, organize project files into proper directories.",
-    category: "productive",
-    duration: 15,
-    isCompleted: false,
-  },
-  {
-    id: "4",
-    title: "Guilt-Free Gaming",
-    description: "Enjoy some gaming time. You've earned it! Try that new indie game.",
-    category: "rest",
-    duration: 30,
-    isCompleted: false,
-  },
-  {
-    id: "5",
-    title: "Evening Gratitude",
-    description: "Write 3 things you're grateful for today in your journal.",
-    category: "mindset",
-    duration: 5,
-    isCompleted: false,
-  },
-];
+import { RefreshCw, PartyPopper, Loader2 } from "lucide-react";
+import { useDailyPlan } from "@/hooks/useDailyPlan";
+import { useAuth } from "@/contexts/AuthContext";
+import { Navigate } from "react-router-dom";
 
 export default function Today() {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [streak] = useState(7);
+  const { user, loading: authLoading } = useAuth();
+  const { plan, loading, streak, toggleTask, rerollPlan, completeDay } = useDailyPlan();
 
-  const completedCount = tasks.filter(t => t.isCompleted).length;
-  const progress = (completedCount / tasks.length) * 100;
-  const allComplete = completedCount === tasks.length;
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
-  const handleToggle = (id: string) => {
-    setTasks(prev => prev.map(task => 
-      task.id === id ? { ...task, isCompleted: !task.isCompleted } : task
-    ));
-  };
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  const completedCount = plan?.items.filter(i => i.is_done).length ?? 0;
+  const totalCount = plan?.items.length ?? 0;
+  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  const allComplete = completedCount === totalCount && totalCount > 0;
+  const rerollsLeft = 1 - (plan?.rerolls_used ?? 0);
 
   return (
     <div className="min-h-screen pb-24">
@@ -92,28 +50,36 @@ export default function Today() {
             variant="ghost" 
             size="sm" 
             className="text-muted-foreground hover:text-foreground"
+            onClick={rerollPlan}
+            disabled={rerollsLeft <= 0 || loading}
           >
             <RefreshCw className="w-4 h-4 mr-2" />
-            Reroll (1 left)
+            Reroll ({rerollsLeft} left)
           </Button>
         </motion.div>
 
         {/* Tasks */}
-        <div className="space-y-3">
-          {tasks.map((task, index) => (
-            <TaskCard
-              key={task.id}
-              id={task.id}
-              title={task.title}
-              description={task.description}
-              category={task.category}
-              duration={task.duration}
-              isCompleted={task.isCompleted}
-              onToggle={handleToggle}
-              index={index}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {plan?.items.map((item, index) => (
+              <TaskCard
+                key={item.id}
+                id={item.id}
+                title={item.title}
+                description={item.description ?? ""}
+                category={item.category as TaskCategory}
+                duration={item.duration_min ?? undefined}
+                isCompleted={item.is_done}
+                onToggle={toggleTask}
+                index={index}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Complete Day Button */}
         {allComplete && (
@@ -124,6 +90,7 @@ export default function Today() {
           >
             <Button 
               className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+              onClick={completeDay}
             >
               <PartyPopper className="w-5 h-5 mr-2" />
               Complete Day!
