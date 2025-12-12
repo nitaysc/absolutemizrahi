@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -12,57 +12,68 @@ export function SwipeablePages({ children }: SwipeablePagesProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [direction, setDirection] = useState(0);
+  const isNavigating = useRef(false);
+  const prevPathRef = useRef(location.pathname);
 
   const currentIndex = routes.indexOf(location.pathname);
 
-  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const threshold = 50;
-    const velocity = 0.5;
+  // Track direction based on route changes
+  if (prevPathRef.current !== location.pathname) {
+    const prevIndex = routes.indexOf(prevPathRef.current);
+    const newIndex = routes.indexOf(location.pathname);
+    if (prevIndex !== -1 && newIndex !== -1) {
+      setDirection(newIndex > prevIndex ? 1 : -1);
+    }
+    prevPathRef.current = location.pathname;
+    isNavigating.current = false;
+  }
 
-    if (info.offset.x < -threshold || info.velocity.x < -velocity) {
+  const handleDragEnd = useCallback((event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    if (isNavigating.current) return;
+    
+    const threshold = 80;
+    const velocityThreshold = 500;
+
+    if ((info.offset.x < -threshold && info.velocity.x <= 0) || info.velocity.x < -velocityThreshold) {
       // Swipe left - go to next page
       if (currentIndex < routes.length - 1) {
+        isNavigating.current = true;
         setDirection(1);
         navigate(routes[currentIndex + 1]);
       }
-    } else if (info.offset.x > threshold || info.velocity.x > velocity) {
+    } else if ((info.offset.x > threshold && info.velocity.x >= 0) || info.velocity.x > velocityThreshold) {
       // Swipe right - go to previous page
       if (currentIndex > 0) {
+        isNavigating.current = true;
         setDirection(-1);
         navigate(routes[currentIndex - 1]);
       }
     }
-  };
-
-  // Update direction based on navigation
-  useEffect(() => {
-    const prevIndex = routes.indexOf(location.pathname);
-    setDirection(0);
-  }, [location.pathname]);
+  }, [currentIndex, navigate]);
 
   const variants = {
     enter: (direction: number) => ({
       x: direction > 0 ? "100%" : direction < 0 ? "-100%" : 0,
-      opacity: 0,
+      opacity: 0.5,
     }),
     center: {
       x: 0,
       opacity: 1,
     },
     exit: (direction: number) => ({
-      x: direction > 0 ? "-100%" : direction < 0 ? "100%" : 0,
+      x: direction > 0 ? "-50%" : direction < 0 ? "50%" : 0,
       opacity: 0,
     }),
   };
 
-  // Don't apply swipe on auth page
-  if (location.pathname === "/auth") {
+  // Don't apply swipe on auth page or unknown routes
+  if (location.pathname === "/auth" || currentIndex === -1) {
     return <>{children}</>;
   }
 
   return (
-    <div className="fixed inset-0 overflow-hidden">
-      <AnimatePresence initial={false} custom={direction} mode="popLayout">
+    <div className="fixed inset-0 overflow-hidden bg-background">
+      <AnimatePresence initial={false} custom={direction} mode="wait">
         <motion.div
           key={location.pathname}
           custom={direction}
@@ -71,14 +82,15 @@ export function SwipeablePages({ children }: SwipeablePagesProps) {
           animate="center"
           exit="exit"
           transition={{
-            x: { type: "spring", stiffness: 300, damping: 30 },
-            opacity: { duration: 0.2 },
+            x: { type: "spring", stiffness: 400, damping: 35 },
+            opacity: { duration: 0.15 },
           }}
           drag="x"
           dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.2}
+          dragElastic={0.15}
+          dragMomentum={false}
           onDragEnd={handleDragEnd}
-          className="absolute inset-0 overflow-y-auto"
+          className="absolute inset-0 overflow-y-auto touch-pan-y"
         >
           {children}
         </motion.div>

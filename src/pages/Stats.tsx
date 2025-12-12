@@ -83,13 +83,13 @@ export default function Stats() {
   ];
 
   const weeklyData = [
-    { day: 'M', value: 85 },
-    { day: 'T', value: 100 },
-    { day: 'W', value: 75 },
-    { day: 'T', value: 90 },
-    { day: 'F', value: 100 },
-    { day: 'S', value: 60 },
-    { day: 'S', value: 20 },
+    { day: 'Mon', value: 85 },
+    { day: 'Tue', value: 100 },
+    { day: 'Wed', value: 75 },
+    { day: 'Thu', value: 90 },
+    { day: 'Fri', value: 100 },
+    { day: 'Sat', value: 60 },
+    { day: 'Sun', value: 20 },
   ];
 
   return (
