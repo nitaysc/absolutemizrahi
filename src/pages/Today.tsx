@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { DailyHeader } from "@/components/daily-header";
 import { TaskCard, TaskCategory } from "@/components/task-card";
+import { TimerWidget } from "@/components/TimerWidget";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, PartyPopper, Loader2 } from "lucide-react";
 import { useDailyPlan } from "@/hooks/useDailyPlan";
@@ -11,7 +12,7 @@ import { Navigate } from "react-router-dom";
 
 export default function Today() {
   const { user, loading: authLoading } = useAuth();
-  const { plan, loading, streak, toggleTask, rerollPlan, completeDay } = useDailyPlan();
+  const { plan, loading, streak, toggleTask, rerollPlan, completeDay, refetch } = useDailyPlan();
   const { profile } = useUserProfile();
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -50,6 +51,9 @@ export default function Today() {
           date={currentTime}
           displayName={profile?.display_name}
         />
+
+        {/* Timer Widget */}
+        <TimerWidget />
 
         {/* Reroll Button */}
         <motion.div
