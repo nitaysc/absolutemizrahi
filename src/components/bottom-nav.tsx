@@ -16,49 +16,58 @@ export function BottomNav() {
     <motion.nav 
       initial={{ y: 100 }}
       animate={{ y: 0 }}
-      transition={{ type: "spring", stiffness: 400, damping: 30, delay: 0.2 }}
-      className="fixed bottom-0 left-0 right-0 z-50 glass-strong safe-bottom"
+      transition={{ type: "spring", stiffness: 400, damping: 35 }}
+      className="fixed bottom-0 left-0 right-0 z-50"
     >
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.to;
-          
-          return (
-            <RouterNavLink
-              key={item.to}
-              to={item.to}
-              className={`flex flex-col items-center gap-1 px-4 py-2 transition-all duration-200 ${
-                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <motion.div 
-                className="relative"
-                whileTap={{ scale: 0.85 }}
-                whileHover={{ scale: 1.1 }}
+      <div className="mx-3 mb-3 rounded-2xl glass-strong safe-bottom">
+        <div className="flex items-center justify-around h-16">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.to;
+            
+            return (
+              <RouterNavLink
+                key={item.to}
+                to={item.to}
+                className="flex flex-col items-center justify-center gap-0.5 px-5 py-2 touch-target"
               >
-                <motion.div
-                  animate={isActive ? { scale: [1, 1.2, 1] } : {}}
-                  transition={{ duration: 0.3 }}
+                <motion.div 
+                  className="relative"
+                  whileTap={{ scale: 0.85 }}
                 >
-                  <item.icon className="w-6 h-6" />
-                </motion.div>
-                {isActive && (
                   <motion.div
-                    layoutId="nav-indicator"
-                    className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 rounded-full bg-primary"
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  />
-                )}
-              </motion.div>
-              <motion.span 
-                className="text-xs font-medium"
-                animate={isActive ? { fontWeight: 600 } : { fontWeight: 500 }}
-              >
-                {item.label}
-              </motion.span>
-            </RouterNavLink>
-          );
-        })}
+                    animate={{ 
+                      scale: isActive ? 1 : 0.9,
+                      y: isActive ? -2 : 0,
+                    }}
+                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                  >
+                    <item.icon 
+                      className={`w-6 h-6 transition-colors duration-200 ${
+                        isActive ? 'text-primary' : 'text-muted-foreground'
+                      }`}
+                      strokeWidth={isActive ? 2.5 : 2}
+                    />
+                  </motion.div>
+                  {isActive && (
+                    <motion.div
+                      layoutId="nav-glow"
+                      className="absolute -inset-2 bg-primary/20 rounded-xl blur-md -z-10"
+                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                </motion.div>
+                <motion.span 
+                  className={`text-[10px] font-semibold tracking-wide transition-colors duration-200 ${
+                    isActive ? 'text-primary' : 'text-muted-foreground'
+                  }`}
+                  animate={{ opacity: isActive ? 1 : 0.7 }}
+                >
+                  {item.label}
+                </motion.span>
+              </RouterNavLink>
+            );
+          })}
+        </div>
       </div>
     </motion.nav>
   );

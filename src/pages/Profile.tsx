@@ -50,8 +50,8 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen pb-24">
-      <div className="max-w-lg mx-auto px-4 pt-6">
+    <div className="min-h-screen pb-28">
+      <div className="app-container pt-2">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
