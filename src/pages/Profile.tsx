@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useUserProfile } from "@/hooks/useUserProfile";
+import { useUserProfile, UserProfile } from "@/hooks/useUserProfile";
 import { EditPreferencesSheet } from "@/components/profile/EditPreferencesSheet";
 import { DataManagementSheet } from "@/components/profile/DataManagement";
 import { Navigate, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   User, 
   Settings, 
@@ -20,7 +21,6 @@ import {
   ChevronRight,
   LogOut,
   Loader2,
-  Upload,
   Pencil
 } from "lucide-react";
 import { toast } from "sonner";
@@ -249,7 +249,19 @@ export default function Profile() {
         open={editOpen}
         onOpenChange={setEditOpen}
         profile={profile}
-        onSave={updateProfile}
+        onSave={async (updates: Partial<UserProfile>) => {
+          const result = await updateProfile(updates);
+          // Delete today's plan so it regenerates with new preferences
+          if (!result.error && user) {
+            const today = new Date().toISOString().split('T')[0];
+            await supabase
+              .from('daily_plans')
+              .delete()
+              .eq('user_id', user.id)
+              .eq('plan_date', today);
+          }
+          return result;
+        }}
       />
 
       <DataManagementSheet
