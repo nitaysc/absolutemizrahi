@@ -70,10 +70,13 @@ export function SwipeablePages({ children }: SwipeablePagesProps) {
   }
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-background">
-      {/* Centered Page Indicators */}
-      <div className="fixed top-3 left-0 right-0 z-50 flex justify-center">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/50">
+    <div className="fixed inset-0 overflow-hidden bg-background safe-top">
+      {/* iOS-style Status Bar spacer */}
+      <div className="h-[env(safe-area-inset-top)] bg-background/80 backdrop-blur-xl fixed top-0 left-0 right-0 z-[60]" />
+      
+      {/* Centered Page Indicators - pill style */}
+      <div className="fixed top-[max(env(safe-area-inset-top),12px)] left-0 right-0 z-50 flex justify-center pointer-events-none">
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-card/80 backdrop-blur-xl border border-white/[0.06] shadow-lg pointer-events-auto">
           {routes.map((route, index) => (
             <motion.button
               key={route}
@@ -83,14 +86,19 @@ export function SwipeablePages({ children }: SwipeablePagesProps) {
                   navigate(route);
                 }
               }}
-              className="relative p-1"
+              className="relative p-1.5 touch-target flex items-center justify-center"
+              whileTap={{ scale: 0.9 }}
             >
               <motion.div
-                className={`w-2 h-2 rounded-full ${
-                  index === currentIndex ? 'bg-primary' : 'bg-muted-foreground/40'
-                }`}
-                animate={index === currentIndex ? { scale: 1.3 } : { scale: 1 }}
-                transition={{ duration: 0.15 }}
+                className="rounded-full"
+                animate={{
+                  width: index === currentIndex ? 20 : 6,
+                  height: 6,
+                  backgroundColor: index === currentIndex 
+                    ? 'hsl(var(--primary))' 
+                    : 'hsl(var(--muted-foreground) / 0.3)',
+                }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
               />
             </motion.button>
           ))}
@@ -106,15 +114,15 @@ export function SwipeablePages({ children }: SwipeablePagesProps) {
           animate="center"
           exit="exit"
           transition={{
-            x: { type: "tween", duration: 0.15, ease: "easeOut" },
-            opacity: { duration: 0.1 },
+            x: { type: "tween", duration: 0.12, ease: [0.25, 0.1, 0.25, 1] },
+            opacity: { duration: 0.08 },
           }}
           drag="x"
           dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.12}
+          dragElastic={0.1}
           dragMomentum={false}
           onDragEnd={handleDragEnd}
-          className="absolute inset-0 overflow-y-auto touch-pan-y pt-10"
+          className="absolute inset-0 overflow-y-auto touch-pan-y pt-14"
         >
           {children}
         </motion.div>
