@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { Json } from "@/integrations/supabase/types";
 
 export interface PlanItem {
   id: string;
@@ -25,8 +26,24 @@ export function useDailyPlan() {
   const [plan, setPlan] = useState<DailyPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [streak, setStreak] = useState(0);
+  const [userHasDog, setUserHasDog] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
+
+  // Fetch user preferences
+  const fetchUserPreferences = useCallback(async () => {
+    if (!user) return;
+    
+    const { data } = await supabase
+      .from('profiles')
+      .select('has_dog')
+      .eq('id', user.id)
+      .single();
+    
+    if (data) {
+      setUserHasDog(data.has_dog ?? false);
+    }
+  }, [user]);
 
   const fetchStreak = useCallback(async () => {
     if (!user) return;
@@ -45,6 +62,15 @@ export function useDailyPlan() {
   const generatePlan = useCallback(async () => {
     if (!user) return null;
 
+    // Fetch user's dog preference
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('has_dog')
+      .eq('id', user.id)
+      .single();
+    
+    const hasDog = profileData?.has_dog ?? false;
+
     // Fetch random tasks from each category
     const categories = ['workout', 'study', 'productive', 'rest', 'mindset'];
     const planItems: { category: string; title: string; description: string | null; duration_min: number | null; order_index: number }[] = [];
@@ -57,14 +83,25 @@ export function useDailyPlan() {
         .eq('category', category);
 
       if (tasks && tasks.length > 0) {
-        const randomTask = tasks[Math.floor(Math.random() * tasks.length)];
-        planItems.push({
-          category,
-          title: randomTask.title,
-          description: randomTask.description,
-          duration_min: randomTask.duration_min,
-          order_index: i,
+        // Filter out dog tasks if user doesn't have a dog
+        const filteredTasks = tasks.filter(task => {
+          const metadata = task.metadata as Record<string, Json> | null;
+          if (metadata && metadata.requires_dog === true) {
+            return hasDog;
+          }
+          return true;
         });
+
+        if (filteredTasks.length > 0) {
+          const randomTask = filteredTasks[Math.floor(Math.random() * filteredTasks.length)];
+          planItems.push({
+            category,
+            title: randomTask.title,
+            description: randomTask.description,
+            duration_min: randomTask.duration_min,
+            order_index: i,
+          });
+        }
       }
     }
 
@@ -194,6 +231,15 @@ export function useDailyPlan() {
       .delete()
       .eq('daily_plan_id', plan.id);
 
+    // Fetch user's dog preference for reroll
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('has_dog')
+      .eq('id', user.id)
+      .single();
+    
+    const hasDog = profileData?.has_dog ?? false;
+
     // Generate new items
     const categories = ['workout', 'study', 'productive', 'rest', 'mindset'];
     const planItems: { daily_plan_id: string; category: string; title: string; description: string | null; duration_min: number | null; order_index: number }[] = [];
@@ -206,15 +252,26 @@ export function useDailyPlan() {
         .eq('category', category);
 
       if (tasks && tasks.length > 0) {
-        const randomTask = tasks[Math.floor(Math.random() * tasks.length)];
-        planItems.push({
-          daily_plan_id: plan.id,
-          category,
-          title: randomTask.title,
-          description: randomTask.description,
-          duration_min: randomTask.duration_min,
-          order_index: i,
+        // Filter out dog tasks if user doesn't have a dog
+        const filteredTasks = tasks.filter(task => {
+          const metadata = task.metadata as Record<string, Json> | null;
+          if (metadata && metadata.requires_dog === true) {
+            return hasDog;
+          }
+          return true;
         });
+
+        if (filteredTasks.length > 0) {
+          const randomTask = filteredTasks[Math.floor(Math.random() * filteredTasks.length)];
+          planItems.push({
+            daily_plan_id: plan.id,
+            category,
+            title: randomTask.title,
+            description: randomTask.description,
+            duration_min: randomTask.duration_min,
+            order_index: i,
+          });
+        }
       }
     }
 
@@ -287,7 +344,8 @@ export function useDailyPlan() {
   useEffect(() => {
     fetchPlan();
     fetchStreak();
-  }, [fetchPlan, fetchStreak]);
+    fetchUserPreferences();
+  }, [fetchPlan, fetchStreak, fetchUserPreferences]);
 
   return {
     plan,

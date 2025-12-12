@@ -113,6 +113,7 @@ export type Database = {
           display_name: string | null
           email: string | null
           equipment: Json | null
+          has_dog: boolean | null
           id: string
           onboarding_complete: boolean | null
           study_focus: Json | null
@@ -126,6 +127,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           equipment?: Json | null
+          has_dog?: boolean | null
           id: string
           onboarding_complete?: boolean | null
           study_focus?: Json | null
@@ -139,6 +141,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           equipment?: Json | null
+          has_dog?: boolean | null
           id?: string
           onboarding_complete?: boolean | null
           study_focus?: Json | null
