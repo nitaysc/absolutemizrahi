@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { BottomNav } from "@/components/bottom-nav";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -154,8 +153,6 @@ export default function Profile() {
           </Button>
         </motion.div>
       </div>
-      
-      <BottomNav />
     </div>
   );
 }

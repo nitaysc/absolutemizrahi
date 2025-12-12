@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { BottomNav } from "@/components/bottom-nav";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
@@ -180,8 +179,6 @@ export default function Calendar() {
           </div>
         </motion.div>
       </div>
-      
-      <BottomNav />
     </div>
   );
 }
