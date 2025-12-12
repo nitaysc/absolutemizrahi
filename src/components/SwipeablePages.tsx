@@ -35,14 +35,12 @@ export function SwipeablePages({ children }: SwipeablePagesProps) {
     const velocityThreshold = 500;
 
     if ((info.offset.x < -threshold && info.velocity.x <= 0) || info.velocity.x < -velocityThreshold) {
-      // Swipe left - go to next page
       if (currentIndex < routes.length - 1) {
         isNavigating.current = true;
         setDirection(1);
         navigate(routes[currentIndex + 1]);
       }
     } else if ((info.offset.x > threshold && info.velocity.x >= 0) || info.velocity.x > velocityThreshold) {
-      // Swipe right - go to previous page
       if (currentIndex > 0) {
         isNavigating.current = true;
         setDirection(-1);
@@ -53,15 +51,15 @@ export function SwipeablePages({ children }: SwipeablePagesProps) {
 
   const variants = {
     enter: (direction: number) => ({
-      x: direction > 0 ? "100%" : direction < 0 ? "-100%" : 0,
-      opacity: 0.5,
+      x: direction > 0 ? "30%" : direction < 0 ? "-30%" : 0,
+      opacity: 0,
     }),
     center: {
       x: 0,
       opacity: 1,
     },
     exit: (direction: number) => ({
-      x: direction > 0 ? "-50%" : direction < 0 ? "50%" : 0,
+      x: direction > 0 ? "-30%" : direction < 0 ? "30%" : 0,
       opacity: 0,
     }),
   };
@@ -73,7 +71,33 @@ export function SwipeablePages({ children }: SwipeablePagesProps) {
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-background">
-      <AnimatePresence initial={false} custom={direction} mode="wait">
+      {/* Centered Page Indicators */}
+      <div className="fixed top-3 left-0 right-0 z-50 flex justify-center">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/50">
+          {routes.map((route, index) => (
+            <motion.button
+              key={route}
+              onClick={() => {
+                if (index !== currentIndex) {
+                  setDirection(index > currentIndex ? 1 : -1);
+                  navigate(route);
+                }
+              }}
+              className="relative p-1"
+            >
+              <motion.div
+                className={`w-2 h-2 rounded-full ${
+                  index === currentIndex ? 'bg-primary' : 'bg-muted-foreground/40'
+                }`}
+                animate={index === currentIndex ? { scale: 1.3 } : { scale: 1 }}
+                transition={{ duration: 0.15 }}
+              />
+            </motion.button>
+          ))}
+        </div>
+      </div>
+
+      <AnimatePresence initial={false} custom={direction} mode="popLayout">
         <motion.div
           key={location.pathname}
           custom={direction}
@@ -82,15 +106,15 @@ export function SwipeablePages({ children }: SwipeablePagesProps) {
           animate="center"
           exit="exit"
           transition={{
-            x: { type: "spring", stiffness: 400, damping: 35 },
-            opacity: { duration: 0.15 },
+            x: { type: "tween", duration: 0.15, ease: "easeOut" },
+            opacity: { duration: 0.1 },
           }}
           drag="x"
           dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.15}
+          dragElastic={0.12}
           dragMomentum={false}
           onDragEnd={handleDragEnd}
-          className="absolute inset-0 overflow-y-auto touch-pan-y"
+          className="absolute inset-0 overflow-y-auto touch-pan-y pt-10"
         >
           {children}
         </motion.div>
