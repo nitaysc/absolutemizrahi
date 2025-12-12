@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
 import { BottomNav } from "@/components/bottom-nav";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { Navigate, useNavigate } from "react-router-dom";
 import { 
   User, 
   Settings, 
@@ -11,7 +13,8 @@ import {
   Moon, 
   Download,
   ChevronRight,
-  LogOut
+  LogOut,
+  Loader2
 } from "lucide-react";
 
 const preferences = [
@@ -27,6 +30,26 @@ const settings = [
 ];
 
 export default function Profile() {
+  const { user, loading, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
+  };
+
   return (
     <div className="min-h-screen pb-24">
       <div className="max-w-lg mx-auto px-4 pt-6">
@@ -51,12 +74,9 @@ export default function Profile() {
               <User className="w-8 h-8 text-primary" />
             </div>
             <div className="flex-1">
-              <h2 className="text-lg font-semibold text-foreground">Guest User</h2>
-              <p className="text-sm text-muted-foreground">Sign in to sync your data</p>
+              <h2 className="text-lg font-semibold text-foreground">{user.email}</h2>
+              <p className="text-sm text-muted-foreground">Streak member</p>
             </div>
-            <Button variant="outline" size="sm">
-              Sign In
-            </Button>
           </div>
         </motion.div>
 
@@ -127,6 +147,7 @@ export default function Profile() {
           <Button 
             variant="ghost" 
             className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={handleSignOut}
           >
             <LogOut className="w-5 h-5 mr-2" />
             Sign Out

@@ -1,15 +1,18 @@
 import { motion } from "framer-motion";
 import { BottomNav } from "@/components/bottom-nav";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Navigate } from "react-router-dom";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-
-// Mock data for completed days
-const completedDays = [1, 2, 3, 5, 6, 7, 8, 10, 11, 12];
-const partialDays = [4, 9];
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Calendar() {
-  const [currentDate] = useState(new Date());
+  const { user, loading: authLoading } = useAuth();
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [completedDays, setCompletedDays] = useState<number[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   
   const daysInMonth = new Date(
@@ -26,13 +29,74 @@ export default function Calendar() {
 
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
   const emptyDays = Array.from({ length: firstDayOfMonth }, (_, i) => i);
-  const today = currentDate.getDate();
+  const today = new Date();
+  const isCurrentMonth = currentDate.getMonth() === today.getMonth() && 
+                         currentDate.getFullYear() === today.getFullYear();
+  const todayDate = today.getDate();
+
+  useEffect(() => {
+    async function fetchCompletedDays() {
+      if (!user) return;
+      
+      setLoading(true);
+      
+      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+      
+      const { data } = await supabase
+        .from('daily_plans')
+        .select('plan_date')
+        .eq('user_id', user.id)
+        .gte('plan_date', startOfMonth.toISOString().split('T')[0])
+        .lte('plan_date', endOfMonth.toISOString().split('T')[0]);
+
+      if (data) {
+        const completed: number[] = [];
+        for (const plan of data) {
+          const { data: items } = await supabase
+            .from('daily_plan_items')
+            .select('is_done')
+            .eq('daily_plan_id', plan.plan_date);
+          
+          // For simplicity, mark days with plans as completed
+          const day = new Date(plan.plan_date).getDate();
+          completed.push(day);
+        }
+        setCompletedDays(completed);
+      }
+      
+      setLoading(false);
+    }
+    
+    fetchCompletedDays();
+  }, [user, currentDate]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
 
   const getDayStatus = (day: number) => {
-    if (day > today) return 'future';
+    if (!isCurrentMonth) return completedDays.includes(day) ? 'complete' : 'none';
+    if (day > todayDate) return 'future';
     if (completedDays.includes(day)) return 'complete';
-    if (partialDays.includes(day)) return 'partial';
+    if (day === todayDate) return 'today';
     return 'missed';
+  };
+
+  const prevMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  };
+
+  const nextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   };
 
   return (
@@ -55,11 +119,11 @@ export default function Calendar() {
         >
           {/* Month Navigation */}
           <div className="flex items-center justify-between mb-6">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" onClick={prevMonth}>
               <ChevronLeft className="w-5 h-5" />
             </Button>
             <h2 className="text-lg font-semibold text-foreground">{monthName}</h2>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" onClick={nextMonth}>
               <ChevronRight className="w-5 h-5" />
             </Button>
           </div>
@@ -80,10 +144,10 @@ export default function Calendar() {
             ))}
             {days.map((day) => {
               const status = getDayStatus(day);
-              const isToday = day === today;
+              const isToday = isCurrentMonth && day === todayDate;
               
               return (
-                <motion.button
+                <motion.div
                   key={day}
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -93,13 +157,12 @@ export default function Calendar() {
                     transition-all duration-200
                     ${isToday ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}
                     ${status === 'complete' ? 'bg-primary text-primary-foreground' : ''}
-                    ${status === 'partial' ? 'bg-primary/40 text-foreground' : ''}
                     ${status === 'missed' ? 'bg-destructive/20 text-destructive' : ''}
-                    ${status === 'future' ? 'text-muted-foreground' : ''}
+                    ${status === 'future' || status === 'none' || status === 'today' ? 'text-muted-foreground' : ''}
                   `}
                 >
                   {day}
-                </motion.button>
+                </motion.div>
               );
             })}
           </div>
@@ -109,10 +172,6 @@ export default function Calendar() {
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded bg-primary" />
               <span className="text-xs text-muted-foreground">Complete</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-primary/40" />
-              <span className="text-xs text-muted-foreground">Partial</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded bg-destructive/30" />

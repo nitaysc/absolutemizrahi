@@ -1,0 +1,301 @@
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
+
+export interface PlanItem {
+  id: string;
+  category: string;
+  title: string;
+  description: string | null;
+  duration_min: number | null;
+  is_done: boolean;
+  order_index: number;
+}
+
+export interface DailyPlan {
+  id: string;
+  plan_date: string;
+  rerolls_used: number;
+  items: PlanItem[];
+}
+
+export function useDailyPlan() {
+  const { user } = useAuth();
+  const [plan, setPlan] = useState<DailyPlan | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [streak, setStreak] = useState(0);
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const fetchStreak = useCallback(async () => {
+    if (!user) return;
+    
+    const { data } = await supabase
+      .from('streaks')
+      .select('current_streak')
+      .eq('user_id', user.id)
+      .single();
+    
+    if (data) {
+      setStreak(data.current_streak);
+    }
+  }, [user]);
+
+  const generatePlan = useCallback(async () => {
+    if (!user) return null;
+
+    // Fetch random tasks from each category
+    const categories = ['workout', 'study', 'productive', 'rest', 'mindset'];
+    const planItems: { category: string; title: string; description: string | null; duration_min: number | null; order_index: number }[] = [];
+
+    for (let i = 0; i < categories.length; i++) {
+      const category = categories[i];
+      const { data: tasks } = await supabase
+        .from('task_library')
+        .select('*')
+        .eq('category', category);
+
+      if (tasks && tasks.length > 0) {
+        const randomTask = tasks[Math.floor(Math.random() * tasks.length)];
+        planItems.push({
+          category,
+          title: randomTask.title,
+          description: randomTask.description,
+          duration_min: randomTask.duration_min,
+          order_index: i,
+        });
+      }
+    }
+
+    // Create daily plan
+    const { data: newPlan, error: planError } = await supabase
+      .from('daily_plans')
+      .insert({ user_id: user.id, plan_date: today })
+      .select()
+      .single();
+
+    if (planError || !newPlan) {
+      console.error('Error creating plan:', planError);
+      return null;
+    }
+
+    // Insert plan items
+    const itemsToInsert = planItems.map(item => ({
+      daily_plan_id: newPlan.id,
+      ...item,
+    }));
+
+    const { error: itemsError } = await supabase
+      .from('daily_plan_items')
+      .insert(itemsToInsert);
+
+    if (itemsError) {
+      console.error('Error creating plan items:', itemsError);
+      return null;
+    }
+
+    return newPlan.id;
+  }, [user, today]);
+
+  const fetchPlan = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
+    // Check for existing plan
+    let { data: existingPlan } = await supabase
+      .from('daily_plans')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('plan_date', today)
+      .single();
+
+    let planId = existingPlan?.id;
+
+    // Generate new plan if none exists
+    if (!existingPlan) {
+      planId = await generatePlan();
+      if (planId) {
+        const { data } = await supabase
+          .from('daily_plans')
+          .select('*')
+          .eq('id', planId)
+          .single();
+        existingPlan = data;
+      }
+    }
+
+    if (!existingPlan || !planId) {
+      setLoading(false);
+      return;
+    }
+
+    // Fetch plan items
+    const { data: items } = await supabase
+      .from('daily_plan_items')
+      .select('*')
+      .eq('daily_plan_id', planId)
+      .order('order_index');
+
+    setPlan({
+      id: existingPlan.id,
+      plan_date: existingPlan.plan_date,
+      rerolls_used: existingPlan.rerolls_used ?? 0,
+      items: items || [],
+    });
+
+    setLoading(false);
+  }, [user, today, generatePlan]);
+
+  const toggleTask = async (itemId: string) => {
+    if (!plan) return;
+
+    const item = plan.items.find(i => i.id === itemId);
+    if (!item) return;
+
+    const newIsDone = !item.is_done;
+
+    const { error } = await supabase
+      .from('daily_plan_items')
+      .update({ 
+        is_done: newIsDone,
+        completed_at: newIsDone ? new Date().toISOString() : null 
+      })
+      .eq('id', itemId);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to update task", variant: "destructive" });
+      return;
+    }
+
+    setPlan(prev => prev ? {
+      ...prev,
+      items: prev.items.map(i => 
+        i.id === itemId ? { ...i, is_done: newIsDone } : i
+      )
+    } : null);
+  };
+
+  const rerollPlan = async () => {
+    if (!plan || !user) return;
+
+    if (plan.rerolls_used >= 1) {
+      toast({ title: "No rerolls left", description: "You can only reroll once per day", variant: "destructive" });
+      return;
+    }
+
+    // Delete current plan items
+    await supabase
+      .from('daily_plan_items')
+      .delete()
+      .eq('daily_plan_id', plan.id);
+
+    // Generate new items
+    const categories = ['workout', 'study', 'productive', 'rest', 'mindset'];
+    const planItems: { daily_plan_id: string; category: string; title: string; description: string | null; duration_min: number | null; order_index: number }[] = [];
+
+    for (let i = 0; i < categories.length; i++) {
+      const category = categories[i];
+      const { data: tasks } = await supabase
+        .from('task_library')
+        .select('*')
+        .eq('category', category);
+
+      if (tasks && tasks.length > 0) {
+        const randomTask = tasks[Math.floor(Math.random() * tasks.length)];
+        planItems.push({
+          daily_plan_id: plan.id,
+          category,
+          title: randomTask.title,
+          description: randomTask.description,
+          duration_min: randomTask.duration_min,
+          order_index: i,
+        });
+      }
+    }
+
+    await supabase
+      .from('daily_plan_items')
+      .insert(planItems);
+
+    // Update rerolls count
+    await supabase
+      .from('daily_plans')
+      .update({ rerolls_used: plan.rerolls_used + 1 })
+      .eq('id', plan.id);
+
+    toast({ title: "Plan rerolled!", description: "New tasks have been generated" });
+    
+    await fetchPlan();
+  };
+
+  const completeDay = async () => {
+    if (!plan || !user) return;
+
+    const completedCount = plan.items.filter(i => i.is_done).length;
+    const requiredCount = Math.ceil(plan.items.length * 0.6); // 60% required
+
+    if (completedCount < requiredCount) {
+      toast({ 
+        title: "Not enough tasks completed", 
+        description: `Complete at least ${requiredCount} tasks to finish the day`,
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    // Update streak
+    const { data: currentStreak } = await supabase
+      .from('streaks')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    if (currentStreak) {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+      let newStreak = 1;
+      if (currentStreak.last_completed_date === yesterdayStr) {
+        newStreak = currentStreak.current_streak + 1;
+      } else if (currentStreak.last_completed_date === today) {
+        newStreak = currentStreak.current_streak;
+      }
+
+      const newLongest = Math.max(newStreak, currentStreak.longest_streak);
+
+      await supabase
+        .from('streaks')
+        .update({
+          current_streak: newStreak,
+          longest_streak: newLongest,
+          last_completed_date: today,
+        })
+        .eq('user_id', user.id);
+
+      setStreak(newStreak);
+    }
+
+    toast({ title: "🎉 Day completed!", description: "Great job! Keep the streak going!" });
+  };
+
+  useEffect(() => {
+    fetchPlan();
+    fetchStreak();
+  }, [fetchPlan, fetchStreak]);
+
+  return {
+    plan,
+    loading,
+    streak,
+    toggleTask,
+    rerollPlan,
+    completeDay,
+    refetch: fetchPlan,
+  };
+}
