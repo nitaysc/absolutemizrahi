@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 
-const routes = ["/", "/timer", "/notes", "/calendar", "/stats", "/profile"];
+const routes = ["/", "/calendar", "/stats", "/timer", "/notes", "/profile"];
 
 interface SwipeablePagesProps {
   children: React.ReactNode;
