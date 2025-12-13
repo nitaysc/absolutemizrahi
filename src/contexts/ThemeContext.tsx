@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { useAccentColor } from "@/hooks/useAccentColor";
 
 type Theme = "dark" | "light";
 
@@ -6,6 +7,8 @@ interface ThemeContextType {
   theme: Theme;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
+  accentColor: string;
+  themeName: string;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -32,10 +35,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
-      {children}
+    <ThemeContext.Provider value={{ 
+      theme, 
+      toggleTheme, 
+      setTheme, 
+      accentColor: "25 95% 53%", 
+      themeName: "Default" 
+    }}>
+      <ThemeProviderInner>{children}</ThemeProviderInner>
     </ThemeContext.Provider>
   );
+}
+
+// Inner component that can use hooks requiring AuthProvider
+function ThemeProviderInner({ children }: { children: React.ReactNode }) {
+  // Apply accent color from shop - this hook handles the CSS variable updates
+  useAccentColor();
+  
+  return <>{children}</>;
 }
 
 export function useTheme() {
