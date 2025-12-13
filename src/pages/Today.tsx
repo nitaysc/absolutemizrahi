@@ -178,28 +178,22 @@ export default function Today() {
           transition={{ delay: 0.3 }}
           className="flex justify-end mb-4"
         >
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-muted-foreground hover:text-foreground"
-                  onClick={() => {
-                    haptics.medium();
-                    rerollPlan();
-                  }}
-                  disabled={rerollsLeft <= 0 || loading}
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Reroll ({rerollsLeft} left)
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="left">
-                <p>Rerolls reset daily</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <div className="flex flex-col items-end gap-1">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                haptics.medium();
+                rerollPlan();
+              }}
+              disabled={rerollsLeft <= 0 || loading}
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Reroll ({rerollsLeft} left)
+            </Button>
+            <span className="text-[10px] text-muted-foreground/70 pr-2">Rerolls reset daily</span>
+          </div>
         </motion.div>
 
         {/* Tasks */}
