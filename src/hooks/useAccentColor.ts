@@ -2,11 +2,13 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useThemePreview } from "@/contexts/ThemePreviewContext";
 
 const DEFAULT_PRIMARY = "25 95% 53%"; // Orange default
 
 export function useAccentColor() {
   const { user } = useAuth();
+  const { previewColor } = useThemePreview();
 
   // Fetch equipped theme from user inventory
   const { data: equippedTheme } = useQuery({
@@ -29,21 +31,24 @@ export function useAccentColor() {
     enabled: !!user,
   });
 
+  // Derive the equipped color
+  const metadata = equippedTheme?.metadata as Record<string, unknown> | null;
+  const equippedRawColor = (metadata?.color as string) ?? DEFAULT_PRIMARY;
+  const hslPattern = /^\d+\s+\d+%\s+\d+%$/;
+  const equippedColor = hslPattern.test(equippedRawColor) ? equippedRawColor : DEFAULT_PRIMARY;
+
+  // Preview color takes priority over equipped color
+  const activeColor = previewColor && hslPattern.test(previewColor) ? previewColor : equippedColor;
+
   // Apply the accent color to CSS variables
   useEffect(() => {
     const root = document.documentElement;
-    const metadata = equippedTheme?.metadata as Record<string, unknown> | null;
-    const rawColor = (metadata?.color as string) ?? DEFAULT_PRIMARY;
-
-    // Ensure we only accept valid HSL triplets like "25 95% 53%" to avoid yellow/invalid colors
-    const hslPattern = /^\d+\s+\d+%\s+\d+%$/;
-    const safeColor = hslPattern.test(rawColor) ? rawColor : DEFAULT_PRIMARY;
 
     // Update CSS variables for primary color (used via hsl(var(--primary)))
-    root.style.setProperty("--primary", safeColor);
-    root.style.setProperty("--ring", safeColor);
-    root.style.setProperty("--sidebar-primary", safeColor);
-    root.style.setProperty("--sidebar-ring", safeColor);
+    root.style.setProperty("--primary", activeColor);
+    root.style.setProperty("--ring", activeColor);
+    root.style.setProperty("--sidebar-primary", activeColor);
+    root.style.setProperty("--sidebar-ring", activeColor);
 
     // Clean up on unmount
     return () => {
@@ -52,16 +57,13 @@ export function useAccentColor() {
       root.style.removeProperty("--sidebar-primary");
       root.style.removeProperty("--sidebar-ring");
     };
-  }, [equippedTheme]);
-
-  const metadata = equippedTheme?.metadata as Record<string, unknown> | null;
-  const rawColor = (metadata?.color as string) ?? DEFAULT_PRIMARY;
-  const hslPattern = /^\d+\s+\d+%\s+\d+%$/;
-  const safeColor = hslPattern.test(rawColor) ? rawColor : DEFAULT_PRIMARY;
+  }, [activeColor]);
 
   return {
     equippedTheme,
-    currentColor: safeColor,
+    currentColor: activeColor,
+    equippedColor,
+    isPreviewActive: !!previewColor,
     themeName: equippedTheme?.name ?? "Default Orange",
   };
 }

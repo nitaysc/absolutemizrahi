@@ -1,12 +1,14 @@
-import { useState, useRef } from "react";
-import { motion } from "framer-motion";
+import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { useShop, ShopItem } from "@/hooks/useShop";
+import { useThemePreview } from "@/contexts/ThemePreviewContext";
 import { ShopItemCard } from "@/components/shop/ShopItemCard";
 import { ShopHeader } from "@/components/shop/ShopHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Palette, Flame, Trophy, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Palette, Flame, Trophy, Sparkles, X } from "lucide-react";
 
 const CATEGORIES = [
   { id: "all", label: "All", icon: Sparkles },
@@ -20,9 +22,17 @@ const CATEGORIES = [
 export default function Shop() {
   const { user, loading: authLoading } = useAuth();
   const { shopItems, userCoins, userStreak, loading } = useShop();
+  const { setPreviewColor, clearPreview, previewColor } = useThemePreview();
   const [activeCategory, setActiveCategory] = useState("all");
   const [previewItem, setPreviewItem] = useState<ShopItem | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
+
+  // Clear live preview when leaving shop
+  useEffect(() => {
+    return () => {
+      clearPreview();
+    };
+  }, [clearPreview]);
 
   if (authLoading) {
     return (
@@ -43,8 +53,23 @@ export default function Shop() {
 
   const handlePreview = (item: ShopItem) => {
     setPreviewItem(item);
-    // Ensure the preview is visible, especially on mobile
+    
+    // If it's a theme, apply the color to the entire app immediately
+    if (item.category === "theme") {
+      const metadata = item.metadata as Record<string, unknown> | null;
+      const color = metadata?.color as string | undefined;
+      if (color) {
+        setPreviewColor(color);
+      }
+    }
+    
+    // Scroll to preview
     previewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleClearPreview = () => {
+    setPreviewItem(null);
+    clearPreview();
   };
 
   // Group by rarity for better display
@@ -61,8 +86,50 @@ export default function Shop() {
         <ShopHeader coins={userCoins} streak={userStreak} />
 
         <div ref={previewRef}>
-          {/* Live Preview */}
-          <ShopPreview item={previewItem} />
+          {/* Live Preview Banner */}
+          <AnimatePresence>
+            {previewColor && previewItem && (
+              <motion.div
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                className="mt-4 mb-2 rounded-2xl p-4 border-2 border-primary/50 bg-primary/10 relative overflow-hidden"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-primary font-medium mb-1">
+                      🎨 Live Preview Active
+                    </p>
+                    <p className="text-sm font-semibold">{previewItem.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      The entire app is now using this color. Look around!
+                    </p>
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="shrink-0"
+                    onClick={handleClearPreview}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+                {/* Animated glow */}
+                <motion.div
+                  animate={{
+                    opacity: [0.3, 0.6, 0.3],
+                  }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="absolute inset-0 bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20 pointer-events-none"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Static Preview for non-theme items */}
+          {previewItem && !previewColor && (
+            <ShopPreview item={previewItem} onClose={handleClearPreview} />
+          )}
         </div>
 
         {/* Category Tabs */}
@@ -161,37 +228,8 @@ function ItemSection({
   );
 }
 
-function ShopPreview({ item }: { item: ShopItem | null }) {
-  if (!item) return null;
-
+function ShopPreview({ item, onClose }: { item: ShopItem; onClose: () => void }) {
   const metadata = item.metadata as any;
-
-  if (item.category === "theme") {
-    const color = metadata?.color as string | undefined;
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mt-4 mb-2 glass rounded-2xl p-4 flex items-center justify-between"
-      >
-        <div>
-          <p className="text-xs text-muted-foreground mb-1">Theme preview</p>
-          <p className="text-sm font-semibold">{item.name}</p>
-          <p className="text-xs text-muted-foreground">
-            Glows, buttons and highlights will use this color.
-          </p>
-        </div>
-        <div
-          className="w-20 h-12 rounded-xl shadow-lg"
-          style={{
-            background: color
-              ? `linear-gradient(135deg, hsl(${color}) 0%, hsl(${color} / 0.7) 100%)`
-              : "var(--gradient-card)",
-          }}
-        />
-      </motion.div>
-    );
-  }
 
   if (item.category === "avatar") {
     const emoji = metadata?.emoji ?? "👤";
@@ -199,18 +237,21 @@ function ShopPreview({ item }: { item: ShopItem | null }) {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mt-4 mb-2 glass rounded-2xl p-4 flex items-center gap-4"
+        className="mt-4 mb-2 glass rounded-2xl p-4 flex items-center gap-4 relative"
       >
         <div className="w-14 h-14 rounded-2xl bg-accent flex items-center justify-center text-4xl">
           {emoji}
         </div>
-        <div>
+        <div className="flex-1">
           <p className="text-xs text-muted-foreground mb-1">Avatar preview</p>
           <p className="text-sm font-semibold">{item.name}</p>
           <p className="text-xs text-muted-foreground">
             This avatar appears on your profile and stats screens.
           </p>
         </div>
+        <Button size="icon" variant="ghost" className="shrink-0" onClick={onClose}>
+          <X className="w-4 h-4" />
+        </Button>
       </motion.div>
     );
   }
@@ -220,8 +261,16 @@ function ShopPreview({ item }: { item: ShopItem | null }) {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mt-4 mb-2 glass rounded-2xl p-4"
+        className="mt-4 mb-2 glass rounded-2xl p-4 relative"
       >
+        <Button
+          size="icon"
+          variant="ghost"
+          className="absolute top-2 right-2"
+          onClick={onClose}
+        >
+          <X className="w-4 h-4" />
+        </Button>
         <p className="text-xs text-muted-foreground mb-2">Task effect preview</p>
         <div className="flex items-center gap-3">
           <motion.button
@@ -243,18 +292,43 @@ function ShopPreview({ item }: { item: ShopItem | null }) {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mt-4 mb-2 glass rounded-2xl p-4 flex items-center gap-4"
+        className="mt-4 mb-2 glass rounded-2xl p-4 flex items-center gap-4 relative"
       >
         <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
           <Flame className="w-5 h-5 text-primary" />
         </div>
-        <div>
+        <div className="flex-1">
           <p className="text-xs text-muted-foreground mb-1">Streak flame preview</p>
           <p className="text-sm font-semibold">{item.name}</p>
           <p className="text-xs text-muted-foreground">
             Your streak counter will use this flame style.
           </p>
         </div>
+        <Button size="icon" variant="ghost" className="shrink-0" onClick={onClose}>
+          <X className="w-4 h-4" />
+        </Button>
+      </motion.div>
+    );
+  }
+
+  if (item.category === "badge") {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mt-4 mb-2 glass rounded-2xl p-4 flex items-center gap-4 relative"
+      >
+        <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
+          <Trophy className="w-5 h-5 text-primary" />
+        </div>
+        <div className="flex-1">
+          <p className="text-xs text-muted-foreground mb-1">Badge preview</p>
+          <p className="text-sm font-semibold">{item.name}</p>
+          <p className="text-xs text-muted-foreground">{item.description}</p>
+        </div>
+        <Button size="icon" variant="ghost" className="shrink-0" onClick={onClose}>
+          <X className="w-4 h-4" />
+        </Button>
       </motion.div>
     );
   }

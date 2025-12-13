@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ThemePreviewProvider } from "@/contexts/ThemePreviewContext";
 import { AccentColorProvider } from "@/components/AccentColorProvider";
 import { SwipeablePages } from "@/components/SwipeablePages";
 import { BottomNav } from "@/components/bottom-nav";
@@ -47,15 +48,17 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <AuthProvider>
-        <AccentColorProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <AppRoutes />
-            </BrowserRouter>
-          </TooltipProvider>
-        </AccentColorProvider>
+        <ThemePreviewProvider>
+          <AccentColorProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <AppRoutes />
+              </BrowserRouter>
+            </TooltipProvider>
+          </AccentColorProvider>
+        </ThemePreviewProvider>
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>
