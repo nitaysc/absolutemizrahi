@@ -208,10 +208,24 @@ export default function Today() {
                     duration={item.duration_min ?? undefined}
                     isCompleted={item.is_done}
                     onToggle={isLocked ? async () => {} : async (id) => {
-                      const wasCompleted = await toggleTask(id);
-                      // Only award coins if task was completed AND hasn't been rewarded yet today
-                      if (wasCompleted && !rewardedTasksRef.current.has(id)) {
+                      // If we've already rewarded this task, just toggle without coins
+                      const alreadyRewarded = rewardedTasksRef.current.has(id);
+
+                      // Optimistically mark as rewarded to avoid rapid-tap exploits
+                      if (!alreadyRewarded) {
                         rewardedTasksRef.current.add(id);
+                      }
+
+                      const wasCompleted = await toggleTask(id);
+
+                      // If task ended up NOT completed, ensure it's not marked rewarded
+                      if (!wasCompleted) {
+                        rewardedTasksRef.current.delete(id);
+                        return;
+                      }
+
+                      // Only award once per task per day
+                      if (!alreadyRewarded) {
                         awardTaskComplete();
                         setCoinAmount(COIN_REWARDS.task_complete);
                         setCoinReason("Task completed!");
