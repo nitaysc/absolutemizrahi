@@ -6,10 +6,10 @@ import { useTaskProgress } from "@/hooks/useTaskProgress";
 
 const navItems = [
   { to: "/", icon: Flame, label: "Today", showIndicator: true },
-  { to: "/timer", icon: Timer, label: "Timer" },
-  { to: "/notes", icon: StickyNote, label: "Notes" },
   { to: "/calendar", icon: Calendar, label: "Calendar" },
   { to: "/stats", icon: BarChart3, label: "Stats" },
+  { to: "/timer", icon: Timer, label: "Timer" },
+  { to: "/notes", icon: StickyNote, label: "Notes" },
   { to: "/profile", icon: User, label: "Profile" },
 ];
 
