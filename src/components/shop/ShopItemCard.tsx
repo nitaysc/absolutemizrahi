@@ -75,8 +75,6 @@ export function ShopItemCard({ item, index, onPreview }: ShopItemCardProps) {
         RARITY_GLOW[item.rarity as keyof typeof RARITY_GLOW],
         isLocked && "opacity-60"
       )}
-      onMouseEnter={handlePreview}
-      onClick={handlePreview}
     >
       {/* Purchase Effect */}
       <AnimatePresence>
@@ -128,13 +126,16 @@ export function ShopItemCard({ item, index, onPreview }: ShopItemCardProps) {
       </p>
 
       {/* Price or Actions */}
-      <div className="mt-3 space-y-1">
+      <div className="mt-3 space-y-1.5">
         {owned ? (
           <Button
             size="sm"
             variant={isEquipped ? "secondary" : "outline"}
             className="w-full h-8 text-xs"
-            onClick={handleEquip}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEquip();
+            }}
           >
             {isEquipped ? "Unequip" : "Equip"}
           </Button>
@@ -146,7 +147,10 @@ export function ShopItemCard({ item, index, onPreview }: ShopItemCardProps) {
               "w-full h-8 text-xs gap-1",
               !hasEnoughCoins && "opacity-50"
             )}
-            onClick={handlePurchase}
+            onClick={(e) => {
+              e.stopPropagation();
+              handlePurchase();
+            }}
             disabled={!purchasable || isPurchasing}
           >
             <Coins className="w-3 h-3" />
@@ -161,14 +165,17 @@ export function ShopItemCard({ item, index, onPreview }: ShopItemCardProps) {
           </Button>
         )}
 
-        {/* Explicit preview button so users can see effects before buying */}
+        {/* Explicit preview button */}
         <Button
-          size="icon"
+          size="sm"
           variant="ghost"
-          className="w-full h-7 text-[11px] text-muted-foreground"
-          onClick={handlePreview}
+          className="w-full h-7 text-[11px] text-muted-foreground hover:text-foreground"
+          onClick={(e) => {
+            e.stopPropagation();
+            handlePreview();
+          }}
         >
-          Preview
+          👁 Preview
         </Button>
       </div>
 

@@ -208,6 +208,8 @@ export function useShop() {
     onSuccess: () => {
       haptics.light();
       queryClient.invalidateQueries({ queryKey: ["user-inventory"] });
+      // Also refresh equipped theme so accent color resets when unequipping a theme
+      queryClient.invalidateQueries({ queryKey: ["equipped-theme", user?.id] });
     },
   });
 
