@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useUserProfile, UserProfile } from "@/hooks/useUserProfile";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useEquippedAvatar } from "@/hooks/useEquippedAvatar";
 import { EditPreferencesSheet } from "@/components/profile/EditPreferencesSheet";
 import { DataManagementSheet } from "@/components/profile/DataManagement";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -42,6 +43,7 @@ export default function Profile() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { profile, loading: profileLoading, updateProfile } = useUserProfile();
+  const { emoji, name: avatarName } = useEquippedAvatar();
   const haptics = useHaptics();
   const navigate = useNavigate();
   
@@ -135,14 +137,21 @@ export default function Profile() {
           className="glass rounded-2xl p-6 mb-6"
         >
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
-              <User className="w-8 h-8 text-primary" />
-            </div>
+            <motion.div 
+              className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-3xl"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {emoji}
+            </motion.div>
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-semibold text-foreground truncate">
                 {profile?.display_name || 'Set your name'}
               </h2>
               <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+              {avatarName && (
+                <p className="text-xs text-primary font-medium">{avatarName}</p>
+              )}
             </div>
             <Button 
               variant="ghost" 

@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { StreakFlame } from "@/components/ui/streak-flame";
+import { useEquippedAvatar } from "@/hooks/useEquippedAvatar";
 
 interface DailyHeaderProps {
   streak: number;
@@ -26,6 +27,7 @@ function formatTime(date: Date): string {
 }
 
 export function DailyHeader({ streak, progress, date, displayName }: DailyHeaderProps) {
+  const { emoji } = useEquippedAvatar();
   const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
   const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const timeStr = formatTime(date);
@@ -56,15 +58,25 @@ export function DailyHeader({ streak, progress, date, displayName }: DailyHeader
       
       <div className="relative flex items-center justify-between">
         <div className="flex-1 min-w-0">
-          {/* Greeting */}
-          <motion.p 
-            className="text-lg font-medium text-foreground mb-1"
+          {/* Greeting with Avatar */}
+          <motion.div 
+            className="flex items-center gap-2 mb-1"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.15 }}
           >
-            {greeting}{name ? `, ${name}` : ''} 👋
-          </motion.p>
+            <motion.span 
+              className="text-2xl"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.3, type: "spring", stiffness: 400 }}
+            >
+              {emoji}
+            </motion.span>
+            <p className="text-lg font-medium text-foreground">
+              {greeting}{name ? `, ${name}` : ''}
+            </p>
+          </motion.div>
           
           {/* Date and Time */}
           <motion.div 
