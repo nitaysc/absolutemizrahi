@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame } from "lucide-react";
+import { Flame, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCoins } from "@/hooks/useCoins";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { CoinEarnedPopup } from "@/components/shop/CoinEarnedPopup";
 
 const WHEEL_SEGMENTS = [
@@ -222,7 +222,21 @@ export function SpinWheel() {
 
       {/* Spin Modal */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md bg-gradient-to-b from-zinc-900 via-zinc-900 to-black border-orange-500/30 overflow-hidden">
+        <DialogContent className="sm:max-w-md bg-gradient-to-b from-zinc-900 via-zinc-900 to-black border-orange-500/30 overflow-hidden [&>button]:hidden">
+          {/* Custom Close Button - bigger and more satisfying */}
+          <DialogClose asChild>
+            <motion.button
+              className="absolute right-3 top-3 z-50 w-10 h-10 rounded-full bg-zinc-800/80 border border-zinc-600/50 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"
+              whileHover={{ scale: 1.1, rotate: 90 }}
+              whileTap={{ scale: 0.85 }}
+              onClick={() => {
+                if (navigator.vibrate) navigator.vibrate(10);
+              }}
+            >
+              <X className="w-5 h-5" />
+            </motion.button>
+          </DialogClose>
+
           {/* Background flame effect */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <motion.div
