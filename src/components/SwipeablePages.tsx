@@ -75,8 +75,8 @@ export function SwipeablePages({ children }: SwipeablePagesProps) {
       <div className="h-[env(safe-area-inset-top)] bg-background/80 backdrop-blur-xl fixed top-0 left-0 right-0 z-[60]" />
       
       {/* Centered Page Indicators - pill style */}
-      <div className="fixed top-[max(env(safe-area-inset-top),12px)] left-0 right-0 z-50 flex justify-center pointer-events-none">
-        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-card/80 backdrop-blur-xl border border-white/[0.06] shadow-lg pointer-events-auto">
+      <div className="fixed top-[max(env(safe-area-inset-top),8px)] left-0 right-0 z-50 flex justify-center pointer-events-none">
+        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-card/70 backdrop-blur-lg border border-white/[0.04] shadow-sm pointer-events-auto">
           {routes.map((route, index) => (
             <motion.button
               key={route}
@@ -86,17 +86,17 @@ export function SwipeablePages({ children }: SwipeablePagesProps) {
                   navigate(route);
                 }
               }}
-              className="relative p-1.5 touch-target flex items-center justify-center"
+              className="relative p-1 touch-target flex items-center justify-center"
               whileTap={{ scale: 0.9 }}
             >
               <motion.div
                 className="rounded-full"
                 animate={{
-                  width: index === currentIndex ? 20 : 6,
-                  height: 6,
+                  width: index === currentIndex ? 14 : 4,
+                  height: 4,
                   backgroundColor: index === currentIndex 
                     ? 'hsl(var(--primary))' 
-                    : 'hsl(var(--muted-foreground) / 0.3)',
+                    : 'hsl(var(--muted-foreground) / 0.25)',
                 }}
                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
               />
