@@ -169,23 +169,28 @@ export default function Calendar() {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="glass rounded-xl p-3 mb-4 flex items-center justify-between"
+          className="glass rounded-xl p-3 mb-4"
         >
-          <div>
-            <p className="text-sm text-muted-foreground">This month</p>
-            <p className="text-lg font-semibold text-foreground">
-              {completedThisMonth}/{totalDaysSoFar} days completed
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">This month</p>
+              <p className="text-lg font-semibold text-foreground">
+                {completedThisMonth}/{totalDaysSoFar} days completed
+              </p>
+            </div>
+            {completedThisMonth >= totalDaysSoFar * 0.8 && (
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ repeat: Infinity, duration: 0.5, repeatDelay: 2 }}
+                className="text-2xl"
+              >
+                🔥
+              </motion.div>
+            )}
           </div>
-          {completedThisMonth >= totalDaysSoFar * 0.8 && (
-            <motion.div
-              animate={{ rotate: [0, 10, -10, 0] }}
-              transition={{ repeat: Infinity, duration: 0.5, repeatDelay: 2 }}
-              className="text-2xl"
-            >
-              🔥
-            </motion.div>
-          )}
+          <p className="text-xs text-muted-foreground mt-2">
+            💡 Days count as complete when you finish 50%+ of tasks. Streak requires 80%+.
+          </p>
         </motion.div>
 
         <motion.div

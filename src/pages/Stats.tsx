@@ -115,20 +115,22 @@ export default function Stats() {
     { label: "Best Streak", value: streak.longest, icon: Flame, color: "text-primary", bg: "bg-primary/10" },
   ];
 
+  // Only show real data - no fake placeholder data
+  const hasEnoughData = taskCounts.total >= 3; // At least 3 tasks completed
   const weeklyData = [
-    { day: 'Mon', value: 85 },
-    { day: 'Tue', value: 100 },
-    { day: 'Wed', value: 75 },
-    { day: 'Thu', value: 90 },
-    { day: 'Fri', value: 100 },
-    { day: 'Sat', value: 60 },
-    { day: 'Sun', value: 20 },
+    { day: 'Mon', value: 0 },
+    { day: 'Tue', value: 0 },
+    { day: 'Wed', value: 0 },
+    { day: 'Thu', value: 0 },
+    { day: 'Fri', value: 0 },
+    { day: 'Sat', value: 0 },
+    { day: 'Sun', value: 0 },
   ];
 
   const streakMessage = getStreakMessage(streak.current, streak.longest);
   const nextMilestone = getNextMilestone(streak.current);
-  const mostProductiveDay = getMostProductiveDay(weeklyData);
-  const weeklyInsight = getWeeklyInsight(weeklyData);
+  const mostProductiveDay = hasEnoughData ? getMostProductiveDay(weeklyData) : null;
+  const weeklyInsight = hasEnoughData ? getWeeklyInsight(weeklyData) : null;
 
   return (
     <div className="min-h-screen pb-28">
@@ -222,49 +224,71 @@ export default function Stats() {
                 </div>
               </div>
               
-              {/* Weekly insight */}
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                className="text-sm text-muted-foreground mb-4"
-              >
-                {weeklyInsight}
-              </motion.p>
+              {/* Weekly insight - only show if enough data */}
+              {hasEnoughData && weeklyInsight ? (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.6 }}
+                  className="text-sm text-muted-foreground mb-4"
+                >
+                  {weeklyInsight}
+                </motion.p>
+              ) : (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.6 }}
+                  className="text-sm text-muted-foreground mb-4"
+                >
+                  Complete a few more tasks to unlock weekly insights 📊
+                </motion.p>
+              )}
               
-              <div className="flex items-end justify-between h-32 gap-2">
-                {weeklyData.map((day, index) => {
-                  const isBest = mostProductiveDay?.day === day.day;
-                  return (
-                    <div key={day.day} className="flex-1 flex flex-col items-center gap-1">
-                      <div className="w-full flex flex-col gap-1 h-24 relative">
-                        {isBest && (
-                          <motion.span
-                            initial={{ opacity: 0, scale: 0 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 1 }}
-                            className="absolute -top-5 left-1/2 -translate-x-1/2 text-sm"
-                          >
-                            🔥
-                          </motion.span>
-                        )}
-                        <motion.div
-                          initial={{ height: 0 }}
-                          animate={{ height: `${day.value}%` }}
-                          transition={{ delay: 0.5 + index * 0.05, duration: 0.5 }}
-                          className={`w-full rounded-t ${isBest ? 'bg-primary' : 'bg-workout'}`}
-                          style={{ marginTop: 'auto' }}
-                        />
+              {hasEnoughData ? (
+                <div className="flex items-end justify-between h-32 gap-2">
+                  {weeklyData.map((day, index) => {
+                    const isBest = mostProductiveDay?.day === day.day;
+                    return (
+                      <div key={day.day} className="flex-1 flex flex-col items-center gap-1">
+                        <div className="w-full flex flex-col gap-1 h-24 relative">
+                          {isBest && day.value > 0 && (
+                            <motion.span
+                              initial={{ opacity: 0, scale: 0 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: 1 }}
+                              className="absolute -top-5 left-1/2 -translate-x-1/2 text-sm"
+                            >
+                              🔥
+                            </motion.span>
+                          )}
+                          <motion.div
+                            initial={{ height: 0 }}
+                            animate={{ height: `${day.value}%` }}
+                            transition={{ delay: 0.5 + index * 0.05, duration: 0.5 }}
+                            className={`w-full rounded-t ${isBest ? 'bg-primary' : 'bg-workout'}`}
+                            style={{ marginTop: 'auto' }}
+                          />
+                        </div>
+                        <span className={`text-xs ${isBest ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
+                          {day.day}
+                        </span>
                       </div>
-                      <span className={`text-xs ${isBest ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
-                        {day.day}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-32 text-center">
+                  <div className="space-y-2">
+                    <div className="text-4xl">📈</div>
+                    <p className="text-sm text-muted-foreground">
+                      Your weekly chart will appear here
+                    </p>
+                  </div>
+                </div>
+              )}
               
-              {mostProductiveDay && (
+              {hasEnoughData && mostProductiveDay && mostProductiveDay.value > 0 && (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
