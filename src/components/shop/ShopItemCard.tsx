@@ -72,8 +72,7 @@ export function ShopItemCard({ item, index, onPreview }: ShopItemCardProps) {
       className={cn(
         "relative rounded-xl border bg-gradient-to-br p-3 overflow-hidden",
         RARITY_COLORS[item.rarity as keyof typeof RARITY_COLORS],
-        RARITY_GLOW[item.rarity as keyof typeof RARITY_GLOW],
-        isLocked && "opacity-60"
+        RARITY_GLOW[item.rarity as keyof typeof RARITY_GLOW]
       )}
     >
       {/* Purchase Effect */}
@@ -88,12 +87,12 @@ export function ShopItemCard({ item, index, onPreview }: ShopItemCardProps) {
         )}
       </AnimatePresence>
 
-      {/* Lock Overlay */}
+      {/* Lock Badge - now just a small indicator, not a full overlay */}
       {isLocked && (
-        <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center gap-1 rounded-xl">
-          <Lock className="w-5 h-5 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground text-center px-2">
-            {item.streak_requirement}-day streak
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-background/80 border border-muted">
+          <Lock className="w-3 h-3 text-muted-foreground" />
+          <span className="text-[10px] text-muted-foreground font-medium">
+            {item.streak_requirement}d
           </span>
         </div>
       )}
