@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw, PartyPopper, Loader2 } from "lucide-react";
 import { useDailyPlan } from "@/hooks/useDailyPlan";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useHaptics } from "@/hooks/useHaptics";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 
@@ -14,6 +15,7 @@ export default function Today() {
   const { user, loading: authLoading } = useAuth();
   const { plan, loading, streak, toggleTask, rerollPlan, completeDay, refetch } = useDailyPlan();
   const { profile } = useUserProfile();
+  const haptics = useHaptics();
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Update time every minute for greeting changes
@@ -66,7 +68,10 @@ export default function Today() {
             variant="ghost" 
             size="sm" 
             className="text-muted-foreground hover:text-foreground"
-            onClick={rerollPlan}
+            onClick={() => {
+              haptics.medium();
+              rerollPlan();
+            }}
             disabled={rerollsLeft <= 0 || loading}
           >
             <RefreshCw className="w-4 h-4 mr-2" />
@@ -106,7 +111,10 @@ export default function Today() {
           >
             <Button 
               className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-              onClick={completeDay}
+              onClick={() => {
+                haptics.success();
+                completeDay();
+              }}
             >
               <PartyPopper className="w-5 h-5 mr-2" />
               Complete Day!
