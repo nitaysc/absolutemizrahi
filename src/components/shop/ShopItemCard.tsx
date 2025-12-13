@@ -117,7 +117,11 @@ export function ShopItemCard({ item, index, onPreview }: ShopItemCardProps) {
       )}
 
       {/* Icon */}
-      <div className="text-3xl mb-2">{CATEGORY_ICONS[item.category] || "🎁"}</div>
+      <div className="text-3xl mb-2">
+        {item.category === "avatar" && (item.metadata as any)?.emoji
+          ? (item.metadata as any).emoji
+          : CATEGORY_ICONS[item.category] || "🎁"}
+      </div>
 
       {/* Info */}
       <h4 className="font-semibold text-sm truncate">{item.name}</h4>
