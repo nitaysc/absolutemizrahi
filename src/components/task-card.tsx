@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { Check, Clock, Dumbbell, BookOpen, Sparkles, Coffee, Heart } from "lucide-react";
 import { hapticFeedback } from "@/hooks/useHaptics";
-import { soundEffects } from "@/hooks/useSoundEffects";
 
 export type TaskCategory = "workout" | "study" | "productive" | "rest" | "mindset";
 
@@ -73,13 +72,11 @@ export function TaskCard({
   const Icon = config.icon;
 
   const handleToggle = () => {
-    // Trigger haptic and sound feedback based on completion state
+    // Trigger haptic feedback based on completion state
     if (!isCompleted) {
       hapticFeedback("success");
-      soundEffects.playTaskComplete();
     } else {
       hapticFeedback("light");
-      soundEffects.playTaskUncomplete();
     }
     onToggle?.(id);
   };
