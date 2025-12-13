@@ -1,7 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, LockOpen } from "lucide-react";
 import { hapticFeedback } from "@/hooks/useHaptics";
-import { soundEffects } from "@/hooks/useSoundEffects";
 import { useEffect } from "react";
 
 interface LockBreakAnimationProps {
@@ -13,7 +12,6 @@ export function LockBreakAnimation({ isUnlocking, onComplete }: LockBreakAnimati
   useEffect(() => {
     if (isUnlocking) {
       hapticFeedback("success");
-      soundEffects.playLockBreak();
       const timer = setTimeout(() => {
         onComplete?.();
       }, 2000); // Slower - 2 seconds total
