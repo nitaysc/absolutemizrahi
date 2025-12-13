@@ -349,10 +349,31 @@ export default function Stats() {
                     </span>
                     <span className="text-muted-foreground">{streak.current} days</span>
                   </div>
-                  <div className="h-3 bg-muted rounded-full overflow-hidden">
+                  <div className="h-3 bg-muted rounded-full overflow-hidden relative">
+                    {/* Milestone markers */}
+                    {[3, 7, 14].map((milestone) => {
+                      const maxRef = Math.max(streak.longest, 14);
+                      const position = (milestone / maxRef) * 100;
+                      const isReached = streak.current >= milestone;
+                      return position <= 100 ? (
+                        <div
+                          key={milestone}
+                          className="absolute top-1/2 -translate-y-1/2 z-10 flex flex-col items-center"
+                          style={{ left: `${position}%` }}
+                        >
+                          <div
+                            className={`w-1.5 h-1.5 rounded-full border ${
+                              isReached
+                                ? "bg-primary border-primary"
+                                : "bg-muted-foreground/30 border-muted-foreground/50"
+                            }`}
+                          />
+                        </div>
+                      ) : null;
+                    })}
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: `${Math.min((streak.current / Math.max(streak.longest, 7)) * 100, 100)}%` }}
+                      animate={{ width: `${Math.min((streak.current / Math.max(streak.longest, 14)) * 100, 100)}%` }}
                       transition={{ delay: 0.6, duration: 0.5 }}
                       className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full relative"
                     >
@@ -362,6 +383,25 @@ export default function Stats() {
                         transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
                       />
                     </motion.div>
+                  </div>
+                  {/* Milestone labels */}
+                  <div className="relative h-4 mt-1">
+                    {[3, 7, 14].map((milestone) => {
+                      const maxRef = Math.max(streak.longest, 14);
+                      const position = (milestone / maxRef) * 100;
+                      const isReached = streak.current >= milestone;
+                      return position <= 100 ? (
+                        <span
+                          key={milestone}
+                          className={`absolute text-[9px] -translate-x-1/2 ${
+                            isReached ? "text-primary" : "text-muted-foreground/50"
+                          }`}
+                          style={{ left: `${position}%` }}
+                        >
+                          {isReached ? "🔓" : "🔒"}{milestone}
+                        </span>
+                      ) : null;
+                    })}
                   </div>
                 </div>
                 <div>
