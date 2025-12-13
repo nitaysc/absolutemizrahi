@@ -86,16 +86,8 @@ export function SpinWheel() {
   const hasSpunRef = useRef(false);
   const tickIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // For testing: allow 10 spins
-  const [testSpinsLeft, setTestSpinsLeft] = useState(10);
-  
-  useEffect(() => {
-    if (user) {
-      localStorage.removeItem(getSpinKey(user.id));
-    }
-  }, [user]);
-
-  const hasSpunToday = testSpinsLeft <= 0;
+  // Check if user has spun today (persisted in localStorage)
+  const hasSpunToday = user ? localStorage.getItem(getSpinKey(user.id)) === "true" : false;
 
   // Cleanup tick interval
   useEffect(() => {
@@ -108,7 +100,6 @@ export function SpinWheel() {
     if (isSpinning || hasSpunToday || !user || hasSpunRef.current) return;
 
     hasSpunRef.current = true;
-    setTestSpinsLeft(prev => prev - 1);
     setIsSpinning(true);
 
     // Haptic feedback
@@ -163,7 +154,7 @@ export function SpinWheel() {
         setShowWinEffect(false);
         setRewardAmount(segment.coins);
         setShowReward(true);
-        hasSpunRef.current = false; // Allow next spin for testing
+        localStorage.setItem(getSpinKey(user.id), "true");
         addCoins({ amount: segment.coins, reason: "daily_bonus" });
       }, 800);
     }, 6000);
@@ -215,7 +206,7 @@ export function SpinWheel() {
           >
             🎡
           </motion.span>
-          <span>{hasSpunToday ? "Done" : `${testSpinsLeft}`}</span>
+          <span>{hasSpunToday ? "Done" : "Spin"}</span>
         </motion.div>
 
         {/* Ready indicator - smaller */}
@@ -311,7 +302,12 @@ export function SpinWheel() {
                 {/* Segment dividers and labels */}
                 {WHEEL_SEGMENTS.map((segment, i) => {
                   const angle = i * SEGMENT_ANGLE;
-                  const labelAngle = angle + SEGMENT_ANGLE / 2 - 90;
+                  const labelAngle = angle + SEGMENT_ANGLE / 2;
+                  // Position label at center of segment, halfway between center and edge
+                  const labelRadius = 80; // distance from center
+                  const labelX = Math.cos((labelAngle - 90) * Math.PI / 180) * labelRadius;
+                  const labelY = Math.sin((labelAngle - 90) * Math.PI / 180) * labelRadius;
+                  
                   return (
                     <div key={i}>
                       {/* Divider line */}
@@ -323,20 +319,22 @@ export function SpinWheel() {
                           background: "linear-gradient(90deg, transparent 0%, rgba(251,146,60,0.3) 50%, rgba(251,146,60,0.6) 100%)",
                         }}
                       />
-                      {/* Label - moved closer to center */}
+                      {/* Label - centered in segment */}
                       <div
-                        className="absolute top-1/2 left-1/2 origin-left flex items-center"
+                        className="absolute flex items-center justify-center"
                         style={{
-                          transform: `rotate(${labelAngle}deg) translateX(55px)`,
+                          top: "50%",
+                          left: "50%",
+                          transform: `translate(calc(-50% + ${labelX}px), calc(-50% + ${labelY}px))`,
                         }}
                       >
                         <span
-                          className="text-sm font-black text-white flex items-center gap-1"
+                          className="text-xs font-black text-white flex items-center gap-0.5"
                           style={{
                             textShadow: "0 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(251,146,60,0.5)",
                           }}
                         >
-                          <Flame className="w-4 h-4 text-primary" fill="hsl(var(--primary))" />
+                          <Flame className="w-3 h-3 text-primary" fill="hsl(var(--primary))" />
                           {segment.coins}
                         </span>
                       </div>
