@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DailyHeader } from "@/components/daily-header";
 import { DailyIdentity } from "@/components/DailyIdentity";
@@ -11,6 +11,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
+import { LockBreakAnimation } from "@/components/ui/lock-break-animation";
 
 export default function Today() {
   const { user, loading: authLoading } = useAuth();
@@ -18,6 +19,9 @@ export default function Today() {
   const { profile } = useUserProfile();
   const haptics = useHaptics();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isUnlocking, setIsUnlocking] = useState(false);
+  const [showLock, setShowLock] = useState(true);
+  const prevCanUnlockRef = useRef<boolean | null>(null);
 
   // Update time every minute for greeting changes
   useEffect(() => {
@@ -50,6 +54,26 @@ export default function Today() {
   const hasProductiveTask = plan?.items.some(i => i.category === 'productive' && i.is_done);
   const restTasks = plan?.items.filter(i => i.category === 'rest') ?? [];
   const canUnlockRest = hasProductiveTask || completedCount >= Math.ceil(totalCount * 0.5);
+
+  // Detect when rest tasks become unlocked and trigger animation
+  useEffect(() => {
+    if (prevCanUnlockRef.current === false && canUnlockRest === true) {
+      setIsUnlocking(true);
+    }
+    prevCanUnlockRef.current = canUnlockRest;
+  }, [canUnlockRest]);
+
+  const handleUnlockComplete = () => {
+    setIsUnlocking(false);
+    setShowLock(false);
+  };
+
+  // Reset lock visibility when plan changes
+  useEffect(() => {
+    if (!canUnlockRest) {
+      setShowLock(true);
+    }
+  }, [plan?.id, canUnlockRest]);
 
   // Urgency message based on progress
   const getUrgencyMessage = () => {
@@ -125,11 +149,21 @@ export default function Today() {
           <div className="space-y-3">
             {plan?.items.map((item, index) => {
               const isRestTask = item.category === 'rest';
-              const isLocked = isRestTask && !canUnlockRest && !item.is_done;
+              const isLocked = isRestTask && !canUnlockRest && !item.is_done && showLock;
+              const shouldShowBreakAnimation = isRestTask && isUnlocking;
               
               return (
                 <div key={item.id} className="relative">
-                  {isLocked && (
+                  {/* Lock break animation */}
+                  {shouldShowBreakAnimation && (
+                    <LockBreakAnimation 
+                      isUnlocking={isUnlocking} 
+                      onComplete={handleUnlockComplete}
+                    />
+                  )}
+                  
+                  {/* Static lock overlay */}
+                  {isLocked && !isUnlocking && (
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
