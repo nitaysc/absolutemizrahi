@@ -62,14 +62,15 @@ export function useDailyPlan() {
   const generatePlan = useCallback(async () => {
     if (!user) return null;
 
-    // Fetch user's dog preference
+    // Fetch user's preferences
     const { data: profileData } = await supabase
       .from('profiles')
-      .select('has_dog')
+      .select('has_dog, workout_style')
       .eq('id', user.id)
       .single();
     
     const hasDog = profileData?.has_dog ?? false;
+    const workoutStyle = profileData?.workout_style ?? 'mixed';
 
     // Fetch random tasks from each category
     const categories = ['workout', 'study', 'productive', 'rest', 'mindset'];
@@ -83,12 +84,32 @@ export function useDailyPlan() {
         .eq('category', category);
 
       if (tasks && tasks.length > 0) {
-        // Filter out dog tasks if user doesn't have a dog
+        // Filter tasks based on user preferences
         const filteredTasks = tasks.filter(task => {
           const metadata = task.metadata as Record<string, Json> | null;
+          const tags = task.tags as string[] | null;
+          
+          // Filter out dog tasks if user doesn't have a dog
           if (metadata && metadata.requires_dog === true) {
-            return hasDog;
+            if (!hasDog) return false;
           }
+          
+          // Filter workout tasks based on workout_style preference
+          if (category === 'workout' && tags) {
+            const hasGymTag = tags.includes('gym');
+            const hasCalisthenicsTag = tags.includes('calisthenics');
+            
+            // If task has no gym/calisthenics tag, it's neutral - always include
+            if (!hasGymTag && !hasCalisthenicsTag) return true;
+            
+            if (workoutStyle === 'gym') {
+              return hasGymTag;
+            } else if (workoutStyle === 'calisthenics') {
+              return hasCalisthenicsTag;
+            }
+            // 'mixed' includes all workout tasks
+          }
+          
           return true;
         });
 
@@ -234,14 +255,15 @@ export function useDailyPlan() {
       .delete()
       .eq('daily_plan_id', plan.id);
 
-    // Fetch user's dog preference for reroll
+    // Fetch user's preferences for reroll
     const { data: profileData } = await supabase
       .from('profiles')
-      .select('has_dog')
+      .select('has_dog, workout_style')
       .eq('id', user.id)
       .single();
     
     const hasDog = profileData?.has_dog ?? false;
+    const workoutStyle = profileData?.workout_style ?? 'mixed';
 
     // Generate new items
     const categories = ['workout', 'study', 'productive', 'rest', 'mindset'];
@@ -255,12 +277,32 @@ export function useDailyPlan() {
         .eq('category', category);
 
       if (tasks && tasks.length > 0) {
-        // Filter out dog tasks if user doesn't have a dog
+        // Filter tasks based on user preferences
         const filteredTasks = tasks.filter(task => {
           const metadata = task.metadata as Record<string, Json> | null;
+          const tags = task.tags as string[] | null;
+          
+          // Filter out dog tasks if user doesn't have a dog
           if (metadata && metadata.requires_dog === true) {
-            return hasDog;
+            if (!hasDog) return false;
           }
+          
+          // Filter workout tasks based on workout_style preference
+          if (category === 'workout' && tags) {
+            const hasGymTag = tags.includes('gym');
+            const hasCalisthenicsTag = tags.includes('calisthenics');
+            
+            // If task has no gym/calisthenics tag, it's neutral - always include
+            if (!hasGymTag && !hasCalisthenicsTag) return true;
+            
+            if (workoutStyle === 'gym') {
+              return hasGymTag;
+            } else if (workoutStyle === 'calisthenics') {
+              return hasCalisthenicsTag;
+            }
+            // 'mixed' includes all workout tasks
+          }
+          
           return true;
         });
 
