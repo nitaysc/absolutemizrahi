@@ -222,20 +222,19 @@ export function SpinWheel() {
 
       {/* Spin Modal */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md bg-gradient-to-b from-zinc-900 via-zinc-900 to-black border-orange-500/30 overflow-hidden [&>button]:hidden">
+        <DialogContent className="sm:max-w-md bg-gradient-to-b from-zinc-900 via-zinc-900 to-black border-orange-500/30 overflow-hidden [&>button[class*='absolute'][class*='right-4']]:hidden">
           {/* Custom Close Button - bigger and more satisfying */}
-          <DialogClose asChild>
-            <motion.button
-              className="absolute right-3 top-3 z-50 w-10 h-10 rounded-full bg-zinc-800/80 border border-zinc-600/50 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"
-              whileHover={{ scale: 1.1, rotate: 90 }}
-              whileTap={{ scale: 0.85 }}
-              onClick={() => {
-                if (navigator.vibrate) navigator.vibrate(10);
-              }}
-            >
-              <X className="w-5 h-5" />
-            </motion.button>
-          </DialogClose>
+          <motion.button
+            onClick={() => {
+              if (navigator.vibrate) navigator.vibrate(10);
+              setOpen(false);
+            }}
+            className="absolute right-3 top-3 z-50 w-10 h-10 rounded-full bg-zinc-800/80 border border-zinc-600/50 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"
+            whileHover={{ scale: 1.1, rotate: 90 }}
+            whileTap={{ scale: 0.85 }}
+          >
+            <X className="w-5 h-5" />
+          </motion.button>
 
           {/* Background flame effect */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
