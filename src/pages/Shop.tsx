@@ -8,6 +8,7 @@ import { useStreakShield } from "@/hooks/useStreakShield";
 import { useLimitedTimeItems } from "@/hooks/useLimitedTimeItems";
 import { ShopItemCard } from "@/components/shop/ShopItemCard";
 import { ShopHeader } from "@/components/shop/ShopHeader";
+import { SpinWheel } from "@/components/SpinWheel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Loader2, Palette, Flame, Trophy, Sparkles, X, Shield, Clock, Zap } from "lucide-react";
@@ -97,6 +98,9 @@ export default function Shop() {
     <div className="min-h-screen pb-28">
       <div className="app-container pt-2">
         <ShopHeader coins={userCoins} streak={userStreak} />
+
+        {/* Daily Spin Wheel */}
+        <SpinWheel />
 
         {/* Streak Shield Card */}
         <motion.div
