@@ -86,14 +86,16 @@ export function SpinWheel() {
   const hasSpunRef = useRef(false);
   const tickIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // For testing: reset spin on component mount
+  // For testing: allow 10 spins
+  const [testSpinsLeft, setTestSpinsLeft] = useState(10);
+  
   useEffect(() => {
     if (user) {
       localStorage.removeItem(getSpinKey(user.id));
     }
   }, [user]);
 
-  const hasSpunToday = user ? localStorage.getItem(getSpinKey(user.id)) === "true" : false;
+  const hasSpunToday = testSpinsLeft <= 0;
 
   // Cleanup tick interval
   useEffect(() => {
@@ -106,6 +108,7 @@ export function SpinWheel() {
     if (isSpinning || hasSpunToday || !user || hasSpunRef.current) return;
 
     hasSpunRef.current = true;
+    setTestSpinsLeft(prev => prev - 1);
     setIsSpinning(true);
 
     // Haptic feedback
@@ -160,7 +163,7 @@ export function SpinWheel() {
         setShowWinEffect(false);
         setRewardAmount(segment.coins);
         setShowReward(true);
-        localStorage.setItem(getSpinKey(user.id), "true");
+        hasSpunRef.current = false; // Allow next spin for testing
         addCoins({ amount: segment.coins, reason: "daily_bonus" });
       }, 800);
     }, 6000);
@@ -172,31 +175,31 @@ export function SpinWheel() {
 
   return (
     <>
-      {/* Premium Glowing Button */}
+      {/* Compact Spin Button */}
       <motion.button
         onClick={() => setOpen(true)}
         className="relative flex items-center justify-center"
-        whileHover={{ scale: 1.08 }}
-        whileTap={{ scale: 0.92 }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
       >
         {/* Outer glow ring */}
         <motion.div
           className="absolute inset-0 rounded-full"
           animate={{
             boxShadow: hasSpunToday
-              ? ["0 0 15px 2px rgba(100,100,100,0.3)", "0 0 20px 4px rgba(100,100,100,0.2)"]
+              ? ["0 0 8px 1px rgba(100,100,100,0.3)", "0 0 12px 2px rgba(100,100,100,0.2)"]
               : [
-                  "0 0 20px 4px rgba(251, 146, 60, 0.4), 0 0 40px 8px rgba(239, 68, 68, 0.2)",
-                  "0 0 30px 8px rgba(251, 146, 60, 0.6), 0 0 60px 16px rgba(239, 68, 68, 0.3)",
+                  "0 0 12px 2px rgba(251, 146, 60, 0.4), 0 0 20px 4px rgba(239, 68, 68, 0.2)",
+                  "0 0 18px 4px rgba(251, 146, 60, 0.6), 0 0 30px 8px rgba(239, 68, 68, 0.3)",
                 ],
           }}
           transition={{ duration: 2, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
           style={{ borderRadius: "9999px" }}
         />
 
-        {/* Button body */}
+        {/* Button body - smaller */}
         <motion.div
-          className={`relative z-10 flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm border ${
+          className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs border ${
             hasSpunToday
               ? "bg-gradient-to-br from-zinc-700 to-zinc-800 border-zinc-600/50 text-zinc-400"
               : "bg-gradient-to-br from-orange-500 via-red-500 to-amber-600 border-orange-400/50 text-white"
@@ -206,31 +209,22 @@ export function SpinWheel() {
         >
           {/* Wheel icon with spin animation */}
           <motion.span
-            className="text-lg"
+            className="text-sm"
             animate={hasSpunToday ? {} : { rotate: [0, 360] }}
             transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
           >
             🎡
           </motion.span>
-          <span>{hasSpunToday ? "Spun!" : "Spin"}</span>
+          <span>{hasSpunToday ? "Done" : `${testSpinsLeft}`}</span>
         </motion.div>
 
-        {/* Floating embers (only when not spun) */}
-        {!hasSpunToday && (
-          <div className="absolute inset-0 overflow-visible pointer-events-none">
-            {[0.1, 0.4, 0.8, 1.2, 1.6].map((delay, i) => (
-              <Ember key={i} delay={delay} />
-            ))}
-          </div>
-        )}
-
-        {/* Ready indicator */}
+        {/* Ready indicator - smaller */}
         {!hasSpunToday && (
           <motion.div
-            className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full"
+            className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-400 rounded-full"
             animate={{ scale: [1, 1.3, 1], opacity: [1, 0.7, 1] }}
             transition={{ duration: 1.5, repeat: Infinity }}
-            style={{ boxShadow: "0 0 8px 2px rgba(74, 222, 128, 0.6)" }}
+            style={{ boxShadow: "0 0 6px 1px rgba(74, 222, 128, 0.6)" }}
           />
         )}
       </motion.button>

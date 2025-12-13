@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Flame, Coins } from "lucide-react";
+import { SpinWheel } from "@/components/SpinWheel";
 
 interface ShopHeaderProps {
   coins: number;
@@ -9,18 +10,21 @@ interface ShopHeaderProps {
 export function ShopHeader({ coins, streak }: ShopHeaderProps) {
   return (
     <div className="space-y-4">
-      {/* Title */}
+      {/* Title with Spin Button */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center"
+        className="flex items-center justify-between"
       >
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">
-          Focus Shop
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Unlock rewards for your consistency
-        </p>
+        <div>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">
+            Focus Shop
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Unlock rewards for your consistency
+          </p>
+        </div>
+        <SpinWheel />
       </motion.div>
 
       {/* Stats Bar */}
