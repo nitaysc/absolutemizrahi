@@ -176,7 +176,7 @@ function ShopPreview({ item }: { item: ShopItem | null }) {
           className="w-20 h-12 rounded-xl shadow-lg"
           style={{
             background: color
-              ? `linear-gradient(135deg, hsl(${color}) 0%, hsl(${color}) / 0.7 100%)`
+              ? `linear-gradient(135deg, hsl(${color}) 0%, hsl(${color} / 0.7) 100%)`
               : "var(--gradient-card)",
           }}
         />

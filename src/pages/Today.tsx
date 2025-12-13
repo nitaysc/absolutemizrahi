@@ -31,8 +31,10 @@ export default function Today() {
   const [coinAmount, setCoinAmount] = useState(0);
   const [coinReason, setCoinReason] = useState("");
   
-  // Track which tasks have been rewarded to prevent exploit
+  // Track which tasks have been rewarded to prevent exploit (persisted per user/day)
   const rewardedTasksRef = useRef<Set<string>>(new Set());
+  const todayKey = new Date().toISOString().split("T")[0];
+  const storageKey = user ? `rewardedTasks:${user.id}:${todayKey}` : null;
 
   // Compute values needed for hooks (before any conditional returns)
   const completedCount = plan?.items.filter(i => i.is_done).length ?? 0;
@@ -40,12 +42,38 @@ export default function Today() {
   const hasProductiveTask = plan?.items.some(i => i.category === 'productive' && i.is_done);
   const canUnlockRest = hasProductiveTask || completedCount >= Math.ceil(totalCount * 0.5);
 
-  // Initialize rewarded tasks with already-completed tasks on load
+  // Load rewarded tasks from localStorage (so re-enabling later doesn't re-award)
+  useEffect(() => {
+    if (!storageKey) return;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const ids = JSON.parse(raw) as string[];
+        rewardedTasksRef.current = new Set(ids);
+      }
+    } catch (e) {
+      console.error("Failed to load rewarded tasks", e);
+    }
+  }, [storageKey]);
+
+  // Helper to mark a task as rewarded and persist it
+  const markTaskRewarded = (taskId: string) => {
+    rewardedTasksRef.current.add(taskId);
+    if (!storageKey) return;
+    try {
+      const ids = Array.from(rewardedTasksRef.current);
+      localStorage.setItem(storageKey, JSON.stringify(ids));
+    } catch (e) {
+      console.error("Failed to save rewarded tasks", e);
+    }
+  };
+
+  // Initialize rewarded tasks with already-completed tasks on load (e.g. from other devices)
   useEffect(() => {
     if (plan?.items) {
       plan.items.forEach(item => {
-        if (item.is_done) {
-          rewardedTasksRef.current.add(item.id);
+        if (item.is_done && !rewardedTasksRef.current.has(item.id)) {
+          markTaskRewarded(item.id);
         }
       });
     }
@@ -208,7 +236,7 @@ export default function Today() {
                     duration={item.duration_min ?? undefined}
                     isCompleted={item.is_done}
                     onToggle={isLocked ? async () => {} : async (id) => {
-                      // Check if this task has ever been rewarded today
+                      // Check if this task has ever been rewarded today (persists via localStorage)
                       const alreadyRewarded = rewardedTasksRef.current.has(id);
 
                       // Toggle task completion in backend/state
@@ -219,9 +247,9 @@ export default function Today() {
                         return;
                       }
 
-                      // Only award once per task per day, even if user unchecks/rechecks
+                      // Only award once per task per day, even if user unchecks/rechecks later
                       if (!alreadyRewarded) {
-                        rewardedTasksRef.current.add(id);
+                        markTaskRewarded(id);
                         awardTaskComplete();
                         setCoinAmount(COIN_REWARDS.task_complete);
                         setCoinReason("Task completed!");

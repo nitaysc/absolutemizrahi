@@ -33,13 +33,17 @@ export function useAccentColor() {
   useEffect(() => {
     const root = document.documentElement;
     const metadata = equippedTheme?.metadata as Record<string, unknown> | null;
-    const color = (metadata?.color as string) ?? DEFAULT_PRIMARY;
+    const rawColor = (metadata?.color as string) ?? DEFAULT_PRIMARY;
 
-    // Update CSS variables for primary color
-    root.style.setProperty("--primary", color);
-    root.style.setProperty("--ring", color);
-    root.style.setProperty("--sidebar-primary", color);
-    root.style.setProperty("--sidebar-ring", color);
+    // Ensure we only accept valid HSL triplets like "25 95% 53%" to avoid yellow/invalid colors
+    const hslPattern = /^\d+\s+\d+%\s+\d+%$/;
+    const safeColor = hslPattern.test(rawColor) ? rawColor : DEFAULT_PRIMARY;
+
+    // Update CSS variables for primary color (used via hsl(var(--primary)))
+    root.style.setProperty("--primary", safeColor);
+    root.style.setProperty("--ring", safeColor);
+    root.style.setProperty("--sidebar-primary", safeColor);
+    root.style.setProperty("--sidebar-ring", safeColor);
 
     // Clean up on unmount
     return () => {
@@ -51,10 +55,13 @@ export function useAccentColor() {
   }, [equippedTheme]);
 
   const metadata = equippedTheme?.metadata as Record<string, unknown> | null;
+  const rawColor = (metadata?.color as string) ?? DEFAULT_PRIMARY;
+  const hslPattern = /^\d+\s+\d+%\s+\d+%$/;
+  const safeColor = hslPattern.test(rawColor) ? rawColor : DEFAULT_PRIMARY;
 
   return {
     equippedTheme,
-    currentColor: (metadata?.color as string) ?? DEFAULT_PRIMARY,
+    currentColor: safeColor,
     themeName: equippedTheme?.name ?? "Default Orange",
   };
 }
