@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 interface ShopItemCardProps {
   item: ShopItem;
   index: number;
+  onPreview?: (item: ShopItem) => void;
 }
 
 const RARITY_COLORS = {
@@ -32,7 +33,7 @@ const CATEGORY_ICONS: Record<string, string> = {
   animation: "✨",
 };
 
-export function ShopItemCard({ item, index }: ShopItemCardProps) {
+export function ShopItemCard({ item, index, onPreview }: ShopItemCardProps) {
   const { isOwned, canPurchase, purchaseItem, equipItem, unequipItem, inventory, userCoins, userStreak, isPurchasing } = useShop();
   const [showPurchaseEffect, setShowPurchaseEffect] = useState(false);
 
@@ -59,6 +60,10 @@ export function ShopItemCard({ item, index }: ShopItemCardProps) {
     }
   };
 
+  const handlePreview = () => {
+    onPreview?.(item);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -70,6 +75,8 @@ export function ShopItemCard({ item, index }: ShopItemCardProps) {
         RARITY_GLOW[item.rarity as keyof typeof RARITY_GLOW],
         isLocked && "opacity-60"
       )}
+      onMouseEnter={handlePreview}
+      onClick={handlePreview}
     >
       {/* Purchase Effect */}
       <AnimatePresence>
