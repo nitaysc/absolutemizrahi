@@ -65,12 +65,28 @@ export function useDailyPlan() {
     // Fetch user's preferences
     const { data: profileData } = await supabase
       .from('profiles')
-      .select('has_dog, workout_style')
+      .select('has_dog, workout_style, study_focus')
       .eq('id', user.id)
       .single();
     
     const hasDog = profileData?.has_dog ?? false;
     const workoutStyle = profileData?.workout_style ?? 'mixed';
+    const studyFocus = (profileData?.study_focus as string[] | null) ?? [];
+    
+    // Map study focus options to task tags
+    const studyFocusTagMap: Record<string, string[]> = {
+      'Math': ['math', 'calculus'],
+      'Science': ['physics', 'mechanics', 'chemistry', 'biology'],
+      'Languages': ['language', 'learning'],
+      'Programming': ['coding', 'review'],
+      'Architecture': ['architecture', 'cad'],
+      'Music': ['music'],
+      'Art': ['art', 'drawing'],
+      'History': ['history'],
+    };
+    
+    // Get all relevant tags from user's study focus
+    const relevantStudyTags = studyFocus.flatMap(focus => studyFocusTagMap[focus] || []);
 
     // Fetch random tasks from each category
     const categories = ['workout', 'study', 'productive', 'rest', 'mindset'];
@@ -108,6 +124,16 @@ export function useDailyPlan() {
               return hasCalisthenicsTag;
             }
             // 'mixed' includes all workout tasks
+          }
+          
+          // Filter study tasks based on study_focus preference
+          if (category === 'study' && tags && relevantStudyTags.length > 0) {
+            // Check if any of the task's tags match the user's study focus tags
+            const hasRelevantTag = tags.some(tag => relevantStudyTags.includes(tag.toLowerCase()));
+            // Also include generic study tasks (flashcards, quiz, reading, writing, research, notes)
+            const genericTags = ['flashcards', 'review', 'quiz', 'testing', 'reading', 'writing', 'research', 'notes', 'planning'];
+            const isGenericTask = tags.some(tag => genericTags.includes(tag.toLowerCase()));
+            return hasRelevantTag || isGenericTask;
           }
           
           return true;
@@ -258,12 +284,28 @@ export function useDailyPlan() {
     // Fetch user's preferences for reroll
     const { data: profileData } = await supabase
       .from('profiles')
-      .select('has_dog, workout_style')
+      .select('has_dog, workout_style, study_focus')
       .eq('id', user.id)
       .single();
     
     const hasDog = profileData?.has_dog ?? false;
     const workoutStyle = profileData?.workout_style ?? 'mixed';
+    const studyFocus = (profileData?.study_focus as string[] | null) ?? [];
+    
+    // Map study focus options to task tags
+    const studyFocusTagMap: Record<string, string[]> = {
+      'Math': ['math', 'calculus'],
+      'Science': ['physics', 'mechanics', 'chemistry', 'biology'],
+      'Languages': ['language', 'learning'],
+      'Programming': ['coding', 'review'],
+      'Architecture': ['architecture', 'cad'],
+      'Music': ['music'],
+      'Art': ['art', 'drawing'],
+      'History': ['history'],
+    };
+    
+    // Get all relevant tags from user's study focus
+    const relevantStudyTags = studyFocus.flatMap(focus => studyFocusTagMap[focus] || []);
 
     // Generate new items
     const categories = ['workout', 'study', 'productive', 'rest', 'mindset'];
@@ -301,6 +343,14 @@ export function useDailyPlan() {
               return hasCalisthenicsTag;
             }
             // 'mixed' includes all workout tasks
+          }
+          
+          // Filter study tasks based on study_focus preference
+          if (category === 'study' && tags && relevantStudyTags.length > 0) {
+            const hasRelevantTag = tags.some(tag => relevantStudyTags.includes(tag.toLowerCase()));
+            const genericTags = ['flashcards', 'review', 'quiz', 'testing', 'reading', 'writing', 'research', 'notes', 'planning'];
+            const isGenericTask = tags.some(tag => genericTags.includes(tag.toLowerCase()));
+            return hasRelevantTag || isGenericTask;
           }
           
           return true;
