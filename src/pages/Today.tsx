@@ -23,6 +23,12 @@ export default function Today() {
   const [showLock, setShowLock] = useState(true);
   const prevCanUnlockRef = useRef<boolean | null>(null);
 
+  // Compute values needed for hooks (before any conditional returns)
+  const completedCount = plan?.items.filter(i => i.is_done).length ?? 0;
+  const totalCount = plan?.items.length ?? 0;
+  const hasProductiveTask = plan?.items.some(i => i.category === 'productive' && i.is_done);
+  const canUnlockRest = hasProductiveTask || completedCount >= Math.ceil(totalCount * 0.5);
+
   // Update time every minute for greeting changes
   useEffect(() => {
     const interval = setInterval(() => {
@@ -31,6 +37,28 @@ export default function Today() {
     return () => clearInterval(interval);
   }, []);
 
+  // Detect when rest tasks become unlocked and trigger animation
+  useEffect(() => {
+    if (prevCanUnlockRef.current === false && canUnlockRest === true) {
+      setIsUnlocking(true);
+    }
+    prevCanUnlockRef.current = canUnlockRest;
+  }, [canUnlockRest]);
+
+  // Reset lock visibility when canUnlockRest changes to false (e.g., user unchecks productive task)
+  useEffect(() => {
+    if (!canUnlockRest) {
+      setShowLock(true);
+      setIsUnlocking(false);
+    }
+  }, [canUnlockRest]);
+
+  const handleUnlockComplete = () => {
+    setIsUnlocking(false);
+    setShowLock(false);
+  };
+
+  // Early returns AFTER all hooks
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -43,38 +71,11 @@ export default function Today() {
     return <Navigate to="/auth" replace />;
   }
 
-  const completedCount = plan?.items.filter(i => i.is_done).length ?? 0;
-  const totalCount = plan?.items.length ?? 0;
+  // Derived values for rendering
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
   const allComplete = completedCount === totalCount && totalCount > 0;
   const rerollsLeft = 1 - (plan?.rerolls_used ?? 0);
-
-  // Check task completion for urgency messaging
   const remainingTasks = totalCount - completedCount;
-  const hasProductiveTask = plan?.items.some(i => i.category === 'productive' && i.is_done);
-  const restTasks = plan?.items.filter(i => i.category === 'rest') ?? [];
-  const canUnlockRest = hasProductiveTask || completedCount >= Math.ceil(totalCount * 0.5);
-
-  // Detect when rest tasks become unlocked and trigger animation
-  useEffect(() => {
-    if (prevCanUnlockRef.current === false && canUnlockRest === true) {
-      setIsUnlocking(true);
-    }
-    prevCanUnlockRef.current = canUnlockRest;
-  }, [canUnlockRest]);
-
-  const handleUnlockComplete = () => {
-    setIsUnlocking(false);
-    setShowLock(false);
-  };
-
-  // Reset lock visibility when canUnlockRest changes to false (e.g., user unchecks productive task)
-  useEffect(() => {
-    if (!canUnlockRest) {
-      setShowLock(true);
-      setIsUnlocking(false);
-    }
-  }, [canUnlockRest]);
 
   // Urgency message based on progress
   const getUrgencyMessage = () => {
