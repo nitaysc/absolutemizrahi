@@ -4,7 +4,7 @@ const TIMER_STORAGE_KEY = "daily-planner-timer";
 
 interface TimerState {
   isRunning: boolean;
-  startTime: number | null;
+  lastTickTime: number | null;
   elapsed: number;
   isPaused: boolean;
 }
@@ -13,26 +13,27 @@ export function useTimer() {
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const [startTime, setStartTime] = useState<number | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const hasRestoredRef = useRef(false);
 
   // Load saved timer state on mount
   useEffect(() => {
+    if (hasRestoredRef.current) return;
+    hasRestoredRef.current = true;
+
     const saved = localStorage.getItem(TIMER_STORAGE_KEY);
     if (saved) {
       try {
         const state: TimerState = JSON.parse(saved);
-        if (state.isRunning && state.startTime && !state.isPaused) {
-          // Timer was running when user left - calculate elapsed time in seconds
+        if (state.isRunning && state.lastTickTime && !state.isPaused) {
+          // Timer was running - add time that passed since last tick
           const now = Date.now();
-          const secondsSinceStart = Math.floor((now - state.startTime) / 1000);
-          const totalElapsed = state.elapsed + secondsSinceStart;
-          setElapsed(totalElapsed);
-          setStartTime(now);
+          const secondsSinceLastTick = Math.floor((now - state.lastTickTime) / 1000);
+          setElapsed(state.elapsed + secondsSinceLastTick);
           setIsRunning(true);
           setIsPaused(false);
         } else if (state.isPaused) {
-          // Timer was paused - restore elapsed seconds
+          // Timer was paused - just restore elapsed
           setElapsed(state.elapsed);
           setIsRunning(false);
           setIsPaused(true);
@@ -44,22 +45,22 @@ export function useTimer() {
     }
   }, []);
 
-  // Save timer state whenever it changes
+  // Save timer state - but only save lastTickTime when running
   useEffect(() => {
     const state: TimerState = {
       isRunning,
-      startTime,
+      lastTickTime: isRunning && !isPaused ? Date.now() : null,
       elapsed,
       isPaused,
     };
     localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(state));
-  }, [isRunning, startTime, elapsed, isPaused]);
+  }, [isRunning, elapsed, isPaused]);
 
   // Timer tick - increment by 1 second
   useEffect(() => {
     if (isRunning && !isPaused) {
       intervalRef.current = setInterval(() => {
-        setElapsed(prev => prev + 1); // Increment by 1 second
+        setElapsed(prev => prev + 1);
       }, 1000);
     } else {
       if (intervalRef.current) {
@@ -76,7 +77,6 @@ export function useTimer() {
   }, [isRunning, isPaused]);
 
   const start = useCallback(() => {
-    setStartTime(Date.now());
     setIsRunning(true);
     setIsPaused(false);
   }, []);
@@ -87,7 +87,6 @@ export function useTimer() {
   }, []);
 
   const resume = useCallback(() => {
-    setStartTime(Date.now());
     setIsRunning(true);
     setIsPaused(false);
   }, []);
@@ -96,11 +95,10 @@ export function useTimer() {
     setIsRunning(false);
     setIsPaused(false);
     setElapsed(0);
-    setStartTime(null);
     localStorage.removeItem(TIMER_STORAGE_KEY);
   }, []);
 
-  // Format time - elapsed is now in seconds
+  // Format time - elapsed is in seconds
   const formatTime = useCallback((totalSeconds: number) => {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
