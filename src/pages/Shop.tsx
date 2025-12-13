@@ -169,9 +169,16 @@ export default function Shop() {
                   transition={{ delay: index * 0.1 }}
                   className="relative rounded-xl bg-background/50 p-2 text-center border border-amber-500/20"
                 >
+                  {/* Discount badge */}
                   <div className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full bg-amber-500 text-[10px] font-bold text-white">
                     -{item.discountPercent}%
                   </div>
+                  {/* Popular badge on first item */}
+                  {index === 0 && (
+                    <div className="absolute -top-1 -left-1 px-1.5 py-0.5 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center gap-0.5">
+                      🔥 Hot
+                    </div>
+                  )}
                   <div className="text-xl mb-1">
                     {(item.metadata as any)?.emoji || (item.metadata as any)?.icon || "🎁"}
                   </div>
@@ -182,6 +189,7 @@ export default function Shop() {
                     </span>
                     {Math.floor(item.price * (1 - item.discountPercent / 100))} 🔥
                   </p>
+                  <p className="text-[8px] text-amber-300/70 mt-0.5">Only today</p>
                 </motion.div>
               ))}
             </div>
