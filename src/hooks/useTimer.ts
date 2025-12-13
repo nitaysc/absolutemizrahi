@@ -23,15 +23,16 @@ export function useTimer() {
       try {
         const state: TimerState = JSON.parse(saved);
         if (state.isRunning && state.startTime && !state.isPaused) {
-          // Timer was running when user left - calculate elapsed time
+          // Timer was running when user left - calculate elapsed time in seconds
           const now = Date.now();
-          const totalElapsed = state.elapsed + (now - state.startTime);
+          const secondsSinceStart = Math.floor((now - state.startTime) / 1000);
+          const totalElapsed = state.elapsed + secondsSinceStart;
           setElapsed(totalElapsed);
           setStartTime(now);
           setIsRunning(true);
           setIsPaused(false);
         } else if (state.isPaused) {
-          // Timer was paused
+          // Timer was paused - restore elapsed seconds
           setElapsed(state.elapsed);
           setIsRunning(false);
           setIsPaused(true);
@@ -54,17 +55,11 @@ export function useTimer() {
     localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(state));
   }, [isRunning, startTime, elapsed, isPaused]);
 
-  // Timer tick
+  // Timer tick - increment by 1 second
   useEffect(() => {
     if (isRunning && !isPaused) {
       intervalRef.current = setInterval(() => {
-        if (startTime) {
-          const now = Date.now();
-          setElapsed(prev => {
-            const base = prev - (prev % 1000); // Keep base from when we started
-            return prev + 1000;
-          });
-        }
+        setElapsed(prev => prev + 1); // Increment by 1 second
       }, 1000);
     } else {
       if (intervalRef.current) {
@@ -78,7 +73,7 @@ export function useTimer() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isRunning, isPaused, startTime]);
+  }, [isRunning, isPaused]);
 
   const start = useCallback(() => {
     setStartTime(Date.now());
@@ -105,8 +100,8 @@ export function useTimer() {
     localStorage.removeItem(TIMER_STORAGE_KEY);
   }, []);
 
-  const formatTime = useCallback((ms: number) => {
-    const totalSeconds = Math.floor(ms / 1000);
+  // Format time - elapsed is now in seconds
+  const formatTime = useCallback((totalSeconds: number) => {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
