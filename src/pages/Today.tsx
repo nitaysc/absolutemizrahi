@@ -30,12 +30,26 @@ export default function Today() {
   const [showCoinPopup, setShowCoinPopup] = useState(false);
   const [coinAmount, setCoinAmount] = useState(0);
   const [coinReason, setCoinReason] = useState("");
+  
+  // Track which tasks have been rewarded to prevent exploit
+  const rewardedTasksRef = useRef<Set<string>>(new Set());
 
   // Compute values needed for hooks (before any conditional returns)
   const completedCount = plan?.items.filter(i => i.is_done).length ?? 0;
   const totalCount = plan?.items.length ?? 0;
   const hasProductiveTask = plan?.items.some(i => i.category === 'productive' && i.is_done);
   const canUnlockRest = hasProductiveTask || completedCount >= Math.ceil(totalCount * 0.5);
+
+  // Initialize rewarded tasks with already-completed tasks on load
+  useEffect(() => {
+    if (plan?.items) {
+      plan.items.forEach(item => {
+        if (item.is_done) {
+          rewardedTasksRef.current.add(item.id);
+        }
+      });
+    }
+  }, [plan?.id]); // Only run when plan changes (new day or reroll)
 
   // Update time every minute for greeting changes
   useEffect(() => {
@@ -195,7 +209,9 @@ export default function Today() {
                     isCompleted={item.is_done}
                     onToggle={isLocked ? async () => {} : async (id) => {
                       const wasCompleted = await toggleTask(id);
-                      if (wasCompleted) {
+                      // Only award coins if task was completed AND hasn't been rewarded yet today
+                      if (wasCompleted && !rewardedTasksRef.current.has(id)) {
+                        rewardedTasksRef.current.add(id);
                         awardTaskComplete();
                         setCoinAmount(COIN_REWARDS.task_complete);
                         setCoinReason("Task completed!");
