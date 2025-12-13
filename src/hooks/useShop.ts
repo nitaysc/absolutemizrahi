@@ -182,7 +182,9 @@ export function useShop() {
     },
     onSuccess: () => {
       haptics.medium();
+      // Refresh inventory and equipped theme so accent color updates instantly
       queryClient.invalidateQueries({ queryKey: ["user-inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["equipped-theme", user?.id] });
       toast({
         title: "✨ Equipped!",
         description: "Your new style is active",

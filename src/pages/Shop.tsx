@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
@@ -22,6 +22,7 @@ export default function Shop() {
   const { shopItems, userCoins, userStreak, loading } = useShop();
   const [activeCategory, setActiveCategory] = useState("all");
   const [previewItem, setPreviewItem] = useState<ShopItem | null>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
 
   if (authLoading) {
     return (
@@ -40,6 +41,12 @@ export default function Shop() {
     return item.category === activeCategory;
   });
 
+  const handlePreview = (item: ShopItem) => {
+    setPreviewItem(item);
+    // Ensure the preview is visible, especially on mobile
+    previewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   // Group by rarity for better display
   const groupedItems = {
     common: filteredItems?.filter((i) => i.rarity === "common") ?? [],
@@ -53,8 +60,10 @@ export default function Shop() {
       <div className="app-container pt-2">
         <ShopHeader coins={userCoins} streak={userStreak} />
 
-        {/* Live Preview */}
-        <ShopPreview item={previewItem} />
+        <div ref={previewRef}>
+          {/* Live Preview */}
+          <ShopPreview item={previewItem} />
+        </div>
 
         {/* Category Tabs */}
         <Tabs value={activeCategory} onValueChange={setActiveCategory} className="mt-4">
@@ -83,7 +92,7 @@ export default function Shop() {
                   <ItemSection
                     title="✨ Legendary"
                     items={groupedItems.legendary}
-                    onPreview={setPreviewItem}
+                    onPreview={handlePreview}
                   />
                 )}
 
@@ -92,7 +101,7 @@ export default function Shop() {
                   <ItemSection
                     title="💜 Epic"
                     items={groupedItems.epic}
-                    onPreview={setPreviewItem}
+                    onPreview={handlePreview}
                   />
                 )}
 
@@ -101,7 +110,7 @@ export default function Shop() {
                   <ItemSection
                     title="💙 Rare"
                     items={groupedItems.rare}
-                    onPreview={setPreviewItem}
+                    onPreview={handlePreview}
                   />
                 )}
 
@@ -110,7 +119,7 @@ export default function Shop() {
                   <ItemSection
                     title="Common"
                     items={groupedItems.common}
-                    onPreview={setPreviewItem}
+                    onPreview={handlePreview}
                   />
                 )}
               </div>
