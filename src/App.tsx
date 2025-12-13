@@ -11,12 +11,13 @@ import Today from "./pages/Today";
 import Calendar from "./pages/Calendar";
 import Stats from "./pages/Stats";
 import Profile from "./pages/Profile";
+import Shop from "./pages/Shop";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const mainRoutes = ["/", "/calendar", "/stats", "/profile"];
+const mainRoutes = ["/", "/calendar", "/stats", "/shop", "/profile"];
 
 function AppRoutes() {
   const location = useLocation();
@@ -31,6 +32,7 @@ function AppRoutes() {
           <Route path="/auth" element={<Auth />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/stats" element={<Stats />} />
+          <Route path="/shop" element={<Shop />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

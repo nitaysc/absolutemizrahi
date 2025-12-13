@@ -1,11 +1,12 @@
 import { motion } from "framer-motion";
-import { Calendar, BarChart3, User, Flame } from "lucide-react";
+import { Calendar, BarChart3, User, Flame, ShoppingBag } from "lucide-react";
 import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import { hapticFeedback } from "@/hooks/useHaptics";
 
 const navItems = [
   { to: "/", icon: Flame, label: "Today" },
   { to: "/calendar", icon: Calendar, label: "Calendar" },
+  { to: "/shop", icon: ShoppingBag, label: "Shop" },
   { to: "/stats", icon: BarChart3, label: "Stats" },
   { to: "/profile", icon: User, label: "Profile" },
 ];

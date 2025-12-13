@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      coin_transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          reason: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          reason?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coin_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_plan_items: {
         Row: {
           category: string
@@ -108,6 +140,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          coins: number | null
           created_at: string | null
           daily_time: string | null
           display_name: string | null
@@ -122,6 +155,7 @@ export type Database = {
           workout_style: string | null
         }
         Insert: {
+          coins?: number | null
           created_at?: string | null
           daily_time?: string | null
           display_name?: string | null
@@ -136,6 +170,7 @@ export type Database = {
           workout_style?: string | null
         }
         Update: {
+          coins?: number | null
           created_at?: string | null
           daily_time?: string | null
           display_name?: string | null
@@ -148,6 +183,42 @@ export type Database = {
           training_split?: string | null
           updated_at?: string | null
           workout_style?: string | null
+        }
+        Relationships: []
+      }
+      shop_items: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          metadata: Json | null
+          name: string
+          price: number
+          rarity: string | null
+          streak_requirement: number | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          name: string
+          price?: number
+          rarity?: string | null
+          streak_requirement?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          name?: string
+          price?: number
+          rarity?: string | null
+          streak_requirement?: number | null
         }
         Relationships: []
       }
@@ -221,6 +292,45 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      user_inventory: {
+        Row: {
+          id: string
+          is_equipped: boolean | null
+          item_id: string
+          purchased_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_equipped?: boolean | null
+          item_id: string
+          purchased_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_equipped?: boolean | null
+          item_id?: string
+          purchased_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_inventory_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "shop_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_inventory_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

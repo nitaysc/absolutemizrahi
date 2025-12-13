@@ -4,11 +4,13 @@ import { DailyHeader } from "@/components/daily-header";
 import { DailyIdentity } from "@/components/DailyIdentity";
 import { TaskCard, TaskCategory } from "@/components/task-card";
 import { TimerWidget } from "@/components/TimerWidget";
+import { CoinEarnedPopup } from "@/components/shop/CoinEarnedPopup";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, PartyPopper, Loader2, Lock } from "lucide-react";
 import { useDailyPlan } from "@/hooks/useDailyPlan";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useCoins } from "@/hooks/useCoins";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { LockBreakAnimation } from "@/components/ui/lock-break-animation";
@@ -17,11 +19,17 @@ export default function Today() {
   const { user, loading: authLoading } = useAuth();
   const { plan, loading, streak, toggleTask, rerollPlan, completeDay, refetch } = useDailyPlan();
   const { profile } = useUserProfile();
+  const { awardTaskComplete, awardDailyBonus, awardStreakBonus, COIN_REWARDS } = useCoins();
   const haptics = useHaptics();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [showLock, setShowLock] = useState(true);
   const prevCanUnlockRef = useRef<boolean | null>(null);
+  
+  // Coin popup state
+  const [showCoinPopup, setShowCoinPopup] = useState(false);
+  const [coinAmount, setCoinAmount] = useState(0);
+  const [coinReason, setCoinReason] = useState("");
 
   // Compute values needed for hooks (before any conditional returns)
   const completedCount = plan?.items.filter(i => i.is_done).length ?? 0;
@@ -185,7 +193,15 @@ export default function Today() {
                     category={item.category as TaskCategory}
                     duration={item.duration_min ?? undefined}
                     isCompleted={item.is_done}
-                    onToggle={isLocked ? () => {} : toggleTask}
+                    onToggle={isLocked ? async () => {} : async (id) => {
+                      const wasCompleted = await toggleTask(id);
+                      if (wasCompleted) {
+                        awardTaskComplete();
+                        setCoinAmount(COIN_REWARDS.task_complete);
+                        setCoinReason("Task completed!");
+                        setShowCoinPopup(true);
+                      }
+                    }}
                     index={index}
                   />
                 </div>
@@ -218,9 +234,24 @@ export default function Today() {
             >
               <Button 
                 className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-                onClick={() => {
+                onClick={async () => {
                   haptics.success();
-                  completeDay();
+                  const newStreak = await completeDay();
+                  if (newStreak !== null) {
+                    // Award daily bonus
+                    awardDailyBonus();
+                    let totalBonus = COIN_REWARDS.daily_bonus;
+                    
+                    // Check for streak milestones
+                    const streakBonus = awardStreakBonus(newStreak);
+                    if (streakBonus > 0) {
+                      totalBonus += streakBonus;
+                    }
+                    
+                    setCoinAmount(totalBonus);
+                    setCoinReason(streakBonus > 0 ? `Day complete + ${newStreak}-day streak bonus!` : "Day completed!");
+                    setShowCoinPopup(true);
+                  }
                 }}
               >
                 <PartyPopper className="w-5 h-5 mr-2" />
@@ -229,6 +260,14 @@ export default function Today() {
             </motion.div>
           </motion.div>
         )}
+
+        {/* Coin Earned Popup */}
+        <CoinEarnedPopup
+          show={showCoinPopup}
+          amount={coinAmount}
+          reason={coinReason}
+          onComplete={() => setShowCoinPopup(false)}
+        />
       </div>
     </div>
   );
