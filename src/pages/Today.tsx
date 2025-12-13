@@ -150,8 +150,9 @@ export default function Today() {
           <div className="space-y-3">
             {plan?.items.map((item, index) => {
               const isRestTask = item.category === 'rest';
-              const isLocked = isRestTask && !canUnlockRest && !item.is_done && showLock;
-              const shouldShowBreakAnimation = isRestTask && isUnlocking;
+              // Show lock if rest task is not unlocked and not completed - ignore showLock state during animation interruption
+              const isLocked = isRestTask && !canUnlockRest && !item.is_done;
+              const shouldShowBreakAnimation = isRestTask && isUnlocking && canUnlockRest;
               
               return (
                 <div key={item.id} className="relative">
