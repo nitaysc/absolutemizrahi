@@ -4,7 +4,6 @@ import { DailyHeader } from "@/components/daily-header";
 import { DailyIdentity } from "@/components/DailyIdentity";
 import { TaskCard, TaskCategory } from "@/components/task-card";
 import { TimerWidget } from "@/components/TimerWidget";
-import { SpinWheel } from "@/components/SpinWheel";
 import { CoinEarnedPopup } from "@/components/shop/CoinEarnedPopup";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -151,11 +150,8 @@ export default function Today() {
           displayName={profile?.display_name}
         />
 
-        {/* Daily Identity + Spin Wheel */}
-        <div className="flex items-center justify-between mb-2">
-          <DailyIdentity date={currentTime} />
-          <SpinWheel />
-        </div>
+        {/* Daily Identity */}
+        <DailyIdentity date={currentTime} />
 
         {/* Timer Widget */}
         <TimerWidget />

@@ -85,6 +85,13 @@ export function SpinWheel() {
   const hasSpunRef = useRef(false);
   const tickIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // For testing: reset spin on component mount
+  useEffect(() => {
+    if (user) {
+      localStorage.removeItem(getSpinKey(user.id));
+    }
+  }, [user]);
+
   const hasSpunToday = user ? localStorage.getItem(getSpinKey(user.id)) === "true" : false;
 
   // Cleanup tick interval
