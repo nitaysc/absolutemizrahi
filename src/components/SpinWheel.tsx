@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Flame } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCoins } from "@/hooks/useCoins";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -126,8 +127,8 @@ export function SpinWheel() {
 
     const segment = WHEEL_SEGMENTS[selectedIndex];
 
-    // Calculate rotation
-    const extraSpins = 6 + Math.random() * 2;
+    // Calculate rotation - slower spin with fewer rotations
+    const extraSpins = 4 + Math.random() * 1.5;
     const segmentCenter = selectedIndex * SEGMENT_ANGLE + SEGMENT_ANGLE / 2;
     const finalRotation = extraSpins * 360 + (360 - segmentCenter + 90);
 
@@ -143,7 +144,7 @@ export function SpinWheel() {
       }
     }, 80);
 
-    // After spin completes
+    // After spin completes - longer duration for slower spin
     setTimeout(() => {
       if (tickIntervalRef.current) clearInterval(tickIntervalRef.current);
       setIsSpinning(false);
@@ -162,7 +163,7 @@ export function SpinWheel() {
         localStorage.setItem(getSpinKey(user.id), "true");
         addCoins({ amount: segment.coins, reason: "daily_bonus" });
       }, 800);
-    }, 4500);
+    }, 6000);
   };
 
   const removeCoin = (id: number) => {
@@ -309,8 +310,8 @@ export function SpinWheel() {
                 }}
                 animate={{ rotate: rotation }}
                 transition={{
-                  duration: 4.5,
-                  ease: [0.2, 0.9, 0.3, 1],
+                  duration: 6,
+                  ease: [0.15, 0.85, 0.25, 1],
                 }}
               >
                 {/* Segment dividers and labels */}
@@ -328,11 +329,11 @@ export function SpinWheel() {
                           background: "linear-gradient(90deg, transparent 0%, rgba(251,146,60,0.3) 50%, rgba(251,146,60,0.6) 100%)",
                         }}
                       />
-                      {/* Label */}
+                      {/* Label - moved closer to center */}
                       <div
                         className="absolute top-1/2 left-1/2 origin-left flex items-center"
                         style={{
-                          transform: `rotate(${labelAngle}deg) translateX(35px)`,
+                          transform: `rotate(${labelAngle}deg) translateX(55px)`,
                         }}
                       >
                         <span
@@ -341,7 +342,7 @@ export function SpinWheel() {
                             textShadow: "0 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(251,146,60,0.5)",
                           }}
                         >
-                          <span className="text-base">🔥</span>
+                          <Flame className="w-4 h-4 text-primary" fill="hsl(var(--primary))" />
                           {segment.coins}
                         </span>
                       </div>
@@ -357,13 +358,12 @@ export function SpinWheel() {
                     boxShadow: "inset 0 -4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(251,146,60,0.4)",
                   }}
                 >
-                  <motion.span
-                    className="text-2xl"
+                  <motion.div
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
                   >
-                    🔥
-                  </motion.span>
+                    <Flame className="w-7 h-7 text-primary" fill="hsl(var(--primary))" />
+                  </motion.div>
                 </div>
               </motion.div>
 
