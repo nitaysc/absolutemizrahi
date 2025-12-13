@@ -68,12 +68,13 @@ export default function Today() {
     setShowLock(false);
   };
 
-  // Reset lock visibility when plan changes
+  // Reset lock visibility when canUnlockRest changes to false (e.g., user unchecks productive task)
   useEffect(() => {
     if (!canUnlockRest) {
       setShowLock(true);
+      setIsUnlocking(false);
     }
-  }, [plan?.id, canUnlockRest]);
+  }, [canUnlockRest]);
 
   // Urgency message based on progress
   const getUrgencyMessage = () => {
