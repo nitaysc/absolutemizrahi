@@ -180,11 +180,12 @@ export function useShop() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       haptics.medium();
-      // Refresh inventory and equipped theme so accent color updates instantly
+      // Refresh inventory and equipped items so they update instantly
       queryClient.invalidateQueries({ queryKey: ["user-inventory"] });
       queryClient.invalidateQueries({ queryKey: ["equipped-theme", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["equipped-avatar", user?.id] });
       toast({
         title: "✨ Equipped!",
         description: "Your new style is active",
@@ -208,8 +209,9 @@ export function useShop() {
     onSuccess: () => {
       haptics.light();
       queryClient.invalidateQueries({ queryKey: ["user-inventory"] });
-      // Also refresh equipped theme so accent color resets when unequipping a theme
+      // Refresh equipped items so they reset when unequipping
       queryClient.invalidateQueries({ queryKey: ["equipped-theme", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["equipped-avatar", user?.id] });
     },
   });
 
