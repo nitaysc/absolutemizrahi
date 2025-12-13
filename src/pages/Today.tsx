@@ -3,8 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DailyHeader } from "@/components/daily-header";
 import { DailyIdentity } from "@/components/DailyIdentity";
 import { TaskCard, TaskCategory } from "@/components/task-card";
-import { TimerWidget } from "@/components/TimerWidget";
-import { NotesWidget } from "@/components/NotesWidget";
 import { CoinEarnedPopup } from "@/components/shop/CoinEarnedPopup";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -153,12 +151,6 @@ export default function Today() {
 
         {/* Daily Identity */}
         <DailyIdentity date={currentTime} />
-
-        {/* Timer Widget */}
-        <TimerWidget />
-
-        {/* Notes Widget */}
-        <NotesWidget />
 
         {/* Urgency Message */}
         <AnimatePresence mode="wait">
