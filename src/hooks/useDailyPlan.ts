@@ -188,11 +188,11 @@ export function useDailyPlan() {
     setLoading(false);
   }, [user, today, generatePlan]);
 
-  const toggleTask = async (itemId: string) => {
-    if (!plan) return;
+  const toggleTask = async (itemId: string): Promise<boolean> => {
+    if (!plan) return false;
 
     const item = plan.items.find(i => i.id === itemId);
-    if (!item) return;
+    if (!item) return false;
 
     const newIsDone = !item.is_done;
 
@@ -206,7 +206,7 @@ export function useDailyPlan() {
 
     if (error) {
       toast({ title: "Error", description: "Failed to update task", variant: "destructive" });
-      return;
+      return false;
     }
 
     setPlan(prev => prev ? {
@@ -215,6 +215,9 @@ export function useDailyPlan() {
         i.id === itemId ? { ...i, is_done: newIsDone } : i
       )
     } : null);
+
+    // Return whether task was completed (for coin rewards)
+    return newIsDone;
   };
 
   const rerollPlan = async () => {
@@ -290,8 +293,8 @@ export function useDailyPlan() {
     await fetchPlan();
   };
 
-  const completeDay = async () => {
-    if (!plan || !user) return;
+  const completeDay = async (): Promise<number | null> => {
+    if (!plan || !user) return null;
 
     const completedCount = plan.items.filter(i => i.is_done).length;
     const requiredCount = Math.ceil(plan.items.length * 0.6); // 60% required
@@ -302,7 +305,7 @@ export function useDailyPlan() {
         description: `Complete at least ${requiredCount} tasks to finish the day`,
         variant: "destructive" 
       });
-      return;
+      return null;
     }
 
     // Update streak
@@ -312,12 +315,13 @@ export function useDailyPlan() {
       .eq('user_id', user.id)
       .single();
 
+    let newStreak = 1;
+
     if (currentStreak) {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-      let newStreak = 1;
       if (currentStreak.last_completed_date === yesterdayStr) {
         newStreak = currentStreak.current_streak + 1;
       } else if (currentStreak.last_completed_date === today) {
@@ -339,6 +343,9 @@ export function useDailyPlan() {
     }
 
     toast({ title: "🎉 Day completed!", description: "Great job! Keep the streak going!" });
+    
+    // Return new streak for coin bonus calculation
+    return newStreak;
   };
 
   useEffect(() => {
