@@ -1,6 +1,7 @@
 import { motion, AnimatePresence, Easing } from "framer-motion";
 import { useState } from "react";
 import { useTimer } from "@/hooks/useTimer";
+import { useHaptics } from "@/hooks/useHaptics";
 import { Play, Pause, Square, Timer, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -9,6 +10,7 @@ const easeInOut: Easing = "easeInOut";
 export function TimerWidget() {
   const { isRunning, isPaused, elapsed, formattedTime, start, pause, resume, stop } = useTimer();
   const [isExpanded, setIsExpanded] = useState(false);
+  const haptics = useHaptics();
 
   const hasActiveTimer = isRunning || isPaused || elapsed > 0;
 
@@ -51,7 +53,10 @@ export function TimerWidget() {
     >
       {/* Header - always visible */}
       <motion.button
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => {
+          haptics.selection();
+          setIsExpanded(!isExpanded);
+        }}
         className="w-full flex items-center justify-between p-4 hover:bg-muted/20 transition-colors"
         whileTap={{ scale: 0.98 }}
       >
@@ -162,7 +167,10 @@ export function TimerWidget() {
                     transition={{ type: "spring", stiffness: 400, damping: 20 }}
                   >
                     <Button
-                      onClick={start}
+                      onClick={() => {
+                        haptics.medium();
+                        start();
+                      }}
                       size="lg"
                       className="h-14 w-14 rounded-full bg-primary hover:bg-primary/90"
                     >
@@ -178,7 +186,10 @@ export function TimerWidget() {
                     transition={{ type: "spring", stiffness: 400, damping: 20 }}
                   >
                     <Button
-                      onClick={pause}
+                      onClick={() => {
+                        haptics.light();
+                        pause();
+                      }}
                       size="lg"
                       className="h-14 w-14 rounded-full bg-amber-500 hover:bg-amber-500/90"
                     >
@@ -195,7 +206,10 @@ export function TimerWidget() {
                       transition={{ type: "spring", stiffness: 400, damping: 20 }}
                     >
                       <Button
-                        onClick={resume}
+                        onClick={() => {
+                          haptics.medium();
+                          resume();
+                        }}
                         size="lg"
                         className="h-14 w-14 rounded-full bg-primary hover:bg-primary/90"
                       >
@@ -208,7 +222,10 @@ export function TimerWidget() {
                       transition={{ type: "spring", stiffness: 400, damping: 20, delay: 0.1 }}
                     >
                       <Button
-                        onClick={stop}
+                        onClick={() => {
+                          haptics.heavy();
+                          stop();
+                        }}
                         size="lg"
                         variant="outline"
                         className="h-14 w-14 rounded-full border-destructive text-destructive hover:bg-destructive/10"
@@ -226,7 +243,10 @@ export function TimerWidget() {
                     transition={{ type: "spring", stiffness: 400, damping: 20, delay: 0.1 }}
                   >
                     <Button
-                      onClick={stop}
+                      onClick={() => {
+                        haptics.heavy();
+                        stop();
+                      }}
                       size="lg"
                       variant="outline"
                       className="h-14 w-14 rounded-full border-destructive text-destructive hover:bg-destructive/10"

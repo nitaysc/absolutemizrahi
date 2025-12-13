@@ -5,6 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useUserProfile, UserProfile } from "@/hooks/useUserProfile";
+import { useHaptics } from "@/hooks/useHaptics";
 import { EditPreferencesSheet } from "@/components/profile/EditPreferencesSheet";
 import { DataManagementSheet } from "@/components/profile/DataManagement";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -41,6 +42,7 @@ export default function Profile() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { profile, loading: profileLoading, updateProfile } = useUserProfile();
+  const haptics = useHaptics();
   const navigate = useNavigate();
   
   const [editOpen, setEditOpen] = useState(false);
@@ -72,7 +74,9 @@ export default function Profile() {
   };
 
   const handleNotificationToggle = async () => {
+    haptics.selection();
     if (!('Notification' in window)) {
+      haptics.error();
       toast.error('Notifications not supported on this device');
       return;
     }
@@ -81,10 +85,12 @@ export default function Profile() {
       setNotificationsEnabled(false);
       toast.info('Notifications disabled');
     } else if (Notification.permission === 'denied') {
+      haptics.warning();
       toast.error('Notifications blocked. Enable in browser settings.');
     } else {
       const permission = await Notification.requestPermission();
       if (permission === 'granted') {
+        haptics.success();
         setNotificationsEnabled(true);
         toast.success('Notifications enabled');
       }
@@ -211,14 +217,20 @@ export default function Profile() {
               <span className="flex-1 text-foreground">Dark Mode</span>
               <Switch 
                 checked={theme === 'dark'} 
-                onCheckedChange={toggleTheme}
+                onCheckedChange={() => {
+                  haptics.selection();
+                  toggleTheme();
+                }}
               />
             </div>
 
             {/* Data Management */}
             <motion.button
               whileTap={{ scale: 0.98 }}
-              onClick={() => setDataOpen(true)}
+              onClick={() => {
+                haptics.light();
+                setDataOpen(true);
+              }}
               className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted/30 transition-colors"
             >
               <Download className="w-5 h-5 text-muted-foreground" />

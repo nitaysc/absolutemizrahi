@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Calendar, BarChart3, User, Flame } from "lucide-react";
 import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
+import { hapticFeedback } from "@/hooks/useHaptics";
 
 const navItems = [
   { to: "/", icon: Flame, label: "Today" },
@@ -11,6 +12,12 @@ const navItems = [
 
 export function BottomNav() {
   const location = useLocation();
+
+  const handleNavClick = (to: string) => {
+    if (location.pathname !== to) {
+      hapticFeedback("selection");
+    }
+  };
 
   return (
     <motion.nav 
@@ -28,6 +35,7 @@ export function BottomNav() {
               <RouterNavLink
                 key={item.to}
                 to={item.to}
+                onClick={() => handleNavClick(item.to)}
                 className="flex flex-col items-center justify-center gap-0.5 px-5 py-2 touch-target"
               >
                 <motion.div 
