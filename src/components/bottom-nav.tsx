@@ -2,9 +2,10 @@ import { motion } from "framer-motion";
 import { Calendar, BarChart3, User, Flame, ShoppingBag } from "lucide-react";
 import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import { hapticFeedback } from "@/hooks/useHaptics";
+import { useTaskProgress } from "@/hooks/useTaskProgress";
 
 const navItems = [
-  { to: "/", icon: Flame, label: "Today" },
+  { to: "/", icon: Flame, label: "Today", showIndicator: true },
   { to: "/calendar", icon: Calendar, label: "Calendar" },
   { to: "/shop", icon: ShoppingBag, label: "Shop" },
   { to: "/stats", icon: BarChart3, label: "Stats" },
@@ -13,6 +14,7 @@ const navItems = [
 
 export function BottomNav() {
   const location = useLocation();
+  const { hasUnfinished } = useTaskProgress();
 
   const handleNavClick = (to: string) => {
     if (location.pathname !== to) {
@@ -31,6 +33,7 @@ export function BottomNav() {
         <div className="flex items-center justify-around h-16">
           {navItems.map((item) => {
             const isActive = location.pathname === item.to;
+            const showDot = item.showIndicator && hasUnfinished && !isActive;
             
             return (
               <RouterNavLink
@@ -63,6 +66,20 @@ export function BottomNav() {
                       className="absolute -inset-2 bg-primary/20 rounded-xl blur-md -z-10"
                       transition={{ type: "spring", stiffness: 400, damping: 30 }}
                     />
+                  )}
+                  {/* Unfinished tasks indicator */}
+                  {showDot && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-destructive rounded-full"
+                    >
+                      <motion.div
+                        animate={{ opacity: [1, 0.5, 1] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                        className="absolute inset-0 bg-destructive rounded-full"
+                      />
+                    </motion.div>
                   )}
                 </motion.div>
                 <motion.span 

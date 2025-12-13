@@ -4,11 +4,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { useShop, ShopItem } from "@/hooks/useShop";
 import { useThemePreview } from "@/contexts/ThemePreviewContext";
+import { useStreakShield } from "@/hooks/useStreakShield";
+import { useLimitedTimeItems } from "@/hooks/useLimitedTimeItems";
 import { ShopItemCard } from "@/components/shop/ShopItemCard";
 import { ShopHeader } from "@/components/shop/ShopHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Loader2, Palette, Flame, Trophy, Sparkles, X } from "lucide-react";
+import { Loader2, Palette, Flame, Trophy, Sparkles, X, Shield, Clock, Zap } from "lucide-react";
 
 const CATEGORIES = [
   { id: "all", label: "All", icon: Sparkles },
@@ -23,9 +25,12 @@ export default function Shop() {
   const { user, loading: authLoading } = useAuth();
   const { shopItems, userCoins, userStreak, loading } = useShop();
   const { setPreviewColor, clearPreview, previewColor } = useThemePreview();
+  const { shieldCount, purchaseShield, isPurchasing } = useStreakShield();
+  const { limitedItems, getTimeRemaining } = useLimitedTimeItems();
   const [activeCategory, setActiveCategory] = useState("all");
   const [previewItem, setPreviewItem] = useState<ShopItem | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState(getTimeRemaining());
 
   // Clear live preview when leaving shop
   useEffect(() => {
@@ -33,6 +38,14 @@ export default function Shop() {
       clearPreview();
     };
   }, [clearPreview]);
+
+  // Update countdown timer
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeRemaining(getTimeRemaining());
+    }, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, [getTimeRemaining]);
 
   if (authLoading) {
     return (
@@ -84,6 +97,96 @@ export default function Shop() {
     <div className="min-h-screen pb-28">
       <div className="app-container pt-2">
         <ShopHeader coins={userCoins} streak={userStreak} />
+
+        {/* Streak Shield Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-4 rounded-2xl border-2 border-blue-500/30 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 p-4 relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                <Shield className="w-6 h-6 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold flex items-center gap-2">
+                  Streak Shield
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
+                    {shieldCount} owned
+                  </span>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Protects your streak from 1 missed day
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => purchaseShield()}
+              disabled={isPurchasing || userCoins < 150}
+              className="bg-blue-500 hover:bg-blue-600 text-white"
+            >
+              {isPurchasing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>150 🔥</>
+              )}
+            </Button>
+          </div>
+          {/* Shield glow */}
+          <motion.div
+            animate={{ opacity: [0.1, 0.3, 0.1] }}
+            transition={{ duration: 3, repeat: Infinity }}
+            className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-cyan-500/20 to-blue-500/10 pointer-events-none"
+          />
+        </motion.div>
+
+        {/* Limited Time Deals */}
+        {limitedItems.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mt-4 rounded-2xl border-2 border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-orange-500/10 p-4"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-amber-400" />
+                <span className="text-sm font-semibold">Daily Deals</span>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-amber-400">
+                <Clock className="w-3 h-3" />
+                {timeRemaining.hours}h {timeRemaining.minutes}m left
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {limitedItems.map((item, index) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="relative rounded-xl bg-background/50 p-2 text-center border border-amber-500/20"
+                >
+                  <div className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full bg-amber-500 text-[10px] font-bold text-white">
+                    -{item.discountPercent}%
+                  </div>
+                  <div className="text-xl mb-1">
+                    {(item.metadata as any)?.emoji || (item.metadata as any)?.icon || "🎁"}
+                  </div>
+                  <p className="text-[10px] font-medium truncate">{item.name}</p>
+                  <p className="text-[10px] text-amber-400">
+                    <span className="line-through text-muted-foreground mr-1">
+                      {item.price}
+                    </span>
+                    {Math.floor(item.price * (1 - item.discountPercent / 100))} 🔥
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         <div ref={previewRef}>
           {/* Live Preview Banner */}
