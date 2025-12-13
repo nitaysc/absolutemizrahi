@@ -242,9 +242,10 @@ export default function Calendar() {
                     transition-all duration-200 relative
                     ${isToday && todayCompleted ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}
                     ${isToday && !todayCompleted ? 'ring-2 ring-muted-foreground/50 ring-offset-2 ring-offset-background' : ''}
-                    ${status === 'complete' ? 'bg-primary text-primary-foreground' : ''}
-                    ${status === 'missed' ? 'bg-destructive/20 text-destructive' : ''}
-                    ${status === 'future' || status === 'none' ? 'text-muted-foreground' : ''}
+                    ${status === 'complete' && isStreak ? 'bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.5)]' : ''}
+                    ${status === 'complete' && !isStreak ? 'bg-primary/80 text-primary-foreground' : ''}
+                    ${status === 'missed' ? 'bg-muted/50 text-muted-foreground/60' : ''}
+                    ${status === 'future' || status === 'none' ? 'text-muted-foreground/50' : ''}
                     ${status === 'today' && !todayCompleted ? 'text-foreground bg-muted' : ''}
                     hover:scale-105 active:scale-95
                   `}
@@ -289,11 +290,11 @@ export default function Calendar() {
               <span className="text-xs text-muted-foreground">Streak day</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-primary" />
+              <div className="w-3 h-3 rounded bg-primary/80" />
               <span className="text-xs text-muted-foreground">Complete</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-destructive/30" />
+              <div className="w-3 h-3 rounded bg-muted/50" />
               <span className="text-xs text-muted-foreground">Missed</span>
             </div>
           </div>

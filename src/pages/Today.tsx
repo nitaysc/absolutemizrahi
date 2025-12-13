@@ -6,6 +6,7 @@ import { TaskCard, TaskCategory } from "@/components/task-card";
 import { TimerWidget } from "@/components/TimerWidget";
 import { CoinEarnedPopup } from "@/components/shop/CoinEarnedPopup";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { RefreshCw, PartyPopper, Loader2, Lock } from "lucide-react";
 import { useDailyPlan } from "@/hooks/useDailyPlan";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -177,19 +178,28 @@ export default function Today() {
           transition={{ delay: 0.3 }}
           className="flex justify-end mb-4"
         >
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-muted-foreground hover:text-foreground"
-            onClick={() => {
-              haptics.medium();
-              rerollPlan();
-            }}
-            disabled={rerollsLeft <= 0 || loading}
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Reroll ({rerollsLeft} left)
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    haptics.medium();
+                    rerollPlan();
+                  }}
+                  disabled={rerollsLeft <= 0 || loading}
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Reroll ({rerollsLeft} left)
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                <p>Rerolls reset daily</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </motion.div>
 
         {/* Tasks */}
