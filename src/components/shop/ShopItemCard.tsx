@@ -128,7 +128,7 @@ export function ShopItemCard({ item, index, onPreview }: ShopItemCardProps) {
       </p>
 
       {/* Price or Actions */}
-      <div className="mt-3">
+      <div className="mt-3 space-y-1">
         {owned ? (
           <Button
             size="sm"
@@ -160,6 +160,16 @@ export function ShopItemCard({ item, index, onPreview }: ShopItemCardProps) {
             )}
           </Button>
         )}
+
+        {/* Explicit preview button so users can see effects before buying */}
+        <Button
+          size="icon"
+          variant="ghost"
+          className="w-full h-7 text-[11px] text-muted-foreground"
+          onClick={handlePreview}
+        >
+          Preview
+        </Button>
       </div>
 
       {/* Rarity Indicator */}
