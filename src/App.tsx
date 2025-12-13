@@ -21,7 +21,7 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const mainRoutes = ["/", "/calendar", "/stats", "/profile", "/timer", "/notes"];
+const mainRoutes = ["/", "/calendar", "/stats", "/shop", "/timer", "/notes", "/profile"];
 
 function AppRoutes() {
   const location = useLocation();
