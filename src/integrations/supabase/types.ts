@@ -149,6 +149,7 @@ export type Database = {
           has_dog: boolean | null
           id: string
           onboarding_complete: boolean | null
+          streak_shields: number | null
           study_focus: Json | null
           training_split: string | null
           updated_at: string | null
@@ -164,6 +165,7 @@ export type Database = {
           has_dog?: boolean | null
           id: string
           onboarding_complete?: boolean | null
+          streak_shields?: number | null
           study_focus?: Json | null
           training_split?: string | null
           updated_at?: string | null
@@ -179,6 +181,7 @@ export type Database = {
           has_dog?: boolean | null
           id?: string
           onboarding_complete?: boolean | null
+          streak_shields?: number | null
           study_focus?: Json | null
           training_split?: string | null
           updated_at?: string | null
@@ -188,10 +191,12 @@ export type Database = {
       }
       shop_items: {
         Row: {
+          available_until: string | null
           category: string
           created_at: string | null
           description: string | null
           id: string
+          is_limited_time: boolean | null
           metadata: Json | null
           name: string
           price: number
@@ -199,10 +204,12 @@ export type Database = {
           streak_requirement: number | null
         }
         Insert: {
+          available_until?: string | null
           category: string
           created_at?: string | null
           description?: string | null
           id?: string
+          is_limited_time?: boolean | null
           metadata?: Json | null
           name: string
           price?: number
@@ -210,10 +217,12 @@ export type Database = {
           streak_requirement?: number | null
         }
         Update: {
+          available_until?: string | null
           category?: string
           created_at?: string | null
           description?: string | null
           id?: string
+          is_limited_time?: boolean | null
           metadata?: Json | null
           name?: string
           price?: number
