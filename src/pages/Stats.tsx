@@ -109,10 +109,10 @@ export default function Stats() {
   }
 
   const stats = [
-    { label: "Workouts", value: taskCounts.workout, icon: Dumbbell, color: "text-workout", bg: "bg-workout/10" },
-    { label: "Study Sessions", value: taskCounts.study, icon: BookOpen, color: "text-study", bg: "bg-study/10" },
-    { label: "Tasks Done", value: taskCounts.total, icon: Sparkles, color: "text-productive", bg: "bg-productive/10" },
-    { label: "Best Streak", value: streak.longest, icon: Flame, color: "text-primary", bg: "bg-primary/10" },
+    { label: "Workouts", value: taskCounts.workout, icon: Dumbbell, color: "text-workout", bg: "bg-workout/10", hint: taskCounts.workout === 0 ? "Complete workout tasks" : null },
+    { label: "Study Sessions", value: taskCounts.study, icon: BookOpen, color: "text-study", bg: "bg-study/10", hint: taskCounts.study === 0 ? "Complete study tasks" : null },
+    { label: "Tasks Done", value: taskCounts.total, icon: Sparkles, color: "text-productive", bg: "bg-productive/10", hint: null },
+    { label: "Best Streak", value: streak.longest, icon: Flame, color: "text-primary", bg: "bg-primary/10", hint: streak.longest === 0 ? "Complete your first day" : null },
   ];
 
   // Only show real data - no fake placeholder data
@@ -206,6 +206,9 @@ export default function Stats() {
                     {stat.value}
                   </motion.p>
                   <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  {stat.hint && stat.value === 0 && (
+                    <p className="text-[10px] text-muted-foreground/60 mt-1">{stat.hint}</p>
+                  )}
                 </motion.div>
               ))}
             </div>
@@ -241,7 +244,7 @@ export default function Stats() {
                   transition={{ delay: 0.6 }}
                   className="text-sm text-muted-foreground mb-4"
                 >
-                  Complete a few more tasks to unlock weekly insights 📊
+                  {3 - taskCounts.total} more tasks to unlock weekly insights 👀
                 </motion.p>
               )}
               
@@ -278,13 +281,31 @@ export default function Stats() {
                   })}
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-32 text-center">
-                  <div className="space-y-2">
-                    <div className="text-4xl">📈</div>
-                    <p className="text-sm text-muted-foreground">
-                      Your weekly chart will appear here
-                    </p>
+                <div className="relative flex items-center justify-center h-32 text-center overflow-hidden">
+                  {/* Blurred preview chart */}
+                  <div className="absolute inset-0 flex items-end justify-between gap-2 px-4 blur-sm opacity-30">
+                    {[40, 65, 55, 80, 45, 70, 50].map((h, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ height: 0 }}
+                        animate={{ height: `${h}%` }}
+                        transition={{ delay: 0.5 + i * 0.1, duration: 0.5 }}
+                        className="flex-1 bg-primary/50 rounded-t"
+                      />
+                    ))}
                   </div>
+                  
+                  {/* Lock overlay */}
+                  <motion.div 
+                    className="relative z-10 space-y-2 bg-background/60 backdrop-blur-[2px] rounded-xl p-4"
+                    animate={{ scale: [1, 1.02, 1] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <div className="text-3xl">🔒</div>
+                    <p className="text-sm font-medium text-foreground">
+                      {3 - taskCounts.total} tasks away from insights
+                    </p>
+                  </motion.div>
                 </div>
               )}
               

@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Loader2, X, Flame } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, X, Flame, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,7 @@ export default function Calendar() {
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<DayDetails | null>(null);
   const [todayCompleted, setTodayCompleted] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
 
   const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   
@@ -172,11 +173,19 @@ export default function Calendar() {
           className="glass rounded-xl p-3 mb-4"
         >
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">This month</p>
-              <p className="text-lg font-semibold text-foreground">
-                {completedThisMonth}/{totalDaysSoFar} days completed
-              </p>
+            <div className="flex items-center gap-2">
+              <div>
+                <p className="text-sm text-muted-foreground">This month</p>
+                <p className="text-lg font-semibold text-foreground">
+                  {completedThisMonth}/{totalDaysSoFar} days completed
+                </p>
+              </div>
+              <button
+                onClick={() => setShowRulesModal(true)}
+                className="p-1.5 rounded-full hover:bg-muted/50 transition-colors"
+              >
+                <Info className="w-4 h-4 text-muted-foreground" />
+              </button>
             </div>
             {completedThisMonth >= totalDaysSoFar * 0.8 && (
               <motion.div
@@ -188,9 +197,6 @@ export default function Calendar() {
               </motion.div>
             )}
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            💡 Days count as complete when you finish 50%+ of tasks. Streak requires 80%+.
-          </p>
         </motion.div>
 
         <motion.div
@@ -355,6 +361,61 @@ export default function Calendar() {
                   {selectedDay.tasks.length === 0 && (
                     <p className="text-center text-muted-foreground py-4">No tasks for this day</p>
                   )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+          
+          {/* Rules explanation modal */}
+          {showRulesModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setShowRulesModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="w-full max-w-sm bg-card rounded-2xl p-6 shadow-xl"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-foreground">How It Works</h3>
+                  <Button variant="ghost" size="icon" onClick={() => setShowRulesModal(false)}>
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-primary/80 flex items-center justify-center shrink-0">
+                      <span className="text-xs text-primary-foreground font-bold">50%</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">Day Completion</p>
+                      <p className="text-sm text-muted-foreground">Complete 50%+ of your tasks to mark a day as done on the calendar.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0 relative">
+                      <span className="text-xs text-primary-foreground font-bold">80%</span>
+                      <Flame className="w-3 h-3 text-orange-400 fill-orange-400 absolute -top-1 -right-1" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">Streak Building</p>
+                      <p className="text-sm text-muted-foreground">Complete 80%+ of your tasks to maintain and grow your streak.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-xs text-muted-foreground">
+                      💡 Tip: Focus on streak days to unlock milestone rewards and prestige items in the shop!
+                    </p>
+                  </div>
                 </div>
               </motion.div>
             </motion.div>
