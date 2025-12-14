@@ -14,6 +14,7 @@ export interface UserProfile {
   equipment: string[] | null;
   onboarding_complete: boolean | null;
   has_dog: boolean | null;
+  water_goal_ml: number | null;
 }
 
 export function useUserProfile() {
@@ -49,6 +50,7 @@ export function useUserProfile() {
         study_focus: Array.isArray(data.study_focus) ? data.study_focus as string[] : [],
         equipment: Array.isArray(data.equipment) ? data.equipment as string[] : [],
         has_dog: data.has_dog ?? false,
+        water_goal_ml: data.water_goal_ml ?? 2000,
       });
     }
     setLoading(false);

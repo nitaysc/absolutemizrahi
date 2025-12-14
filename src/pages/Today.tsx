@@ -36,6 +36,8 @@ export default function Today() {
   const rewardedTasksRef = useRef<Set<string>>(new Set());
   const todayKey = new Date().toISOString().split("T")[0];
   const storageKey = user ? `rewardedTasks:${user.id}:${todayKey}` : null;
+  const dayBonusKey = user ? `dayBonusAwarded:${user.id}:${todayKey}` : null;
+  const dayBonusAwardedRef = useRef<boolean>(false);
 
   // Compute values needed for hooks (before any conditional returns)
   const completedCount = plan?.items.filter(i => i.is_done).length ?? 0;
@@ -43,7 +45,7 @@ export default function Today() {
   const hasProductiveTask = plan?.items.some(i => i.category === 'productive' && i.is_done);
   const canUnlockRest = hasProductiveTask || completedCount >= Math.ceil(totalCount * 0.5);
 
-  // Load rewarded tasks from localStorage (so re-enabling later doesn't re-award)
+  // Load rewarded tasks and day bonus status from localStorage
   useEffect(() => {
     if (!storageKey) return;
     try {
@@ -55,7 +57,11 @@ export default function Today() {
     } catch (e) {
       console.error("Failed to load rewarded tasks", e);
     }
-  }, [storageKey]);
+    // Load day bonus status
+    if (dayBonusKey) {
+      dayBonusAwardedRef.current = localStorage.getItem(dayBonusKey) === 'true';
+    }
+  }, [storageKey, dayBonusKey]);
 
   // Helper to mark a task as rewarded and persist it
   const markTaskRewarded = (taskId: string) => {
@@ -295,9 +301,21 @@ export default function Today() {
               <Button 
                 className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
                 onClick={async () => {
+                  // Prevent double-awarding day bonus
+                  if (dayBonusAwardedRef.current) {
+                    haptics.light();
+                    return;
+                  }
+                  
                   haptics.success();
                   const newStreak = await completeDay();
                   if (newStreak !== null) {
+                    // Mark day bonus as awarded and persist
+                    dayBonusAwardedRef.current = true;
+                    if (dayBonusKey) {
+                      localStorage.setItem(dayBonusKey, 'true');
+                    }
+                    
                     // Award daily bonus
                     awardDailyBonus();
                     let totalBonus = COIN_REWARDS.daily_bonus;
