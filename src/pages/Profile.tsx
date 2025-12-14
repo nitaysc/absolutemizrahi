@@ -23,8 +23,10 @@ import {
   ChevronRight,
   LogOut,
   Loader2,
-  Pencil
+  Pencil,
+  Droplets
 } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 
 const workoutLabels: Record<string, string> = {
@@ -199,6 +201,44 @@ export default function Profile() {
                 </div>
               </motion.div>
             ))}
+          </div>
+        </motion.div>
+
+        {/* Water Goal Setting */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="glass rounded-2xl p-6 mb-6"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Droplets className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-semibold text-foreground">Daily Water Goal</h2>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Target</span>
+              <span className="text-foreground font-medium">
+                {((profile?.water_goal_ml ?? 2000) / 1000).toFixed(1)}L
+              </span>
+            </div>
+            <Slider
+              value={[(profile?.water_goal_ml ?? 2000) / 250]}
+              min={4}
+              max={16}
+              step={1}
+              onValueChange={([val]) => {
+                haptics.selection();
+                updateProfile({ water_goal_ml: val * 250 });
+              }}
+              className="w-full"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>1L</span>
+              <span>2L</span>
+              <span>3L</span>
+              <span>4L</span>
+            </div>
           </div>
         </motion.div>
 

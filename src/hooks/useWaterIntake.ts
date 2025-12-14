@@ -1,14 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
-const DAILY_GOAL_ML = 2000; // 2 liters daily goal
+const DEFAULT_GOAL_ML = 2000; // 2 liters default
 
 export function useWaterIntake() {
   const { user } = useAuth();
+  const { profile } = useUserProfile();
   const queryClient = useQueryClient();
   const today = new Date().toISOString().split('T')[0];
-
+  const dailyGoal = profile?.water_goal_ml ?? DEFAULT_GOAL_ML;
   const { data: todayIntake = [], isLoading } = useQuery({
     queryKey: ["water-intake", user?.id, today],
     queryFn: async () => {
@@ -69,15 +71,14 @@ export function useWaterIntake() {
   });
 
   const totalMl = todayIntake.reduce((sum, entry) => sum + entry.amount_ml, 0);
-  const progressPercent = Math.min((totalMl / DAILY_GOAL_ML) * 100, 100);
+  const progressPercent = Math.min((totalMl / dailyGoal) * 100, 100);
   const glasses = Math.round(totalMl / 250); // Approximate glasses (250ml each)
-
   return {
     todayIntake,
     totalMl,
     progressPercent,
     glasses,
-    dailyGoal: DAILY_GOAL_ML,
+    dailyGoal,
     isLoading,
     addIntake: addIntake.mutate,
     removeLastIntake: removeLastIntake.mutate,

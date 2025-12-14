@@ -185,6 +185,7 @@ export type Database = {
           study_focus: Json | null
           training_split: string | null
           updated_at: string | null
+          water_goal_ml: number | null
           workout_style: string | null
         }
         Insert: {
@@ -201,6 +202,7 @@ export type Database = {
           study_focus?: Json | null
           training_split?: string | null
           updated_at?: string | null
+          water_goal_ml?: number | null
           workout_style?: string | null
         }
         Update: {
@@ -217,6 +219,7 @@ export type Database = {
           study_focus?: Json | null
           training_split?: string | null
           updated_at?: string | null
+          water_goal_ml?: number | null
           workout_style?: string | null
         }
         Relationships: []
