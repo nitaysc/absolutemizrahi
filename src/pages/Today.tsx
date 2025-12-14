@@ -4,6 +4,7 @@ import { DailyHeader } from "@/components/daily-header";
 import { DailyIdentity } from "@/components/DailyIdentity";
 import { TaskCard, TaskCategory } from "@/components/task-card";
 import { CoinEarnedPopup } from "@/components/shop/CoinEarnedPopup";
+import { WaterIntakeWidget } from "@/components/WaterIntakeWidget";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { RefreshCw, PartyPopper, Loader2, Lock } from "lucide-react";
@@ -151,6 +152,11 @@ export default function Today() {
 
         {/* Daily Identity */}
         <DailyIdentity date={currentTime} />
+
+        {/* Water Intake Widget */}
+        <div className="mb-4">
+          <WaterIntakeWidget />
+        </div>
 
         {/* Urgency Message */}
         <AnimatePresence mode="wait">
