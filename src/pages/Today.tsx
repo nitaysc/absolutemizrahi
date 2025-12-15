@@ -200,7 +200,7 @@ export default function Today() {
               <RefreshCw className="w-4 h-4 mr-2" />
               Reroll ({rerollsLeft} left)
             </Button>
-            <span className="text-[10px] text-muted-foreground/70 pr-2">Rerolls reset daily</span>
+            <span className="text-[10px] text-muted-foreground/70 pr-2">5 rerolls per day</span>
           </div>
         </motion.div>
 
