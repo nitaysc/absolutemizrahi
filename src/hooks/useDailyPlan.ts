@@ -270,8 +270,8 @@ export function useDailyPlan() {
   const rerollPlan = async () => {
     if (!plan || !user) return;
 
-    if (plan.rerolls_used >= 1) {
-      toast({ title: "No rerolls left", description: "You can only reroll once per day", variant: "destructive" });
+    if (plan.rerolls_used >= 5) {
+      toast({ title: "No rerolls left", description: "You used all 5 rerolls for today", variant: "destructive" });
       return;
     }
 
