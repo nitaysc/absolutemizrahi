@@ -131,7 +131,7 @@ export default function Today() {
   // Derived values for rendering
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
   const allComplete = completedCount === totalCount && totalCount > 0;
-  const rerollsLeft = 1 - (plan?.rerolls_used ?? 0);
+  const rerollsLeft = 5 - (plan?.rerolls_used ?? 0);
   const remainingTasks = totalCount - completedCount;
 
   // Urgency message based on progress
