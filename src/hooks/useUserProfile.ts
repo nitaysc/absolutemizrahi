@@ -7,14 +7,12 @@ export interface UserProfile {
   id: string;
   display_name: string | null;
   email: string | null;
-  workout_style: string | null;
-  daily_time: string | null;
-  training_split: string | null;
-  study_focus: string[] | null;
-  equipment: string[] | null;
+  total_xp: number;
+  current_streak: number;
+  longest_streak: number;
+  last_workout_date: string | null;
+  current_rank: string;
   onboarding_complete: boolean | null;
-  has_dog: boolean | null;
-  water_goal_ml: number | null;
 }
 
 export function useUserProfile() {
@@ -46,11 +44,15 @@ export function useUserProfile() {
       console.error('Error fetching profile:', error);
     } else if (data) {
       setProfile({
-        ...data,
-        study_focus: Array.isArray(data.study_focus) ? data.study_focus as string[] : [],
-        equipment: Array.isArray(data.equipment) ? data.equipment as string[] : [],
-        has_dog: data.has_dog ?? false,
-        water_goal_ml: data.water_goal_ml ?? 2000,
+        id: data.id,
+        display_name: data.display_name,
+        email: data.email,
+        total_xp: data.total_xp ?? 0,
+        current_streak: data.current_streak ?? 0,
+        longest_streak: data.longest_streak ?? 0,
+        last_workout_date: data.last_workout_date,
+        current_rank: data.current_rank ?? 'wood',
+        onboarding_complete: data.onboarding_complete,
       });
     }
     setLoading(false);

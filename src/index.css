@@ -36,17 +36,20 @@
 
     --radius: 1.25rem;
 
-    /* Category colors - vibrant */
-    --workout: 25 95% 53%;
-    --workout-glow: 25 100% 60%;
-    --study: 200 100% 50%;
-    --study-glow: 200 100% 60%;
-    --productive: 145 80% 42%;
-    --productive-glow: 145 80% 52%;
-    --rest: 280 75% 55%;
-    --rest-glow: 280 75% 65%;
-    --mindset: 350 85% 55%;
-    --mindset-glow: 350 85% 65%;
+    /* Workout success color */
+    --success: 145 80% 42%;
+    --success-foreground: 0 0% 100%;
+
+    /* Rank colors */
+    --rank-wood: 25 50% 35%;
+    --rank-bronze: 25 70% 50%;
+    --rank-silver: 220 10% 70%;
+    --rank-gold: 45 100% 50%;
+    --rank-platinum: 190 70% 60%;
+    --rank-diamond: 210 100% 60%;
+    --rank-champion: 280 70% 60%;
+    --rank-titan: 350 70% 55%;
+    --rank-olympian: 40 100% 65%;
 
     /* Gradients */
     --gradient-dark: linear-gradient(180deg, hsl(220 15% 6%) 0%, hsl(220 15% 3%) 100%);
