@@ -1,98 +1,53 @@
+import { useLocation, Link } from "react-router-dom";
+import { Home, Trophy, User } from "lucide-react";
 import { motion } from "framer-motion";
-import { Calendar, BarChart3, User, Flame, Timer, StickyNote, ShoppingBag } from "lucide-react";
-import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
-import { hapticFeedback } from "@/hooks/useHaptics";
-import { useTaskProgress } from "@/hooks/useTaskProgress";
+import { cn } from "@/lib/utils";
 
 const navItems = [
-  { to: "/", icon: Flame, label: "Today", showIndicator: true },
-  { to: "/calendar", icon: Calendar, label: "Calendar" },
-  { to: "/stats", icon: BarChart3, label: "Stats" },
-  { to: "/shop", icon: ShoppingBag, label: "Shop" },
-  { to: "/timer", icon: Timer, label: "Timer" },
-  { to: "/notes", icon: StickyNote, label: "Notes" },
-  { to: "/profile", icon: User, label: "Profile" },
+  { path: "/", icon: Home, label: "Home" },
+  { path: "/leaderboard", icon: Trophy, label: "Ranks" },
+  { path: "/profile", icon: User, label: "Profile" },
 ];
 
 export function BottomNav() {
   const location = useLocation();
-  const { hasUnfinished } = useTaskProgress();
-
-  const handleNavClick = (to: string) => {
-    if (location.pathname !== to) {
-      hapticFeedback("selection");
-    }
-  };
 
   return (
-    <motion.nav 
+    <motion.nav
       initial={{ y: 100 }}
       animate={{ y: 0 }}
-      transition={{ type: "spring", stiffness: 400, damping: 35 }}
-      className="fixed bottom-0 left-0 right-0 z-50"
+      transition={{ type: "spring", damping: 20 }}
+      className="fixed bottom-0 left-0 right-0 z-50 safe-bottom"
     >
-      <div className="mx-3 mb-3 rounded-2xl glass-strong safe-bottom">
-        <div className="flex items-center justify-around h-16">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.to;
-            const showDot = item.showIndicator && hasUnfinished && !isActive;
-            
+      <div className="app-container pb-2">
+        <div className="glass-strong rounded-2xl px-4 py-2 flex justify-around items-center">
+          {navItems.map(({ path, icon: Icon, label }) => {
+            const isActive = location.pathname === path;
             return (
-              <RouterNavLink
-                key={item.to}
-                to={item.to}
-                onClick={() => handleNavClick(item.to)}
-                className="flex flex-col items-center justify-center gap-0.5 px-5 py-2 touch-target"
+              <Link
+                key={path}
+                to={path}
+                className={cn(
+                  "flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all touch-target",
+                  isActive
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
               >
-                <motion.div 
+                <motion.div
+                  whileTap={{ scale: 0.9 }}
                   className="relative"
-                  whileTap={{ scale: 0.85 }}
                 >
-                  <motion.div
-                    animate={{ 
-                      scale: isActive ? 1 : 0.9,
-                      y: isActive ? -2 : 0,
-                    }}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                  >
-                    <item.icon 
-                      className={`w-6 h-6 transition-colors duration-200 ${
-                        isActive ? 'text-primary' : 'text-muted-foreground'
-                      }`}
-                      strokeWidth={isActive ? 2.5 : 2}
-                    />
-                  </motion.div>
+                  <Icon className="w-6 h-6" />
                   {isActive && (
                     <motion.div
-                      layoutId="nav-glow"
-                      className="absolute -inset-2 bg-primary/20 rounded-xl blur-md -z-10"
-                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                      layoutId="activeTab"
+                      className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary"
                     />
                   )}
-                  {/* Unfinished tasks indicator */}
-                  {showDot && (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-destructive rounded-full"
-                    >
-                      <motion.div
-                        animate={{ opacity: [1, 0.5, 1] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
-                        className="absolute inset-0 bg-destructive rounded-full"
-                      />
-                    </motion.div>
-                  )}
                 </motion.div>
-                <motion.span 
-                  className={`text-[10px] font-semibold tracking-wide transition-colors duration-200 ${
-                    isActive ? 'text-primary' : 'text-muted-foreground'
-                  }`}
-                  animate={{ opacity: isActive ? 1 : 0.7 }}
-                >
-                  {item.label}
-                </motion.span>
-              </RouterNavLink>
+                <span className="text-xs font-medium">{label}</span>
+              </Link>
             );
           })}
         </div>
