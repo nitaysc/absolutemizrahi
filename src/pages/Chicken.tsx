@@ -59,6 +59,11 @@ export default function Chicken() {
   const [lanes, setLanes] = useState<LaneState[]>([]);
   const [busy, setBusy] = useState(false);
   const [dead, setDead] = useState(false);
+  /** Lane the chicken died on (set when dead = true). */
+  const [deathLane, setDeathLane] = useState<number | null>(null);
+  /** Set after a successful cashout — the lane index where the next car was waiting. */
+  const [nextDeathLane, setNextDeathLane] = useState<number | null>(null);
+  const [cashedOut, setCashedOut] = useState(false);
 
   // Pre-rolled deaths for the current round (committed at Bet time).
   const rollsRef = useRef<boolean[]>([]); // true = death lane
@@ -87,6 +92,9 @@ export default function Chicken() {
     setLanes(Array(total).fill("hidden"));
     setStep(0);
     setDead(false);
+    setDeathLane(null);
+    setNextDeathLane(null);
+    setCashedOut(false);
     setActive(true);
   }
 
@@ -105,6 +113,7 @@ export default function Chicken() {
         return next;
       });
       setDead(true);
+      setDeathLane(idx);
       // Settle as loss
       const { data, error } = await supabase.rpc("place_bet", {
         _game: "chicken",
@@ -126,6 +135,7 @@ export default function Chicken() {
         setLanes([]);
         setStep(0);
         setDead(false);
+        setDeathLane(null);
       }, 1800);
       return;
     }
@@ -156,8 +166,19 @@ export default function Chicken() {
     }
     if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
     const profitNow = Math.max(Number(data?.[0]?.payout ?? 0) - lockedBetRef.current, 0);
-    toast.success(`+${formatCoins(profitNow)} (${mult.toFixed(2)}×)`);
-    // Reveal remaining lanes briefly so they see what was ahead
+    // Find the next lane that would have killed them (the "you got out just in time" moment).
+    const nextDeath = rollsRef.current.findIndex((d, i) => i >= step && d);
+    setNextDeathLane(nextDeath >= 0 ? nextDeath : null);
+    setCashedOut(true);
+    if (nextDeath >= 0) {
+      const lanesLeft = nextDeath - step + 1;
+      toast.success(
+        `+${formatCoins(profitNow)} (${mult.toFixed(2)}×) — car was ${lanesLeft} lane${lanesLeft === 1 ? "" : "s"} away!`,
+      );
+    } else {
+      toast.success(`+${formatCoins(profitNow)} (${mult.toFixed(2)}×) — clear road ahead!`);
+    }
+    // Reveal remaining lanes so they see what was ahead
     setLanes((prev) =>
       prev.map((l, i) => (l === "hidden" ? (rollsRef.current[i] ? "death" : "safe") : l)),
     );
@@ -165,6 +186,8 @@ export default function Chicken() {
     setTimeout(() => {
       setLanes([]);
       setStep(0);
+      setNextDeathLane(null);
+      setCashedOut(false);
     }, 2000);
   }
 
@@ -198,6 +221,9 @@ export default function Chicken() {
         multipliers={previewMults}
         dead={dead}
         active={active}
+        deathLane={deathLane}
+        cashedOut={cashedOut}
+        nextDeathLane={nextDeathLane}
       />
 
       {/* Lane strip preview underneath: small chips with multipliers so players
