@@ -22,6 +22,8 @@ import Snakes from "./pages/Snakes";
 import Wordle from "./pages/Wordle";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
+import Friends from "./pages/Friends";
+import PlayerProfile from "./pages/PlayerProfile";
 import NotFound from "./pages/NotFound";
 
 function Protected({ children }: { children: React.ReactNode }) {
@@ -67,6 +69,8 @@ const App = () => (
             <Route path="/wordle" element={<Wordle />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/friends" element={<Friends />} />
+            <Route path="/u/:username" element={<PlayerProfile />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

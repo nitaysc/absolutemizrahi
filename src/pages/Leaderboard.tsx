@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
@@ -14,6 +15,7 @@ interface Row {
 
 export default function Leaderboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -55,8 +57,13 @@ export default function Leaderboard() {
             return (
               <li
                 key={r.id}
-                className={`flex items-center gap-3 rounded-2xl border p-3 backdrop-blur ${
-                  isMe ? "border-primary bg-primary/10" : "border-border bg-card/60"
+                onClick={() =>
+                  !isMe && r.username && navigate(`/u/${encodeURIComponent(r.username)}`)
+                }
+                className={`flex items-center gap-3 rounded-2xl border p-3 backdrop-blur transition ${
+                  isMe
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-card/60 cursor-pointer hover:bg-card hover:border-primary/40"
                 }`}
               >
                 <div
