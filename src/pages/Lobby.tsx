@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
-import { Dice5, Coins, Gift, TrendingUp, Bomb, Rocket, Zap, Spade, Bird, Triangle, Wind, Flame } from "lucide-react";
+import { Dice5, Coins, Gift, TrendingUp, Bomb, Rocket, Zap, Spade, Bird, Triangle, Wind, Flame, Club } from "lucide-react";
 import { formatCoins } from "@/lib/format";
 import mizrahi from "@/assets/absolute-mizrahi.gif";
 
@@ -106,6 +106,14 @@ export default function Lobby() {
       title: "DRAGON",
       icon: Flame,
       gradient: "from-red-600 via-orange-600 to-yellow-500",
+      iconColor: "text-white",
+    },
+    {
+      to: "/poker",
+      key: "poker",
+      title: "POKER",
+      icon: Club,
+      gradient: "from-emerald-700 via-green-800 to-emerald-950",
       iconColor: "text-white",
     },
   ];
