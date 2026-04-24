@@ -409,8 +409,8 @@ function RingTile({
     } else if (tile?.kind === "mult") {
       content = <span>{tile.mult.toFixed(2)}×</span>;
     } else if (tile?.kind === "snake") {
-      // Hidden until landed — show neutral placeholder
-      content = <span className={dim}>?</span>;
+      // Snakes are visible on the board so the player can see the danger.
+      content = <span className="text-xl opacity-60 sm:text-2xl">🐍</span>;
     }
   } else {
     if (tile?.kind === "snake") {
