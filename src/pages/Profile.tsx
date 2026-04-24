@@ -7,6 +7,7 @@ import { formatCoins } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { AVATAR_OPTIONS } from "@/lib/avatars";
 
 interface Bet {
   id: string;
@@ -34,6 +35,17 @@ export default function Profile() {
   useEffect(() => {
     if (profile?.username) setName(profile.username);
   }, [profile?.username]);
+
+  async function pickAvatar(emoji: string) {
+    if (!user || emoji === profile?.avatar) return;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ avatar: emoji })
+      .eq("id", user.id);
+    if (error) return toast.error(error.message);
+    toast.success("Avatar updated");
+    refetch();
+  }
 
   useEffect(() => {
     if (!user) return;
@@ -116,9 +128,41 @@ export default function Profile() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-black tracking-tight">PROFILE</h1>
-        <p className="text-sm text-muted-foreground">{user?.email}</p>
+        <div className="flex items-center gap-3">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-primary/40 bg-card text-3xl shadow-[0_0_22px_hsl(var(--primary)/0.25)]">
+            {profile?.avatar ?? "🎰"}
+          </div>
+          <div>
+            <h1 className="text-3xl font-black tracking-tight">PROFILE</h1>
+            <p className="text-sm text-muted-foreground">{user?.email}</p>
+          </div>
+        </div>
       </header>
+
+      <section className="rounded-3xl border border-border bg-card/70 p-5 backdrop-blur-xl">
+        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+          Avatar · seen by other players in poker, blackjack & multiplayer games
+        </label>
+        <div className="mt-3 grid grid-cols-8 gap-2 sm:grid-cols-12">
+          {AVATAR_OPTIONS.map((emoji) => {
+            const active = profile?.avatar === emoji;
+            return (
+              <button
+                key={emoji}
+                onClick={() => pickAvatar(emoji)}
+                className={`flex aspect-square items-center justify-center rounded-xl border-2 text-2xl transition ${
+                  active
+                    ? "border-primary bg-primary/15 shadow-[0_0_16px_hsl(var(--primary)/0.45)] scale-105"
+                    : "border-border bg-background/40 hover:bg-card"
+                }`}
+                aria-label={`Use ${emoji} as avatar`}
+              >
+                {emoji}
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       <section className="rounded-3xl border border-border bg-card/70 p-5 backdrop-blur-xl">
         <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Username</label>

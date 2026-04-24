@@ -23,6 +23,7 @@ type Seat = {
   seat_index: number;
   user_id: string;
   username: string;
+  avatar?: string;
   bet: number;
   hands: Hand[];
   current_hand: number;
@@ -418,6 +419,7 @@ function SeatCard({
     >
       <div className="flex items-center justify-between text-[11px] font-bold">
         <span className="truncate">
+          <span className="mr-1 align-middle text-base leading-none">{seat.avatar ?? "🎰"}</span>
           {isMe ? "You" : seat.username}
           <span className="ml-1 text-muted-foreground">· seat {seatIndex + 1}</span>
         </span>

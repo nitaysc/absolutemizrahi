@@ -18,6 +18,7 @@ type Seat = {
   seat_index: number;
   user_id: string;
   username: string;
+  avatar?: string;
   stack: number;
   current_bet: number;
   total_committed: number;
@@ -460,6 +461,7 @@ export default function Poker() {
                     isCurrent ? "border-primary bg-primary/30 shadow-[0_0_20px_hsl(var(--primary)/0.6)] ring-2 ring-primary" : "border-border bg-black/60"
                   }`}>
                     <span className="flex items-center gap-1 text-white">
+                      <span className="text-base leading-none">{seat.avatar ?? "🎰"}</span>
                       {seat.username}
                       {isDealer && <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-[9px] font-black text-black">D</span>}
                     </span>

@@ -52,6 +52,7 @@ export type Database = {
       }
       bj_seats: {
         Row: {
+          avatar: string
           bet: number
           current_hand: number
           hands: Json
@@ -66,6 +67,7 @@ export type Database = {
           username: string
         }
         Insert: {
+          avatar?: string
           bet: number
           current_hand?: number
           hands?: Json
@@ -80,6 +82,7 @@ export type Database = {
           username: string
         }
         Update: {
+          avatar?: string
           bet?: number
           current_hand?: number
           hands?: Json
@@ -221,6 +224,7 @@ export type Database = {
       }
       poker_seats: {
         Row: {
+          avatar: string
           current_bet: number
           has_acted: boolean
           hole: Json
@@ -236,6 +240,7 @@ export type Database = {
           username: string
         }
         Insert: {
+          avatar?: string
           current_bet?: number
           has_acted?: boolean
           hole?: Json
@@ -251,6 +256,7 @@ export type Database = {
           username: string
         }
         Update: {
+          avatar?: string
           current_bet?: number
           has_acted?: boolean
           hole?: Json
@@ -337,6 +343,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar: string
           blackjack_round: Json | null
           coins: number
           created_at: string | null
@@ -353,6 +360,7 @@ export type Database = {
           username: string | null
         }
         Insert: {
+          avatar?: string
           blackjack_round?: Json | null
           coins?: number
           created_at?: string | null
@@ -369,6 +377,7 @@ export type Database = {
           username?: string | null
         }
         Update: {
+          avatar?: string
           blackjack_round?: Json | null
           coins?: number
           created_at?: string | null
