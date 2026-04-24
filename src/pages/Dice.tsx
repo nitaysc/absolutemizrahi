@@ -31,13 +31,14 @@ export default function Dice() {
   const multiplier = winChance > 0 ? +(HOUSE_EDGE * (100 / winChance)).toFixed(4) : 0;
   const profit = Math.floor(bet * multiplier) - bet;
 
-  async function rollOnce(): Promise<AutoBetRoundResult | null> {
+  async function rollOnce(betOverride?: number): Promise<AutoBetRoundResult | null> {
     if (!profile) return null;
-    if (bet < 1) {
+    const stake = betOverride ?? bet;
+    if (stake < 1) {
       toast.error("Bet at least 1 coin");
       return null;
     }
-    if (bet > profile.coins) {
+    if (stake > profile.coins) {
       toast.error("Not enough coins");
       return null;
     }
@@ -52,7 +53,7 @@ export default function Dice() {
 
     const { data, error } = await supabase.rpc("place_bet", {
       _game: "dice",
-      _bet_amount: bet,
+      _bet_amount: stake,
       _won: won,
       _multiplier: multiplier,
       _details: { roll: result, target, dir },
@@ -67,7 +68,7 @@ export default function Dice() {
     setLastRoll(result);
     setHistory((h) => [{ roll: result, won }, ...h].slice(0, 10));
     const payout = Number(data?.[0]?.payout ?? 0);
-    return { won, profit: won ? Math.max(payout - bet, 0) : -bet };
+    return { won, profit: won ? Math.max(payout - stake, 0) : -stake };
   }
 
   // Slider bar: red on the losing side, green on winning side
