@@ -21,44 +21,33 @@ type Difficulty = "easy" | "medium" | "hard" | "expert";
  *   - trophy (final big-payout tile near the end of the ring)
  */
 const RING = 16;
-// Always exactly ONE jackpot (trophy) per board — the final tile.
-const TROPHY_COUNT = 1;
 
 const DIFF_CFG: Record<
   Difficulty,
   { snakeChance: (i: number) => number; multBase: number; label: string }
 > = {
-  // Toned-down multipliers so the game isn't OP. Snake odds still scale with distance.
-  easy:   { snakeChance: (i) => 0.06 + i * 0.010, multBase: 1.06, label: "Easy" },
-  medium: { snakeChance: (i) => 0.12 + i * 0.012, multBase: 1.10, label: "Medium" },
-  hard:   { snakeChance: (i) => 0.18 + i * 0.014, multBase: 1.14, label: "Hard" },
-  expert: { snakeChance: (i) => 0.26 + i * 0.016, multBase: 1.18, label: "Expert" },
+  // Tame multipliers, snake odds scale with distance and difficulty.
+  easy:   { snakeChance: (i) => 0.06 + i * 0.008, multBase: 1.03, label: "Easy" },
+  medium: { snakeChance: (i) => 0.12 + i * 0.010, multBase: 1.05, label: "Medium" },
+  hard:   { snakeChance: (i) => 0.20 + i * 0.012, multBase: 1.07, label: "Hard" },
+  expert: { snakeChance: (i) => 0.30 + i * 0.014, multBase: 1.09, label: "Expert" },
 };
 
 type Tile =
   | { kind: "snake" }
-  | { kind: "mult"; mult: number }
-  | { kind: "trophy"; mult: number };
+  | { kind: "mult"; mult: number };
 
 function buildRing(diff: Difficulty): Tile[] {
   const cfg = DIFF_CFG[diff];
   const tiles: Tile[] = new Array(RING);
-  // Single jackpot = the very last tile.
-  const trophyIdx = RING - 1;
-
+  // No jackpots — only multiplier tiles or snakes.
   for (let i = 1; i < RING; i++) {
-    if (i === trophyIdx) {
-      // Modest jackpot — meaningful but not absurd.
-      const base = Math.pow(cfg.multBase, i) * 1.6;
-      tiles[i] = { kind: "trophy", mult: +base.toFixed(2) };
-      continue;
-    }
-    const snakeP = Math.min(0.55, cfg.snakeChance(i));
+    const snakeP = Math.min(0.6, cfg.snakeChance(i));
     if (Math.random() < snakeP) {
       tiles[i] = { kind: "snake" };
     } else {
       const base = Math.pow(cfg.multBase, i);
-      const jitter = 0.92 + Math.random() * 0.18;
+      const jitter = 0.94 + Math.random() * 0.12;
       tiles[i] = { kind: "mult", mult: +(base * jitter).toFixed(2) };
     }
   }
@@ -160,8 +149,7 @@ export default function Snakes() {
       return;
     }
 
-    const newMult =
-      tile.kind === "trophy" ? +(mult * tile.mult).toFixed(2) : +(mult * tile.mult).toFixed(2);
+    const newMult = +(mult * tile.mult).toFixed(2);
     setMult(newMult);
 
     // Auto-cashout on the final ring tile.
@@ -404,9 +392,7 @@ function RingTile({
   if (isStart) {
     content = <Play className="h-5 w-5 fill-primary text-primary sm:h-6 sm:w-6" />;
   } else if (!isRevealed) {
-    if (tile?.kind === "trophy") {
-      content = <Trophy className={`h-5 w-5 sm:h-6 sm:w-6 ${dim}`} />;
-    } else if (tile?.kind === "mult") {
+    if (tile?.kind === "mult") {
       content = <span>{tile.mult.toFixed(2)}×</span>;
     } else if (tile?.kind === "snake") {
       // Snakes are visible on the board so the player can see the danger.
@@ -415,10 +401,6 @@ function RingTile({
   } else {
     if (tile?.kind === "snake") {
       content = <span className="text-2xl sm:text-3xl">🐍</span>;
-    } else if (tile?.kind === "trophy") {
-      content = (
-        <Trophy className="h-6 w-6 fill-[hsl(var(--success))] text-[hsl(var(--success))] sm:h-7 sm:w-7" />
-      );
     } else if (tile?.kind === "mult") {
       content = (
         <span className="text-[hsl(var(--success))]">{tile.mult.toFixed(2)}×</span>
