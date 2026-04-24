@@ -42,7 +42,7 @@ const GAMES = [
   "plinko",
   "pump",
   "dragontower",
-  "aviamasters",
+  "snakes",
 ];
 const POS_KEY = "liveStats:pos:v1";
 const OPEN_KEY = "liveStats:open:v1";
@@ -292,8 +292,8 @@ export function LiveStatsWindow() {
                           ? "All games"
                           : g === "dragontower"
                             ? "Dragon Tower"
-                            : g === "aviamasters"
-                              ? "Aviamasters"
+                            : g === "snakes"
+                              ? "Snakes"
                               : g}
                       </SelectItem>
                     ))}
