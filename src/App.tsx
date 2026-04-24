@@ -17,6 +17,7 @@ import Plinko from "./pages/Plinko";
 import Pump from "./pages/Pump";
 import DragonTower from "./pages/DragonTower";
 import Poker from "./pages/Poker";
+import PokerLobby from "./pages/PokerLobby";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -58,7 +59,8 @@ const App = () => (
             <Route path="/plinko" element={<Plinko />} />
             <Route path="/pump" element={<Pump />} />
             <Route path="/dragontower" element={<DragonTower />} />
-            <Route path="/poker" element={<Poker />} />
+            <Route path="/poker" element={<PokerLobby />} />
+            <Route path="/poker/:tableId" element={<Poker />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/profile" element={<Profile />} />
           </Route>
