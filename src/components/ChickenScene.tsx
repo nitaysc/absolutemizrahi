@@ -76,6 +76,20 @@ function CameraRig({ step }: { step: number }) {
 }
 
 function Scene({ totalLanes, step, lanes, multipliers, dead, active }: Props) {
+  return null as never;
+}
+
+function SceneImpl({
+  totalLanes,
+  step,
+  lanes,
+  multipliers,
+  dead,
+  active,
+  deathLane,
+  cashedOut,
+  nextDeathLane,
+}: Props) {
   return (
     <group>
       {/* Sidewalk start */}
@@ -91,6 +105,8 @@ function Scene({ totalLanes, step, lanes, multipliers, dead, active }: Props) {
           state={lanes[i] ?? "hidden"}
           multiplier={multipliers[i] ?? 1}
           highlight={active && !dead && i === step}
+          isDeathHit={dead && deathLane === i}
+          wouldHaveDied={!!cashedOut && nextDeathLane === i}
         />
       ))}
 
