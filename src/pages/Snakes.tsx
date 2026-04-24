@@ -416,7 +416,7 @@ function RingTile({
 }) {
   // Keycap-style tile: rounded, soft inner shadow, slight top highlight.
   const base =
-    "relative flex aspect-square items-center justify-center rounded-xl text-sm font-black tabular-nums sm:rounded-2xl sm:text-base";
+    "relative flex aspect-square items-center justify-center rounded-xl text-sm font-black tabular-nums ring-1 ring-border/80 sm:rounded-2xl sm:text-base";
   const surface =
     "bg-gradient-to-b from-[hsl(220_25%_22%)] to-[hsl(220_30%_15%)] text-foreground shadow-[inset_0_-3px_0_hsl(220_40%_8%),inset_0_1px_0_hsl(220_25%_30%)]";
   const dim = "text-muted-foreground/70";
