@@ -11,6 +11,7 @@ import { Slider } from "@/components/ui/slider";
 import { NumberField } from "@/components/NumberField";
 import { formatCoins } from "@/lib/format";
 import { Spade, Clock, LogOut, ArrowLeft, Eye } from "lucide-react";
+import { Trophy } from "lucide-react";
 
 type Card = { s: "S" | "H" | "D" | "C"; r: string };
 type Seat = {
@@ -79,6 +80,15 @@ function PlayingCard({ card, hidden, size = "md", glow }: { card?: Card; hidden?
 
 type ActionLog = { id: number; seat: number; user: string; text: string; tone: "fold" | "check" | "call" | "raise" | "allin" | "info" };
 
+type Announcement = {
+  id: number;
+  title: string;
+  subtitle?: string;
+  winners: { username: string; amount: number; isMe: boolean; cards?: Card[] }[];
+  pot: number;
+  reason: "fold" | "showdown";
+};
+
 export default function Poker() {
   useTrackGame("poker");
   const { tableId = "micro" } = useParams<{ tableId: string }>();
@@ -96,6 +106,8 @@ export default function Poker() {
   const [log, setLog] = useState<ActionLog[]>([]);
   const [seatFlash, setSeatFlash] = useState<Record<number, ActionLog>>({});
   const mySeatIndexRef = useRef<number | null>(null);
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  const announcementIdRef = useRef(0);
 
   function pushLog(entry: Omit<ActionLog, "id">) {
     const id = ++logIdRef.current;
@@ -131,6 +143,44 @@ export default function Poker() {
     if (prev.status !== next.status && next.status !== "waiting") {
       pushLog({ seat: -1, user: "—", text: next.status.toUpperCase(), tone: "info" });
     }
+
+    // Winner detection: when status transitions to "showdown" (or pot empties
+    // mid-hand because everyone else folded), figure out who won what.
+    const becameShowdown = prev.status !== "showdown" && next.status === "showdown";
+    const potEmptiedToZero = prev.pot > 0 && next.pot === 0 && prev.status !== "showdown";
+    if (becameShowdown || potEmptiedToZero) {
+      const winners: Announcement["winners"] = [];
+      for (const s of next.seats) {
+        const p = prev.seats.find((x) => x.seat_index === s.seat_index && x.user_id === s.user_id);
+        if (!p) continue;
+        const gain = s.stack - p.stack;
+        if (gain > 0) {
+          const cards = Array.isArray(s.hole) && s.hole.length > 0 && typeof s.hole[0] === "object"
+            ? (s.hole as Card[]) : undefined;
+          winners.push({ username: s.username, amount: gain, isMe: s.is_me, cards });
+        }
+      }
+      // Determine reason: if only one player wasn't folded going in, it's a fold-win
+      const aliveBefore = prev.seats.filter((s) => s.status === "active" || s.status === "allin").length;
+      const reason: Announcement["reason"] = aliveBefore <= 1 || !becameShowdown ? "fold" : "showdown";
+      if (winners.length > 0) {
+        const id = ++announcementIdRef.current;
+        const title = winners.length === 1
+          ? `${winners[0].username} wins ${formatCoins(winners[0].amount)}`
+          : `Split pot · ${winners.map((w) => w.username).join(" & ")}`;
+        const subtitle = reason === "fold" ? "All others folded" : "Showdown";
+        setAnnouncement({ id, title, subtitle, winners, pot: prev.pot, reason });
+        pushLog({
+          seat: -1, user: "—",
+          text: `${title} (${reason === "fold" ? "fold" : "showdown"})`,
+          tone: "info",
+        });
+        window.setTimeout(() => {
+          setAnnouncement((cur) => (cur && cur.id === id ? null : cur));
+        }, 6000);
+      }
+    }
+
     for (const s of next.seats) {
       const p = prev.seats.find((x) => x.seat_index === s.seat_index && x.user_id === s.user_id);
       if (!p) continue;
@@ -307,6 +357,40 @@ export default function Poker() {
 
       {/* Table */}
       <div className="relative mx-auto aspect-[16/10] w-full max-w-4xl overflow-hidden rounded-[40%/30%] border-[10px] border-amber-900/80 bg-gradient-to-br from-emerald-800 via-emerald-900 to-emerald-950 shadow-[inset_0_0_60px_rgba(0,0,0,0.6),0_20px_40px_rgba(0,0,0,0.5)]">
+        {/* Winner announcement banner */}
+        <AnimatePresence>
+          {announcement && (
+            <motion.div
+              key={announcement.id}
+              initial={{ opacity: 0, scale: 0.85, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: -10 }}
+              transition={{ type: "spring", stiffness: 260, damping: 22 }}
+              className="pointer-events-none absolute inset-x-0 top-3 z-20 mx-auto flex w-fit max-w-[90%] flex-col items-center gap-1 rounded-2xl border-2 border-amber-300/70 bg-gradient-to-br from-amber-400/95 via-amber-500/95 to-amber-600/95 px-5 py-2.5 text-center shadow-[0_0_40px_rgba(252,211,77,0.55)] backdrop-blur"
+            >
+              <div className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-black sm:text-base">
+                <Trophy className="h-4 w-4 sm:h-5 sm:w-5" />
+                {announcement.title}
+              </div>
+              {announcement.subtitle && (
+                <div className="text-[10px] font-bold uppercase tracking-widest text-black/70">
+                  {announcement.subtitle} · pot {formatCoins(announcement.pot)}
+                </div>
+              )}
+              {announcement.reason === "showdown" && announcement.winners.some((w) => w.cards) && (
+                <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+                  {announcement.winners.map((w, wi) => (
+                    <div key={wi} className="flex items-center gap-1 rounded-lg bg-black/30 px-2 py-1">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-amber-100">{w.username}</span>
+                      {w.cards?.map((c, ci) => <PlayingCard key={ci} card={c} size="sm" />)}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* center: pot + board */}
         <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
           <div className="rounded-full border border-amber-300/40 bg-black/70 px-5 py-1.5 text-sm font-black uppercase tracking-widest text-amber-200 shadow-lg backdrop-blur">
