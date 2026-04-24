@@ -67,10 +67,14 @@ function buildRing(diff: Difficulty): Tile[] {
   // Per-step multipliers (each tile applies once when landed) — keep them small so
   // the cumulative product stays close to maxMult by the end.
   // Solve: product over n tiles ≈ maxMult  =>  per-step ≈ maxMult^(1/n)
-  const perStep = Math.pow(cfg.maxMult, 1 / Math.max(1, n));
+  // House edge: shave per-step multipliers ~6% so the cumulative product undershoots
+  // maxMult on average. Also steepen the ramp so the BIG tiles are clustered near
+  // the end (and harder to reach without busting on a snake first).
+  const HOUSE_EDGE = 0.94;
+  const perStep = Math.pow(cfg.maxMult, 1 / Math.max(1, n)) * HOUSE_EDGE;
   multIdxs.forEach((idx, k) => {
-    // Slightly ramp: earlier tiles a touch lower, later a touch higher.
-    const ramp = 0.92 + (k / Math.max(1, n - 1)) * 0.16;
+    // Steeper ramp: earlier tiles much lower, later tiles ramp up to the headline.
+    const ramp = 0.78 + (k / Math.max(1, n - 1)) * 0.34;
     const v = +(perStep * ramp).toFixed(2);
     tiles[idx] = { kind: "mult", mult: Math.max(1.01, v) };
   });
@@ -164,8 +168,17 @@ export default function Snakes() {
     const r = d1 + d2;
 
     const startPos = pos;
-    const landed = Math.min(RING - 1, startPos + r);
-    for (let i = startPos + 1; i <= landed; i++) {
+    // Wrap around the ring so the player can keep rolling past the final tile.
+    // Skip index 0 (start) when wrapping.
+    const steps: number[] = [];
+    let cur = startPos;
+    for (let s = 0; s < r; s++) {
+      cur = (cur + 1) % RING;
+      if (cur === 0) cur = 1; // skip start tile on wrap
+      steps.push(cur);
+    }
+    const landed = steps[steps.length - 1];
+    for (const i of steps) {
       setPos(i);
       await new Promise((res) => setTimeout(res, 160));
     }
@@ -186,12 +199,6 @@ export default function Snakes() {
     const newMult = +(mult * tile.mult).toFixed(2);
     setMult(newMult);
 
-    // Auto-cashout on the final ring tile.
-    if (landed >= RING - 1) {
-      await settle(true, newMult, landed);
-      setRolling(false);
-      return;
-    }
     setBusy(false);
     setRolling(false);
   }
