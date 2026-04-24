@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -9,9 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { NumberField } from "@/components/NumberField";
 import { formatCoins } from "@/lib/format";
-import { Spade, Clock, LogOut } from "lucide-react";
-
-const TABLE_ID = "main";
+import { Spade, Clock, LogOut, ArrowLeft } from "lucide-react";
 
 type Card = { s: "S" | "H" | "D" | "C"; r: string };
 type Seat = {
@@ -75,6 +74,8 @@ function PlayingCard({ card, hidden, small }: { card?: Card; hidden?: boolean; s
 
 export default function Poker() {
   useTrackGame("poker");
+  const { tableId = "micro" } = useParams<{ tableId: string }>();
+  const TABLE_ID = tableId;
   const { user } = useAuth();
   const { profile, refetch } = useUserProfile();
   const [state, setState] = useState<State | null>(null);
@@ -171,8 +172,11 @@ export default function Poker() {
     <div className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
+          <Link to="/poker" className="mb-1 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-3.5 w-3.5" /> Lobby
+          </Link>
           <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">
-            <Spade className="h-6 w-6 text-primary sm:h-7 sm:w-7" /> POKER
+            <Spade className="h-6 w-6 text-primary sm:h-7 sm:w-7" /> POKER · {TABLE_ID.toUpperCase()}
           </h1>
           <p className="text-xs text-muted-foreground sm:text-sm">
             Texas Hold'em • {state?.small_blind ?? 1}/{state?.big_blind ?? 2} blinds • Hand #{state?.hand_seq ?? 0}
