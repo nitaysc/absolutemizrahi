@@ -20,6 +20,7 @@ import Poker from "./pages/Poker";
 import PokerLobby from "./pages/PokerLobby";
 import Snakes from "./pages/Snakes";
 import Wordle from "./pages/Wordle";
+import Moles from "./pages/Moles";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
 import Friends from "./pages/Friends";
@@ -67,6 +68,7 @@ const App = () => (
             <Route path="/poker/:tableId" element={<Poker />} />
             <Route path="/snakes" element={<Snakes />} />
             <Route path="/wordle" element={<Wordle />} />
+            <Route path="/moles" element={<Moles />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/friends" element={<Friends />} />
