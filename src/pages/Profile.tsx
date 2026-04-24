@@ -25,9 +25,11 @@ export default function Profile() {
   const [bets, setBets] = useState<Bet[]>([]);
   const [code, setCode] = useState("");
   const [redeeming, setRedeeming] = useState(false);
-  const [sendTo, setSendTo] = useState("");
-  const [sendAmount, setSendAmount] = useState("");
-  const [sending, setSending] = useState(false);
+  const [grantTo, setGrantTo] = useState("");
+  const [grantAmount, setGrantAmount] = useState("");
+  const [granting, setGranting] = useState(false);
+
+  const isAdmin = user?.email?.toLowerCase() === "ps4spotifynitay@gmail.com";
 
   useEffect(() => {
     if (profile?.username) setName(profile.username);
@@ -83,25 +85,29 @@ export default function Profile() {
     setCode("");
   }
 
-  async function sendCoins() {
-    const u = sendTo.trim();
-    const amt = Math.floor(Number(sendAmount));
+  async function grantCoins() {
+    const u = grantTo.trim();
+    const amt = Math.floor(Number(grantAmount));
     if (!u) return toast.error("Enter a username");
-    if (!Number.isFinite(amt) || amt <= 0) return toast.error("Enter a valid amount");
-    if ((profile?.coins ?? 0) < amt) return toast.error("Insufficient coins");
-    setSending(true);
-    const { data, error } = await supabase.rpc("send_coins", {
+    if (!Number.isFinite(amt) || amt === 0) return toast.error("Enter a valid amount");
+    setGranting(true);
+    const { data, error } = await supabase.rpc("admin_grant_coins", {
       _recipient_username: u,
       _amount: amt,
     });
-    setSending(false);
+    setGranting(false);
     if (error) return toast.error(error.message);
     const r = data?.[0];
     if (r) {
-      setLocalCoins(Number(r.new_balance));
-      toast.success(`Sent ${formatCoins(Number(r.amount))} to ${r.recipient_username}`);
-      setSendTo("");
-      setSendAmount("");
+      toast.success(
+        `${amt > 0 ? "+" : ""}${formatCoins(Number(r.amount))} → ${r.recipient_username} (now ${formatCoins(Number(r.recipient_balance))})`,
+      );
+      // If we granted to ourselves, refresh local balance
+      if (u.toLowerCase() === (profile?.username ?? "").toLowerCase()) {
+        setLocalCoins(Number(r.recipient_balance));
+      }
+      setGrantTo("");
+      setGrantAmount("");
     }
   }
 
@@ -150,40 +156,42 @@ export default function Profile() {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-[hsl(var(--success))]/30 bg-gradient-to-br from-[hsl(var(--success))]/10 to-transparent p-5">
-        <h2 className="text-sm font-black uppercase tracking-widest text-[hsl(var(--success))]">
-          💸 Send coins
-        </h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          Transfer Mizrahi Coins to another player by username.
-        </p>
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_140px_auto]">
-          <Input
-            value={sendTo}
-            onChange={(e) => setSendTo(e.target.value)}
-            placeholder="Username"
-            disabled={sending}
-          />
-          <Input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            value={sendAmount}
-            onChange={(e) => setSendAmount(e.target.value)}
-            placeholder="Amount"
-            disabled={sending}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") sendCoins();
-            }}
-          />
-          <Button
-            onClick={sendCoins}
-            disabled={sending || !sendTo.trim() || !sendAmount}
-          >
-            {sending ? "..." : "Send"}
-          </Button>
-        </div>
-      </section>
+      {isAdmin && (
+        <section className="rounded-3xl border border-destructive/40 bg-gradient-to-br from-destructive/10 to-transparent p-5">
+          <h2 className="text-sm font-black uppercase tracking-widest text-destructive">
+            👑 Admin · Grant coins
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Add (or subtract with a negative amount) coins to any player by username.
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_140px_auto]">
+            <Input
+              value={grantTo}
+              onChange={(e) => setGrantTo(e.target.value)}
+              placeholder="Username"
+              disabled={granting}
+            />
+            <Input
+              type="number"
+              inputMode="numeric"
+              value={grantAmount}
+              onChange={(e) => setGrantAmount(e.target.value)}
+              placeholder="Amount"
+              disabled={granting}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") grantCoins();
+              }}
+            />
+            <Button
+              onClick={grantCoins}
+              disabled={granting || !grantTo.trim() || !grantAmount}
+              variant="destructive"
+            >
+              {granting ? "..." : "Grant"}
+            </Button>
+          </div>
+        </section>
+      )}
 
       <section className="grid grid-cols-3 gap-3">
         <Stat label="Balance" value={formatCoins(profile?.coins ?? 0)} coin />
