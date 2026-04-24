@@ -60,7 +60,10 @@ export default function Coinflip() {
     setResult(outcome);
     setWon(w);
     setHistory((h) => [outcome, ...h].slice(0, 12));
-    if (w) toast.success(`+${formatCoins(data?.[0]?.payout ?? 0)} coins!`);
+    if (w) {
+      const profit = Math.max(Number(data?.[0]?.payout ?? 0) - bet, 0);
+      toast.success(`+${formatCoins(profit)} coins!`);
+    }
   }
 
   return (
