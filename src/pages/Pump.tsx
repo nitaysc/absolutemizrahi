@@ -54,10 +54,17 @@ export default function Pump() {
   const [busy, setBusy] = useState(false);
   const [popped, setPopped] = useState(false);
   const [popAt, setPopAt] = useState<number | null>(null);
-  // Use a ref alongside `busy` state so a rapid click can't see a stale value
-  // and so `finally` always reliably releases the lock (the bug where cashout
-  // appeared dead until a refresh was a stuck `busy` flag after a race).
-  const busyRef = useRef(false);
+  // Per-action locks so a click on CASHOUT isn't silently swallowed while a
+  // PUMP request is still in flight. We also queue a pending cashout so a
+  // fast double-tap (PUMP → CASHOUT) is honoured the moment the pump resolves.
+  const pumpingRef = useRef(false);
+  const cashingRef = useRef(false);
+  const startingRef = useRef(false);
+  const pendingCashoutRef = useRef(false);
+  const activeRef = useRef(false);
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
 
   // Resume any active server-side round on mount so a refresh doesn't lose state.
   useEffect(() => {
@@ -91,8 +98,8 @@ export default function Pump() {
     if (!profile) return;
     if (bet < 1) return toast.error("Bet at least 1 coin");
     if (bet > profile.coins) return toast.error("Not enough coins");
-    if (busyRef.current) return;
-    busyRef.current = true;
+    if (startingRef.current || activeRef.current) return;
+    startingRef.current = true;
     setBusy(true);
     try {
       const { data, error } = await supabase.rpc("pump_start", {
@@ -102,18 +109,19 @@ export default function Pump() {
       if (error) return toast.error(error.message);
       if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
       setActive(true);
+      activeRef.current = true;
       setPumps(0);
       setPopped(false);
       setPopAt(null);
     } finally {
-      busyRef.current = false;
+      startingRef.current = false;
       setBusy(false);
     }
   }
 
   async function pump() {
-    if (!active || busyRef.current) return;
-    busyRef.current = true;
+    if (!activeRef.current || pumpingRef.current || cashingRef.current) return;
+    pumpingRef.current = true;
     setBusy(true);
     playTileClick();
     try {
@@ -127,6 +135,8 @@ export default function Pump() {
         setPopped(true);
         setPopAt(r.pop_at);
         setActive(false);
+        activeRef.current = false;
+        pendingCashoutRef.current = false;
         toast.error(`Pop! -${formatCoins(bet)}`);
         setTimeout(() => {
           setPumps(0);
@@ -136,14 +146,25 @@ export default function Pump() {
         playGem();
       }
     } finally {
-      busyRef.current = false;
+      pumpingRef.current = false;
       setBusy(false);
+      // If the user pressed CASHOUT while this pump was in flight, run it now.
+      if (pendingCashoutRef.current && activeRef.current) {
+        pendingCashoutRef.current = false;
+        void cashout();
+      }
     }
   }
 
   async function cashout() {
-    if (!active || pumps < 1 || busyRef.current) return;
-    busyRef.current = true;
+    if (!activeRef.current || cashingRef.current) return;
+    // If a pump is mid-flight, queue the cashout instead of dropping the click.
+    if (pumpingRef.current) {
+      pendingCashoutRef.current = true;
+      return;
+    }
+    if (pumps < 1) return;
+    cashingRef.current = true;
     setBusy(true);
     try {
       const { data, error } = await supabase.rpc("pump_cashout");
@@ -155,6 +176,7 @@ export default function Pump() {
       const profitNow = Math.max(Number(r.payout) - bet, 0);
       const lanesLeft = Number(r.pop_at) - pumps;
       setActive(false);
+      activeRef.current = false;
       setPopAt(Number(r.pop_at));
       toast.success(
         `+${formatCoins(profitNow)} (${Number(r.multiplier).toFixed(2)}×) — pop was ${lanesLeft} pump${lanesLeft === 1 ? "" : "s"} away!`,
@@ -164,7 +186,7 @@ export default function Pump() {
         setPopAt(null);
       }, 2200);
     } finally {
-      busyRef.current = false;
+      cashingRef.current = false;
       setBusy(false);
     }
   }
@@ -294,7 +316,7 @@ export default function Pump() {
               </Button>
               <Button
                 onClick={cashout}
-                disabled={busy || pumps < 1}
+                disabled={pumps < 1 || cashingRef.current}
                 className="h-12 bg-[hsl(var(--success))] text-background hover:bg-[hsl(var(--success))]/90"
               >
                 CASHOUT
