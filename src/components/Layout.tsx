@@ -1,15 +1,18 @@
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { MizrahiCoin } from "./MizrahiCoin";
 import { formatCoins } from "@/lib/format";
-import { Dice5, Coins, Trophy, User, LogOut, Home } from "lucide-react";
+import { Dice5, Coins, Trophy, User, LogOut, Home, Bomb, Rocket } from "lucide-react";
 import { cn } from "@/lib/utils";
 import mizrahi from "@/assets/absolute-mizrahi.gif";
 
 const navItems = [
   { to: "/", label: "Lobby", icon: Home, end: true },
   { to: "/dice", label: "Dice", icon: Dice5 },
+  { to: "/limbo", label: "Limbo", icon: Rocket },
+  { to: "/mines", label: "Mines", icon: Bomb },
   { to: "/coinflip", label: "Coinflip", icon: Coins },
   { to: "/leaderboard", label: "Top", icon: Trophy },
   { to: "/profile", label: "Me", icon: User },
@@ -56,12 +59,7 @@ export function Layout() {
           </button>
 
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 rounded-full border border-primary/30 bg-card/80 px-3 py-1.5 shadow-[0_0_18px_hsl(var(--primary)/0.18)]">
-              <MizrahiCoin size={20} />
-              <span className="font-bold tabular-nums">
-                {formatCoins(profile?.coins ?? 0)}
-              </span>
-            </div>
+            <BalancePill coins={profile?.coins ?? 0} />
             <button
               onClick={() => signOut()}
               className="touch-target flex items-center justify-center rounded-full border border-border bg-card/80 p-2 text-muted-foreground hover:text-foreground"
@@ -80,7 +78,7 @@ export function Layout() {
 
       {/* Bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border/50 bg-background/85 backdrop-blur-xl safe-bottom">
-        <ul className="mx-auto flex max-w-5xl items-center justify-around px-2 py-2">
+        <ul className="mx-auto flex max-w-5xl items-center justify-around overflow-x-auto px-1 py-2">
           {navItems.map(({ to, label, icon: Icon, end }) => (
             <li key={to}>
               <NavLink
@@ -88,7 +86,7 @@ export function Layout() {
                 end={end}
                 className={({ isActive }) =>
                   cn(
-                    "flex flex-col items-center gap-1 rounded-xl px-4 py-1.5 text-xs font-medium transition-colors",
+                    "flex flex-col items-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-medium transition-colors",
                     isActive
                       ? "text-primary"
                       : "text-muted-foreground hover:text-foreground",
@@ -102,6 +100,41 @@ export function Layout() {
           ))}
         </ul>
       </nav>
+    </div>
+  );
+}
+
+/** Balance pill that briefly pulses when the value changes (delta tick). */
+function BalancePill({ coins }: { coins: number }) {
+  const [prev, setPrev] = useState(coins);
+  const [delta, setDelta] = useState<number | null>(null);
+  useEffect(() => {
+    if (coins !== prev) {
+      setDelta(coins - prev);
+      setPrev(coins);
+      const t = setTimeout(() => setDelta(null), 1100);
+      return () => clearTimeout(t);
+    }
+  }, [coins, prev]);
+
+  return (
+    <div className="relative flex items-center gap-2 rounded-full border border-primary/30 bg-card/80 px-3 py-1.5 shadow-[0_0_18px_hsl(var(--primary)/0.18)]">
+      <MizrahiCoin size={20} />
+      <span className="font-bold tabular-nums">{formatCoins(coins)}</span>
+      {delta !== null && delta !== 0 && (
+        <span
+          key={delta}
+          className={cn(
+            "pointer-events-none absolute -top-2 right-2 animate-[fade-in_0.2s_ease-out] rounded-full px-2 py-0.5 text-[10px] font-black",
+            delta > 0
+              ? "bg-[hsl(var(--success))] text-background"
+              : "bg-destructive text-destructive-foreground",
+          )}
+        >
+          {delta > 0 ? "+" : ""}
+          {formatCoins(delta)}
+        </span>
+      )}
     </div>
   );
 }
