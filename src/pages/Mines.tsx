@@ -113,6 +113,23 @@ export default function Mines() {
       toast.success(
         `+${formatCoins(Number(r.payout ?? 0))} (${Number(r.multiplier).toFixed(2)}×)`,
       );
+      // Reveal the bombs the player avoided so they can see what they dodged.
+      const bombs = (r.bombs as number[]) ?? [];
+      setTiles((prev) => {
+        const next: Tile[] = [...prev];
+        bombs.forEach((b) => {
+          if (next[b] === "hidden") next[b] = "bomb";
+        });
+        return next;
+      });
+      setActive(false);
+      // Auto-clear after a short reveal so the next round starts fresh.
+      setTimeout(() => {
+        setTiles(Array(25).fill("hidden"));
+        setRevealedCount(0);
+        setMultiplier(1);
+      }, 2200);
+      return;
     }
     setActive(false);
     setTiles(Array(25).fill("hidden"));
