@@ -13,11 +13,11 @@ import { playGem, playBomb, playTileClick, playCashout } from "@/lib/sfx";
 type Difficulty = "easy" | "medium" | "hard" | "expert" | "master";
 
 const CONFIG: Record<Difficulty, { tiles: number; eggs: number; step: number; tone: string }> = {
-  easy:   { tiles: 4, eggs: 1, step: 1.18, tone: "border-emerald-400 bg-emerald-500/15 text-emerald-300" },
-  medium: { tiles: 3, eggs: 1, step: 1.32, tone: "border-sky-400 bg-sky-500/15 text-sky-300" },
-  hard:   { tiles: 2, eggs: 1, step: 1.65, tone: "border-amber-400 bg-amber-500/15 text-amber-300" },
-  expert: { tiles: 3, eggs: 2, step: 2.20, tone: "border-orange-400 bg-orange-500/15 text-orange-300" },
-  master: { tiles: 4, eggs: 3, step: 2.90, tone: "border-rose-400 bg-rose-500/15 text-rose-300" },
+  easy:   { tiles: 4, eggs: 1, step: 1.32, tone: "border-emerald-400 bg-emerald-500/15 text-emerald-300" },
+  medium: { tiles: 3, eggs: 1, step: 1.49, tone: "border-sky-400 bg-sky-500/15 text-sky-300" },
+  hard:   { tiles: 2, eggs: 1, step: 1.80, tone: "border-amber-400 bg-amber-500/15 text-amber-300" },
+  expert: { tiles: 3, eggs: 2, step: 2.45, tone: "border-orange-400 bg-orange-500/15 text-orange-300" },
+  master: { tiles: 4, eggs: 3, step: 3.20, tone: "border-rose-400 bg-rose-500/15 text-rose-300" },
 };
 
 const FLOORS = 9;
