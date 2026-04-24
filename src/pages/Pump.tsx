@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTrackGame } from "@/hooks/usePresence";
@@ -36,7 +36,7 @@ const POP_PCT: Record<Difficulty, number> = {
   easy: 4,
   medium: 8,
   hard: 20,
-  insane: 35,
+  insane: 45,
 };
 
 function multForPump(diff: Difficulty, pumps: number) {
@@ -54,6 +54,10 @@ export default function Pump() {
   const [busy, setBusy] = useState(false);
   const [popped, setPopped] = useState(false);
   const [popAt, setPopAt] = useState<number | null>(null);
+  // Use a ref alongside `busy` state so a rapid click can't see a stale value
+  // and so `finally` always reliably releases the lock (the bug where cashout
+  // appeared dead until a refresh was a stuck `busy` flag after a race).
+  const busyRef = useRef(false);
 
   // Resume any active server-side round on mount so a refresh doesn't lose state.
   useEffect(() => {
@@ -87,66 +91,82 @@ export default function Pump() {
     if (!profile) return;
     if (bet < 1) return toast.error("Bet at least 1 coin");
     if (bet > profile.coins) return toast.error("Not enough coins");
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
-    const { data, error } = await supabase.rpc("pump_start", {
-      _bet_amount: bet,
-      _difficulty: difficulty,
-    });
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
-    setActive(true);
-    setPumps(0);
-    setPopped(false);
-    setPopAt(null);
+    try {
+      const { data, error } = await supabase.rpc("pump_start", {
+        _bet_amount: bet,
+        _difficulty: difficulty,
+      });
+      if (error) return toast.error(error.message);
+      if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
+      setActive(true);
+      setPumps(0);
+      setPopped(false);
+      setPopAt(null);
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
   }
 
   async function pump() {
-    if (!active || busy) return;
+    if (!active || busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     playTileClick();
-    const { data, error } = await supabase.rpc("pump_pump");
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    const r = data?.[0];
-    if (!r) return;
-    setPumps(r.pumps);
-    if (r.popped) {
-      playBomb();
-      setPopped(true);
-      setPopAt(r.pop_at);
-      setActive(false);
-      toast.error(`Pop! -${formatCoins(bet)}`);
-      setTimeout(() => {
-        setPumps(0);
-        setPopped(false);
-      }, 2200);
-    } else {
-      playGem();
+    try {
+      const { data, error } = await supabase.rpc("pump_pump");
+      if (error) return toast.error(error.message);
+      const r = data?.[0];
+      if (!r) return;
+      setPumps(r.pumps);
+      if (r.popped) {
+        playBomb();
+        setPopped(true);
+        setPopAt(r.pop_at);
+        setActive(false);
+        toast.error(`Pop! -${formatCoins(bet)}`);
+        setTimeout(() => {
+          setPumps(0);
+          setPopped(false);
+        }, 2200);
+      } else {
+        playGem();
+      }
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
     }
   }
 
   async function cashout() {
-    if (!active || pumps < 1 || busy) return;
+    if (!active || pumps < 1 || busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
-    const { data, error } = await supabase.rpc("pump_cashout");
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    const r = data?.[0];
-    if (!r) return;
-    playCashout();
-    setLocalCoins(Number(r.new_balance));
-    const profitNow = Math.max(Number(r.payout) - bet, 0);
-    const lanesLeft = Number(r.pop_at) - pumps;
-    setActive(false);
-    setPopAt(Number(r.pop_at));
-    toast.success(
-      `+${formatCoins(profitNow)} (${Number(r.multiplier).toFixed(2)}×) — pop was ${lanesLeft} pump${lanesLeft === 1 ? "" : "s"} away!`,
-    );
-    setTimeout(() => {
-      setPumps(0);
-      setPopAt(null);
-    }, 2200);
+    try {
+      const { data, error } = await supabase.rpc("pump_cashout");
+      if (error) return toast.error(error.message);
+      const r = data?.[0];
+      if (!r) return;
+      playCashout();
+      setLocalCoins(Number(r.new_balance));
+      const profitNow = Math.max(Number(r.payout) - bet, 0);
+      const lanesLeft = Number(r.pop_at) - pumps;
+      setActive(false);
+      setPopAt(Number(r.pop_at));
+      toast.success(
+        `+${formatCoins(profitNow)} (${Number(r.multiplier).toFixed(2)}×) — pop was ${lanesLeft} pump${lanesLeft === 1 ? "" : "s"} away!`,
+      );
+      setTimeout(() => {
+        setPumps(0);
+        setPopAt(null);
+      }, 2200);
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
   }
 
   return (
