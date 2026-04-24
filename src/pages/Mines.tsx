@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTrackGame } from "@/hooks/usePresence";
@@ -8,14 +8,17 @@ import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
 import { NumberField } from "@/components/NumberField";
 import { formatCoins } from "@/lib/format";
-import { Bomb, Gem } from "lucide-react";
+import { Bomb, Gem, Target, Repeat } from "lucide-react";
 import { playGem, playBomb, playTileClick, playCashout } from "@/lib/sfx";
 
 type Tile = "hidden" | "gem" | "bomb";
+type Mode = "manual" | "auto";
+type WinLossMode = "reset" | "increase";
 
 export default function Mines() {
   useTrackGame("mines");
   const { profile, setLocalCoins } = useUserProfile();
+  const [mode, setMode] = useState<Mode>("manual");
   const [bet, setBet] = useState(10);
   const [mines, setMines] = useState(3);
   const [active, setActive] = useState(false);
@@ -24,10 +27,25 @@ export default function Mines() {
   const [multiplier, setMultiplier] = useState(1);
   const [busy, setBusy] = useState(false);
 
-  // Resume any active round on mount
+  // Auto-mode state
+  const [picks, setPicks] = useState<Set<number>>(new Set());
+  const [autoBets, setAutoBets] = useState(10);
+  const [infinite, setInfinite] = useState(false);
+  const [onWinMode, setOnWinMode] = useState<WinLossMode>("reset");
+  const [onWinPct, setOnWinPct] = useState(0);
+  const [onLossMode, setOnLossMode] = useState<WinLossMode>("reset");
+  const [onLossPct, setOnLossPct] = useState(0);
+  const [stopProfit, setStopProfit] = useState(0);
+  const [stopLoss, setStopLoss] = useState(0);
+  const [running, setRunning] = useState(false);
+  const [autoLeft, setAutoLeft] = useState(0);
+  const [session, setSession] = useState({ profit: 0, wins: 0, losses: 0 });
+  const stopRef = useRef(false);
+  const baseBetRef = useRef(bet);
+
+  // Resume any active round on mount (manual only)
   useEffect(() => {
     if (!profile) return;
-    // Check via separate query for the round
     (async () => {
       const { data } = await supabase
         .from("profiles")
@@ -51,9 +69,14 @@ export default function Mines() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
 
+  // Cancel auto loop on unmount.
+  useEffect(() => () => { stopRef.current = true; }, []);
+
   const gemsLeft = 25 - mines - revealedCount;
   const nextMultiplier = currentMultiplier(mines, revealedCount + 1);
   const profit = Math.floor(bet * multiplier) - bet;
+
+  // ---------- MANUAL ----------
 
   async function start() {
     if (!profile) return;
@@ -66,10 +89,7 @@ export default function Mines() {
       _mines: mines,
     });
     setBusy(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
+    if (error) { toast.error(error.message); return; }
     if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
     setTiles(Array(25).fill("hidden"));
     setRevealedCount(0);
@@ -88,17 +108,14 @@ export default function Mines() {
     if (!r) return;
     if (r.hit_bomb) {
       playBomb();
-      // Use functional update so we don't drop a click that landed mid-request.
       setTiles((prev) => {
         const next: Tile[] = [...prev];
         const bombs = (r.bombs as number[]) ?? [];
-        // Reveal the entire board: every bomb shown as bomb, everything
-        // else (including the tile just clicked) as a gem the player missed.
         for (let idx = 0; idx < 25; idx++) {
           if (bombs.includes(idx)) next[idx] = "bomb";
           else if (next[idx] === "hidden") next[idx] = "gem";
         }
-        next[i] = "bomb"; // ensure the actually clicked tile shows bomb
+        next[i] = "bomb";
         return next;
       });
       setActive(false);
@@ -107,13 +124,7 @@ export default function Mines() {
       return;
     }
     playGem();
-    // Functional update guarantees the clicked tile shows even if React
-    // batched another state change between the click and the response.
-    setTiles((prev) => {
-      const next: Tile[] = [...prev];
-      next[i] = "gem";
-      return next;
-    });
+    setTiles((prev) => { const next: Tile[] = [...prev]; next[i] = "gem"; return next; });
     setRevealedCount((c) => c + 1);
     setMultiplier(Number(r.multiplier));
   }
@@ -129,25 +140,17 @@ export default function Mines() {
     if (r) {
       playCashout();
       const profit = Math.max(Number(r.payout ?? 0) - bet, 0);
-      toast.success(
-        `+${formatCoins(profit)} (${Number(r.multiplier).toFixed(2)}×)`,
-      );
-      // Reveal the full board: bombs the player dodged AND the gems they
-      // could've grabbed if they kept going.
+      toast.success(`+${formatCoins(profit)} (${Number(r.multiplier).toFixed(2)}×)`);
       const bombs = (r.bombs as number[]) ?? [];
       setTiles((prev) => {
         const next: Tile[] = [...prev];
         for (let idx = 0; idx < 25; idx++) {
-          if (bombs.includes(idx)) {
-            if (next[idx] === "hidden") next[idx] = "bomb";
-          } else if (next[idx] === "hidden") {
-            next[idx] = "gem";
-          }
+          if (bombs.includes(idx)) { if (next[idx] === "hidden") next[idx] = "bomb"; }
+          else if (next[idx] === "hidden") next[idx] = "gem";
         }
         return next;
       });
       setActive(false);
-      // Auto-clear after a short reveal so the next round starts fresh.
       setTimeout(() => {
         setTiles(Array(25).fill("hidden"));
         setRevealedCount(0);
@@ -160,6 +163,131 @@ export default function Mines() {
     setRevealedCount(0);
     setMultiplier(1);
   }
+
+  // ---------- AUTO ----------
+
+  function togglePick(i: number) {
+    if (running) return;
+    setPicks((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else if (next.size < 25 - mines) next.add(i);
+      return next;
+    });
+  }
+
+  /** Plays one auto-mode round at the given stake. Returns net profit. */
+  async function playAutoRound(stake: number): Promise<{ won: boolean; profit: number } | null> {
+    // Start
+    const startRes = await supabase.rpc("mines_start", { _bet_amount: stake, _mines: mines });
+    if (startRes.error) { toast.error(startRes.error.message); return null; }
+    if (startRes.data?.[0]) setLocalCoins(Number(startRes.data[0].new_balance));
+    // Reset board for animation
+    setTiles(Array(25).fill("hidden"));
+    setRevealedCount(0);
+    setMultiplier(1);
+
+    const order = Array.from(picks);
+    let lastMult = 1;
+    for (let k = 0; k < order.length; k++) {
+      if (stopRef.current) return null;
+      const tile = order[k];
+      const res = await supabase.rpc("mines_reveal", { _tile: tile });
+      if (res.error) { toast.error(res.error.message); return null; }
+      const r = res.data?.[0];
+      if (!r) return null;
+      if (r.hit_bomb) {
+        playBomb();
+        const bombs = (r.bombs as number[]) ?? [];
+        setTiles((prev) => {
+          const next: Tile[] = [...prev];
+          for (let idx = 0; idx < 25; idx++) {
+            if (bombs.includes(idx)) next[idx] = "bomb";
+            else if (next[idx] === "hidden") next[idx] = "gem";
+          }
+          next[tile] = "bomb";
+          return next;
+        });
+        setMultiplier(0);
+        return { won: false, profit: -stake };
+      }
+      playGem();
+      setTiles((prev) => { const next: Tile[] = [...prev]; next[tile] = "gem"; return next; });
+      setRevealedCount(k + 1);
+      lastMult = Number(r.multiplier);
+      setMultiplier(lastMult);
+      await sleep(120);
+    }
+
+    // Cashout
+    const cash = await supabase.rpc("mines_cashout");
+    if (cash.error) { toast.error(cash.error.message); return null; }
+    const cr = cash.data?.[0];
+    if (!cr) return null;
+    setLocalCoins(Number(cr.new_balance));
+    playCashout();
+    const payout = Number(cr.payout ?? 0);
+    const bombs = (cr.bombs as number[]) ?? [];
+    setTiles((prev) => {
+      const next: Tile[] = [...prev];
+      for (let idx = 0; idx < 25; idx++) {
+        if (bombs.includes(idx)) { if (next[idx] === "hidden") next[idx] = "bomb"; }
+        else if (next[idx] === "hidden") next[idx] = "gem";
+      }
+      return next;
+    });
+    return { won: payout > stake, profit: payout - stake };
+  }
+
+  async function startAuto() {
+    if (running) { stopRef.current = true; return; }
+    if (!profile) return;
+    if (picks.size === 0) return toast.error("Pick at least one tile to auto-reveal");
+    if (picks.size > 25 - mines) return toast.error("Too many picks for that mine count");
+    if (bet < 1) return toast.error("Bet at least 1 coin");
+    if (bet > profile.coins) return toast.error("Not enough coins");
+    if (!infinite && autoBets < 1) return;
+
+    stopRef.current = false;
+    setRunning(true);
+    setAutoLeft(infinite ? (Infinity as unknown as number) : autoBets);
+    setSession({ profit: 0, wins: 0, losses: 0 });
+    baseBetRef.current = bet;
+    let cumulative = 0;
+    let next = bet;
+    let i = 0;
+    while (infinite || i < autoBets) {
+      if (stopRef.current) break;
+      next = Math.max(1, Math.floor(next));
+      setBet(next);
+      const res = await playAutoRound(next);
+      if (!res) break;
+      cumulative += res.profit;
+      setSession((s) => ({
+        profit: s.profit + res.profit,
+        wins: s.wins + (res.won ? 1 : 0),
+        losses: s.losses + (res.won ? 0 : 1),
+      }));
+      if (stopProfit > 0 && cumulative >= stopProfit) break;
+      if (stopLoss > 0 && -cumulative >= stopLoss) break;
+      if (res.won) {
+        next = onWinMode === "reset" ? baseBetRef.current : next + (next * onWinPct) / 100;
+      } else {
+        next = onLossMode === "reset" ? baseBetRef.current : next + (next * onLossPct) / 100;
+      }
+      i++;
+      if (!infinite) setAutoLeft(autoBets - i);
+      await sleep(600);
+    }
+    setRunning(false);
+    setBet(baseBetRef.current);
+    setActive(false);
+  }
+
+  // ---------- RENDER ----------
+
+  const inAuto = mode === "auto";
+  const isPicking = inAuto && !running;
 
   return (
     <div className="space-y-6">
@@ -176,47 +304,66 @@ export default function Mines() {
         {/* Grid */}
         <div className="rounded-3xl border border-border bg-card/70 p-4 backdrop-blur-xl sm:p-6">
           <div className="grid grid-cols-5 gap-2 sm:gap-3">
-            {tiles.map((t, i) => (
-              <button
-                key={i}
-                onClick={() => reveal(i)}
-                disabled={!active || t !== "hidden" || busy}
-                className={`relative aspect-square rounded-xl transition ${
-                  t === "hidden"
-                    ? active
-                      ? "bg-secondary hover:bg-accent active:scale-95 cursor-pointer"
-                      : "bg-secondary/50 cursor-default"
-                    : t === "gem"
-                      ? "bg-[hsl(var(--success))]/15 ring-2 ring-[hsl(var(--success))]"
-                      : "bg-destructive/15 ring-2 ring-destructive"
-                }`}
-              >
-                {/* No AnimatePresence — it was racing fast clicks and making
-                    revealed gems disappear. A simple key-based motion remount
-                    plays the pop animation reliably. */}
-                {t !== "hidden" && (
-                  <motion.div
-                    key={t}
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ type: "spring", stiffness: 260, damping: 14 }}
-                    className="absolute inset-0 flex items-center justify-center"
-                  >
-                    {t === "gem" ? (
-                      <Gem className="h-7 w-7 text-[hsl(var(--success))] drop-shadow-[0_0_12px_hsl(var(--success)/0.6)] sm:h-9 sm:w-9" />
-                    ) : (
-                      <Bomb className="h-7 w-7 text-destructive drop-shadow-[0_0_12px_hsl(var(--destructive)/0.6)] sm:h-9 sm:w-9" />
-                    )}
-                  </motion.div>
-                )}
-              </button>
-            ))}
+            {tiles.map((t, i) => {
+              const picked = picks.has(i);
+              const clickable = inAuto
+                ? isPicking && t === "hidden"
+                : active && t === "hidden" && !busy;
+              return (
+                <button
+                  key={i}
+                  onClick={() => (inAuto ? togglePick(i) : reveal(i))}
+                  disabled={!clickable}
+                  className={`relative aspect-square rounded-xl transition ${
+                    t === "hidden"
+                      ? clickable
+                        ? picked
+                          ? "bg-primary/30 ring-2 ring-primary shadow-[0_0_18px_hsl(var(--primary)/0.5)] active:scale-95 cursor-pointer"
+                          : "bg-secondary hover:bg-accent active:scale-95 cursor-pointer"
+                        : picked
+                          ? "bg-primary/20 ring-2 ring-primary/60"
+                          : "bg-secondary/50 cursor-default"
+                      : t === "gem"
+                        ? "bg-[hsl(var(--success))]/15 ring-2 ring-[hsl(var(--success))]"
+                        : "bg-destructive/15 ring-2 ring-destructive"
+                  }`}
+                >
+                  {t === "hidden" && picked && (
+                    <Target className="absolute inset-0 m-auto h-5 w-5 text-primary sm:h-6 sm:w-6" />
+                  )}
+                  {t !== "hidden" && (
+                    <motion.div
+                      key={t}
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: "spring", stiffness: 260, damping: 14 }}
+                      className="absolute inset-0 flex items-center justify-center"
+                    >
+                      {t === "gem" ? (
+                        <Gem className="h-7 w-7 text-[hsl(var(--success))] drop-shadow-[0_0_12px_hsl(var(--success)/0.6)] sm:h-9 sm:w-9" />
+                      ) : (
+                        <Bomb className="h-7 w-7 text-destructive drop-shadow-[0_0_12px_hsl(var(--destructive)/0.6)] sm:h-9 sm:w-9" />
+                      )}
+                    </motion.div>
+                  )}
+                </button>
+              );
+            })}
           </div>
+          {inAuto && (
+            <p className="mt-3 text-center text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+              {picks.size === 0
+                ? "Click tiles to mark your auto-reveal pattern"
+                : `${picks.size} tile${picks.size === 1 ? "" : "s"} selected · ${currentMultiplier(mines, picks.size).toFixed(2)}× target`}
+            </p>
+          )}
         </div>
 
         {/* Controls */}
         <div className="space-y-4 rounded-3xl border border-border bg-card/70 p-5 backdrop-blur-xl">
-          <BetControls bet={bet} setBet={setBet} disabled={active} />
+          <ModeTabs mode={mode} onChange={(m) => { if (!running && !active) setMode(m); }} disabled={running || active} />
+
+          <BetControls bet={bet} setBet={setBet} disabled={active || running} />
 
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -225,10 +372,10 @@ export default function Mines() {
               </label>
               <NumberField
                 value={mines}
-                onChange={setMines}
+                onChange={(n) => { setMines(n); setPicks(new Set()); }}
                 min={1}
                 max={24}
-                disabled={active}
+                disabled={active || running}
                 className="mt-2"
               />
             </div>
@@ -242,17 +389,92 @@ export default function Mines() {
             </div>
           </div>
 
-          {active && (
+          {!inAuto && active && (
             <div className="grid grid-cols-2 gap-2 text-center">
               <Stat label="Multiplier" value={`${multiplier.toFixed(2)}×`} />
-              <Stat
-                label="Next pick"
-                value={gemsLeft > 0 ? `${nextMultiplier.toFixed(2)}×` : "—"}
-              />
+              <Stat label="Next pick" value={gemsLeft > 0 ? `${nextMultiplier.toFixed(2)}×` : "—"} />
             </div>
           )}
 
-          {active ? (
+          {inAuto && (
+            <>
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                    Number of bets
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={infinite}
+                      onChange={(e) => setInfinite(e.target.checked)}
+                      disabled={running}
+                      className="accent-primary"
+                    />
+                    ∞ infinite
+                  </label>
+                </div>
+                <NumberField
+                  value={autoBets}
+                  onChange={setAutoBets}
+                  min={1}
+                  max={100000}
+                  disabled={running || infinite}
+                  className="mt-1"
+                />
+              </div>
+
+              <WinLossRow title="On Win" mode={onWinMode} setMode={setOnWinMode} pct={onWinPct} setPct={setOnWinPct} disabled={running} />
+              <WinLossRow title="On Loss" mode={onLossMode} setMode={setOnLossMode} pct={onLossPct} setPct={setOnLossPct} disabled={running} />
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Stop on profit
+                  </label>
+                  <NumberField value={stopProfit} onChange={setStopProfit} min={0} max={1_000_000_000} disabled={running} className="mt-1" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Stop on loss
+                  </label>
+                  <NumberField value={stopLoss} onChange={setStopLoss} min={0} max={1_000_000_000} disabled={running} className="mt-1" />
+                </div>
+              </div>
+
+              {(running || session.wins + session.losses > 0) && (
+                <div className="grid grid-cols-3 gap-2 rounded-xl bg-background/60 p-2 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  <div>
+                    <div>Wins</div>
+                    <div className="mt-0.5 text-sm font-black tabular-nums text-[hsl(var(--success))]">{session.wins}</div>
+                  </div>
+                  <div>
+                    <div>Losses</div>
+                    <div className="mt-0.5 text-sm font-black tabular-nums text-destructive">{session.losses}</div>
+                  </div>
+                  <div>
+                    <div>Profit</div>
+                    <div className={`mt-0.5 text-sm font-black tabular-nums ${session.profit >= 0 ? "text-[hsl(var(--success))]" : "text-destructive"}`}>
+                      {session.profit >= 0 ? "+" : ""}{session.profit.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {inAuto ? (
+            <Button
+              onClick={startAuto}
+              disabled={!profile}
+              className={`h-12 w-full text-base font-black tracking-wider ${running ? "bg-destructive hover:bg-destructive" : "shadow-[0_0_24px_hsl(var(--primary)/0.4)]"}`}
+            >
+              <Repeat className="mr-2 h-4 w-4" />
+              {running
+                ? infinite ? "STOP (∞)" : `STOP (${autoLeft} left)`
+                : infinite ? "START AUTO (∞)" : `START AUTO (${autoBets})`}
+            </Button>
+          ) : active ? (
             <Button
               onClick={cashout}
               disabled={revealedCount === 0 || busy}
@@ -275,7 +497,8 @@ export default function Mines() {
   );
 }
 
-/** Mines multiplier with 1% house edge. Identical formula to the SQL function. */
+function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
+
 function currentMultiplier(mines: number, safeRevealed: number): number {
   if (safeRevealed <= 0) return 1;
   let m = 1;
@@ -288,10 +511,74 @@ function currentMultiplier(mines: number, safeRevealed: number): number {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl bg-background/60 p-2">
-      <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-        {label}
-      </div>
+      <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</div>
       <div className="mt-1 text-base font-black tabular-nums">{value}</div>
+    </div>
+  );
+}
+
+function ModeTabs({ mode, onChange, disabled }: { mode: Mode; onChange: (m: Mode) => void; disabled?: boolean }) {
+  return (
+    <div className="flex rounded-lg bg-secondary p-1">
+      {(["manual", "auto"] as Mode[]).map((m) => (
+        <button
+          key={m}
+          onClick={() => onChange(m)}
+          disabled={disabled}
+          className={`flex-1 rounded-md py-1.5 text-xs font-black uppercase tracking-widest transition ${
+            mode === m ? "bg-card text-foreground shadow" : "text-muted-foreground"
+          } ${disabled ? "opacity-50" : ""}`}
+        >
+          {m}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function WinLossRow({
+  title, mode, setMode, pct, setPct, disabled,
+}: {
+  title: string;
+  mode: WinLossMode;
+  setMode: (m: WinLossMode) => void;
+  pct: number;
+  setPct: (n: number) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div>
+      <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{title}</div>
+      <div className="mt-1 flex gap-1.5">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => setMode("reset")}
+          className={`rounded-md px-3 py-1.5 text-xs font-black uppercase tracking-wider transition ${
+            mode === "reset" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+          }`}
+        >Reset</button>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => setMode("increase")}
+          className={`rounded-md px-3 py-1.5 text-xs font-black uppercase tracking-wider transition ${
+            mode === "increase" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+          }`}
+        >Increase by</button>
+        <div className="relative flex-1">
+          <NumberField
+            value={pct}
+            onChange={setPct}
+            min={0}
+            max={1000}
+            decimal
+            disabled={disabled || mode === "reset"}
+            className="pr-7 text-right"
+          />
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">%</span>
+        </div>
+      </div>
     </div>
   );
 }
