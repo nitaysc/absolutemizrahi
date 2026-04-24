@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { MizrahiCoin } from "./MizrahiCoin";
@@ -9,10 +10,31 @@ interface Props {
   disabled?: boolean;
 }
 
-/** Reusable bet-amount input with ½ / 2× / Max controls. */
+/** Reusable bet-amount input with ½ / 2× / Max controls.
+ *  Uses a local string buffer so the user can freely type, clear, or paste
+ *  without the field snapping back to "1" on every keystroke. */
 export function BetControls({ bet, setBet, disabled }: Props) {
   const { profile } = useUserProfile();
   const max = profile?.coins ?? 0;
+
+  // Local string buffer — keeps cursor + intermediate values usable while typing.
+  const [text, setText] = useState(String(bet));
+  useEffect(() => {
+    // Sync from external changes (½, 2×, Max) without clobbering active typing.
+    if (Number(text) !== bet) setText(String(bet));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bet]);
+
+  function commit(raw: string) {
+    const n = Math.floor(Number(raw));
+    if (!Number.isFinite(n) || n < 1) {
+      setBet(1);
+      setText("1");
+    } else {
+      setBet(n);
+      setText(String(n));
+    }
+  }
 
   return (
     <div>
@@ -28,11 +50,18 @@ export function BetControls({ bet, setBet, disabled }: Props) {
         <div className="relative flex-1">
           <MizrahiCoin size={18} className="absolute left-3 top-1/2 -translate-y-1/2" />
           <Input
-            type="number"
-            min={1}
-            value={bet}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={text}
             disabled={disabled}
-            onChange={(e) => setBet(Math.max(1, Math.floor(Number(e.target.value) || 0)))}
+            onChange={(e) => {
+              const v = e.target.value.replace(/[^0-9]/g, "");
+              setText(v);
+              const n = Number(v);
+              if (v !== "" && Number.isFinite(n) && n >= 1) setBet(n);
+            }}
+            onBlur={(e) => commit(e.target.value)}
             className="pl-10 text-lg font-bold tabular-nums"
           />
         </div>
