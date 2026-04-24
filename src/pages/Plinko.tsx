@@ -33,8 +33,9 @@ const BOARD_H = TOP_PAD + (ROWS + 1) * ROW_H + 8;
 
 // Physics — slower, floaty Stake-like feel
 const GRAVITY = 320;          // svg units / s^2
-const RESTITUTION = 0.42;     // bounciness off pegs
-const FRICTION = 0.985;       // per-frame horizontal damping (applied via dt)
+const RESTITUTION = 0.42;     // bounce on the normal axis
+const TANGENTIAL_KEEP = 0.98; // preserve sideways glide across peg surface
+const AIR_DRAG = 0.992;       // global damping (applied via dt)
 const PEG_RADIUS = 2.4;
 const BALL_RADIUS = 4.2;
 const SUB_STEPS = 4;          // physics sub-steps per frame for stable contacts
@@ -42,6 +43,7 @@ const SUB_STEPS = 4;          // physics sub-steps per frame for stable contacts
 type Ball = {
   id: number;
   path: number[];        // predetermined row decisions (server-truth)
+  rightsByRow: number[]; // cumulative rights after each row, for lane guidance
   bucket: number;
   multiplier: number;
   bet: number;
@@ -91,9 +93,12 @@ export default function Plinko() {
   const pegY = useCallback((r: number) => TOP_PAD + (r + 1) * ROW_H, []);
 
   // Bucket center X (bucket i, i=0..16). Final landing column == sum of rights.
-  // Bucket cells are rendered as 17 equal flex divs spanning the SVG width.
   const bucketX = useCallback(
-    (i: number) => SIDE_PAD + i * COL + COL / 2,
+    (i: number) => COL / 2 + i * COL,
+    []
+  );
+  const laneX = useCallback(
+    (row: number, rights: number) => BOARD_W / 2 + (rights - (row + 1) / 2) * COL,
     []
   );
   const floorY = TOP_PAD + (ROWS + 1) * ROW_H;
@@ -130,7 +135,18 @@ export default function Plinko() {
         // deflect" instead of teleporting between rows.
         for (let s = 0; s < SUB_STEPS; s++) {
           b.vy += GRAVITY * sdt;
-          b.vx *= Math.pow(FRICTION, sdt * 60);
+          b.vx *= Math.pow(AIR_DRAG, sdt * 60);
+
+          if (b.y <= pegY(ROWS - 1) + ROW_H * 0.35) {
+            const guideRow = Math.max(
+              0,
+              Math.min(ROWS - 1, Math.floor((b.y - TOP_PAD + ROW_H * 0.45) / ROW_H) - 1),
+            );
+            const targetLaneX = laneX(guideRow, b.rightsByRow[guideRow]);
+            const lanePull = Math.max(-28, Math.min(28, (targetLaneX - b.x) * 1.8));
+            b.vx += lanePull * sdt * 12;
+          }
+
           b.x += b.vx * sdt;
           b.y += b.vy * sdt;
 
@@ -154,25 +170,27 @@ export default function Plinko() {
                 b.x += nx * overlap;
                 b.y += ny * overlap;
 
-                // Reflect velocity across the normal, then dampen
+                // Reflect only the normal component so the ball keeps its
+                // sideways glide along the peg instead of dropping dead
+                // straight after the first impact.
                 const vDotN = b.vx * nx + b.vy * ny;
                 if (vDotN < 0) {
-                  b.vx = (b.vx - 2 * vDotN * nx) * RESTITUTION;
-                  b.vy = (b.vy - 2 * vDotN * ny) * RESTITUTION;
+                  const tx = -ny;
+                  const ty = nx;
+                  const vDotT = b.vx * tx + b.vy * ty;
+                  const normalOut = -vDotN * RESTITUTION;
+                  const tangentOut = vDotT * TANGENTIAL_KEEP;
 
-                  // Bias toward the predetermined path so the visual
-                  // landing matches the server-recorded bucket. Applied as
-                  // a sideways nudge proportional to current fall speed
-                  // (stronger than a flat number → reliably lands right).
+                  b.vx = tx * tangentOut + nx * normalOut;
+                  b.vy = ty * tangentOut + ny * normalOut;
+
                   if (r === b.nextRow) {
-                    const wantRight = b.path[r] === 1;
-                    b.vx = (wantRight ? 1 : -1) * Math.max(40, Math.abs(b.vy) * 0.55);
+                    const targetLaneX = laneX(r, b.rightsByRow[r]);
+                    b.vx += Math.max(-18, Math.min(18, (targetLaneX - b.x) * 1.4));
                     b.nextRow = r + 1;
                   }
 
-                  // Anti-stuck: ensure ball keeps moving downward after
-                  // any peg contact so it can't rest on top of a peg.
-                  if (b.vy < 25) b.vy = 25;
+                  if (b.vy < 30) b.vy = 30;
 
                   litPegsRef.current.set(`${r}-${c}`, performance.now());
                   if ((r + c) % 3 === 0) playTileClick();
@@ -182,22 +200,24 @@ export default function Plinko() {
           }
 
           // Side walls so the ball never escapes the triangle
-          if (b.x < SIDE_PAD + BALL_RADIUS) {
-            b.x = SIDE_PAD + BALL_RADIUS;
+          if (b.x < BALL_RADIUS) {
+            b.x = BALL_RADIUS;
             b.vx = Math.abs(b.vx) * 0.6;
-          } else if (b.x > BOARD_W - SIDE_PAD - BALL_RADIUS) {
-            b.x = BOARD_W - SIDE_PAD - BALL_RADIUS;
+          } else if (b.x > BOARD_W - BALL_RADIUS) {
+            b.x = BOARD_W - BALL_RADIUS;
             b.vx = -Math.abs(b.vx) * 0.6;
           }
         }
 
-        // After clearing all rows, strongly steer to the predetermined
-        // bucket so the visual landing always matches the recorded result.
+        // After the last peg row, gently pull into the exact bucket center.
         if (b.y > pegY(ROWS - 1) + ROW_H * 0.5) {
           const targetX = bucketX(b.bucket);
           const dxT = targetX - b.x;
-          b.vx = dxT * 6;            // direct steer — no overshoot
-          if (Math.abs(dxT) < 1.5) b.x = targetX; // snap last sliver
+          b.vx += Math.max(-24, Math.min(24, dxT * 1.35)) * dt * 10;
+          if (Math.abs(dxT) < 0.75) {
+            b.x = targetX;
+            b.vx *= 0.5;
+          }
         }
 
         if (b.y >= floorY) {
@@ -236,7 +256,7 @@ export default function Plinko() {
       rafRef.current = null;
       lastTsRef.current = null;
     };
-  }, [pegX, pegY, bucketX, floorY]);
+  }, [pegX, pegY, bucketX, laneX, floorY]);
 
   async function drop() {
     if (!profile) return;
@@ -253,6 +273,11 @@ export default function Plinko() {
       path.push(right);
       bucket += right;
     }
+    const rightsByRow = path.reduce<number[]>((acc, dir) => {
+      const prev = acc.length > 0 ? acc[acc.length - 1] : 0;
+      acc.push(prev + dir);
+      return acc;
+    }, []);
     const multiplier = PAYOUTS[bucket];
 
     const { data, error } = await supabase.rpc("place_bet", {
@@ -269,6 +294,7 @@ export default function Plinko() {
     const newBall: Ball = {
       id,
       path,
+      rightsByRow,
       bucket,
       multiplier,
       bet,
@@ -421,10 +447,7 @@ export default function Plinko() {
             {/* Bucket row — aligned to SVG columns via padding */}
             <div
               className="mt-1 flex w-full gap-[2px]"
-              style={{
-                paddingLeft: `${(SIDE_PAD / BOARD_W) * 100}%`,
-                paddingRight: `${(SIDE_PAD / BOARD_W) * 100}%`,
-              }}
+              style={{ paddingLeft: 0, paddingRight: 0 }}
             >
               {PAYOUTS.map((m, i) => (
                 <BucketCell
