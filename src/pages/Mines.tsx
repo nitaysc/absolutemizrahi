@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTrackGame } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
@@ -181,22 +181,24 @@ export default function Mines() {
                       : "bg-destructive/15 ring-2 ring-destructive"
                 }`}
               >
-                <AnimatePresence>
-                  {t !== "hidden" && (
-                    <motion.div
-                      initial={{ scale: 0, rotate: -180 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      transition={{ type: "spring", stiffness: 260, damping: 14 }}
-                      className="absolute inset-0 flex items-center justify-center"
-                    >
-                      {t === "gem" ? (
-                        <Gem className="h-7 w-7 text-[hsl(var(--success))] drop-shadow-[0_0_12px_hsl(var(--success)/0.6)] sm:h-9 sm:w-9" />
-                      ) : (
-                        <Bomb className="h-7 w-7 text-destructive drop-shadow-[0_0_12px_hsl(var(--destructive)/0.6)] sm:h-9 sm:w-9" />
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                {/* No AnimatePresence — it was racing fast clicks and making
+                    revealed gems disappear. A simple key-based motion remount
+                    plays the pop animation reliably. */}
+                {t !== "hidden" && (
+                  <motion.div
+                    key={t}
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: "spring", stiffness: 260, damping: 14 }}
+                    className="absolute inset-0 flex items-center justify-center"
+                  >
+                    {t === "gem" ? (
+                      <Gem className="h-7 w-7 text-[hsl(var(--success))] drop-shadow-[0_0_12px_hsl(var(--success)/0.6)] sm:h-9 sm:w-9" />
+                    ) : (
+                      <Bomb className="h-7 w-7 text-destructive drop-shadow-[0_0_12px_hsl(var(--destructive)/0.6)] sm:h-9 sm:w-9" />
+                    )}
+                  </motion.div>
+                )}
               </button>
             ))}
           </div>
