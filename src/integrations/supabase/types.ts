@@ -219,6 +219,122 @@ export type Database = {
         }
         Relationships: []
       }
+      poker_seats: {
+        Row: {
+          current_bet: number
+          has_acted: boolean
+          hole: Json
+          id: string
+          joined_at: string
+          seat_index: number
+          stack: number
+          status: string
+          table_id: string
+          total_committed: number
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          current_bet?: number
+          has_acted?: boolean
+          hole?: Json
+          id?: string
+          joined_at?: string
+          seat_index: number
+          stack?: number
+          status?: string
+          table_id: string
+          total_committed?: number
+          updated_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          current_bet?: number
+          has_acted?: boolean
+          hole?: Json
+          id?: string
+          joined_at?: string
+          seat_index?: number
+          stack?: number
+          status?: string
+          table_id?: string
+          total_committed?: number
+          updated_at?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poker_seats_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "poker_tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      poker_tables: {
+        Row: {
+          big_blind: number
+          board: Json
+          current_bet: number
+          current_seat: number | null
+          dealer_button: number | null
+          deck: Json
+          hand_seq: number
+          id: string
+          last_raise_size: number
+          max_buy_in: number
+          min_buy_in: number
+          phase_ends_at: string | null
+          pot: number
+          seats: number
+          small_blind: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          big_blind?: number
+          board?: Json
+          current_bet?: number
+          current_seat?: number | null
+          dealer_button?: number | null
+          deck?: Json
+          hand_seq?: number
+          id: string
+          last_raise_size?: number
+          max_buy_in?: number
+          min_buy_in?: number
+          phase_ends_at?: string | null
+          pot?: number
+          seats?: number
+          small_blind?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          big_blind?: number
+          board?: Json
+          current_bet?: number
+          current_seat?: number | null
+          dealer_button?: number | null
+          deck?: Json
+          hand_seq?: number
+          id?: string
+          last_raise_size?: number
+          max_buy_in?: number
+          min_buy_in?: number
+          phase_ends_at?: string | null
+          pot?: number
+          seats?: number
+          small_blind?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           blackjack_round: Json | null
@@ -497,6 +613,28 @@ export type Database = {
           payout: number
         }[]
       }
+      poker_action: {
+        Args: { _action: string; _amount?: number; _table_id: string }
+        Returns: Json
+      }
+      poker_advance: { Args: { _table_id: string }; Returns: undefined }
+      poker_buy_in: {
+        Args: { _amount: number; _seat_index: number; _table_id: string }
+        Returns: Json
+      }
+      poker_collect_bets: { Args: { _table_id: string }; Returns: undefined }
+      poker_draw: { Args: { _deck: Json }; Returns: Record<string, unknown> }
+      poker_eval7: { Args: { _cards: Json }; Returns: number }
+      poker_fresh_deck: { Args: never; Returns: Json }
+      poker_leave: { Args: { _table_id: string }; Returns: Json }
+      poker_next_actor: {
+        Args: { _from: number; _table_id: string }
+        Returns: number
+      }
+      poker_rank_value: { Args: { _r: string }; Returns: number }
+      poker_settle: { Args: { _table_id: string }; Returns: undefined }
+      poker_table_state: { Args: { _table_id: string }; Returns: Json }
+      poker_try_start_hand: { Args: { _table_id: string }; Returns: undefined }
       pump_cashout: {
         Args: never
         Returns: {
