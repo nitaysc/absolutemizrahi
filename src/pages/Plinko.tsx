@@ -15,10 +15,13 @@ import { playGem, playBomb, playTileClick } from "@/lib/sfx";
  * Multi-ball: each click drops a new independent ball. Balls disappear on landing.
  */
 const ROWS = 16;
-const PAYOUTS: number[] = [
-  110, 41, 10, 5, 3, 1.5, 1, 0.5, 0.3, 0.5, 1, 1.5, 3, 5, 10, 41, 110,
-];
-const BUCKETS = PAYOUTS.length; // 17
+type Risk = "low" | "medium" | "high";
+const PAYOUTS_BY_RISK: Record<Risk, number[]> = {
+  low:    [16, 9, 2, 1.4, 1.1, 1, 0.5, 1, 0.3, 1, 0.5, 1, 1.1, 1.4, 2, 9, 16],
+  medium: [40, 14, 5, 2, 1.4, 1, 0.5, 0.3, 0.2, 0.3, 0.5, 1, 1.4, 2, 5, 14, 40],
+  high:   [420, 130, 26, 9, 3, 1.5, 0.3, 0.2, 0.1, 0.2, 0.3, 1.5, 3, 9, 26, 130, 420],
+};
+const BUCKETS = 17;
 
 // Logical SVG units — compact.
 const COL = 28;
@@ -28,10 +31,10 @@ const SIDE_PAD = 14;
 const BOARD_W = SIDE_PAD * 2 + (BUCKETS - 1) * COL;
 const BOARD_H = TOP_PAD + (ROWS + 1) * ROW_H + 8;
 
-// Physics
-const GRAVITY = 520;        // svg units / s^2
-const BOUNCE_DAMP = 0.55;   // vertical restitution at peg
-const HORIZ_KICK = 95;      // horizontal velocity given by peg deflection
+// Physics — slower, floaty Stake-like feel
+const GRAVITY = 240;        // svg units / s^2
+const BOUNCE_DAMP = 0.45;   // vertical restitution at peg
+const HORIZ_KICK = 55;      // horizontal velocity given by peg deflection
 const PEG_RADIUS = 2.4;
 const BALL_RADIUS = 4.6;
 
@@ -55,9 +58,12 @@ export default function Plinko() {
   useTrackGame("plinko");
   const { profile, setLocalCoins } = useUserProfile();
   const [bet, setBet] = useState(10);
+  const [risk, setRisk] = useState<Risk>("medium");
   const [recent, setRecent] = useState<{ mult: number; won: boolean }[]>([]);
   const [hitBucket, setHitBucket] = useState<{ i: number; t: number } | null>(null);
   const [, force] = useState(0);
+
+  const PAYOUTS = PAYOUTS_BY_RISK[risk];
 
   const ballsRef = useRef<Ball[]>([]);
   const idRef = useRef(0);
@@ -134,7 +140,7 @@ export default function Plinko() {
             const sideOffset = PEG_RADIUS + BALL_RADIUS;
             b.x = px + (right ? sideOffset : -sideOffset);
             b.y = py - 0.5; // touch peg from the side, not above
-            b.vy = Math.max(60, b.vy * BOUNCE_DAMP); // keep falling, slight slow
+            b.vy = Math.max(30, b.vy * BOUNCE_DAMP); // keep falling, slight slow
             b.vx = (right ? 1 : -1) * HORIZ_KICK;
 
             litPegsRef.current.set(`${r}-${pegCol}`, performance.now());
@@ -147,7 +153,7 @@ export default function Plinko() {
           const targetX = bucketX(b.bucket);
           const dx = targetX - b.x;
           // Soft pull horizontally so it lands cleanly.
-          b.vx += dx * 6 * dt;
+          b.vx += dx * 4 * dt;
           b.vx *= Math.pow(0.85, dt * 60);
 
           if (b.y >= floorY) {
@@ -224,8 +230,8 @@ export default function Plinko() {
       bet,
       x: BOARD_W / 2 + (Math.random() - 0.5) * 4,
       y: TOP_PAD - 6,
-      vx: (Math.random() - 0.5) * 30,
-      vy: 30,
+      vx: (Math.random() - 0.5) * 18,
+      vy: 12,
       rowIdx: 0,
       done: false,
       hue: Math.floor(Math.random() * 360),
@@ -279,6 +285,30 @@ export default function Plinko() {
         {/* Controls */}
         <div className="order-2 space-y-3 rounded-2xl border border-border bg-card/70 p-3 backdrop-blur-xl md:order-1">
           <BetControls bet={bet} setBet={setBet} disabled={false} />
+          <div>
+            <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Risk
+            </div>
+            <div className="grid grid-cols-3 gap-1">
+              {(["low", "medium", "high"] as Risk[]).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setRisk(r)}
+                  className={`rounded-md border px-2 py-1.5 text-[10px] font-black uppercase tracking-wider transition ${
+                    risk === r
+                      ? r === "high"
+                        ? "border-rose-400 bg-rose-500/20 text-rose-300"
+                        : r === "medium"
+                          ? "border-amber-400 bg-amber-400/20 text-amber-300"
+                          : "border-emerald-400 bg-emerald-500/20 text-emerald-300"
+                      : "border-border bg-background/60 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
           <Button
             onClick={drop}
             disabled={!profile}
@@ -288,7 +318,7 @@ export default function Plinko() {
           </Button>
           <div className="rounded-xl bg-background/60 p-2.5 text-[10px] text-muted-foreground">
             16 rows · 17 buckets · Up to{" "}
-            <span className="font-black text-foreground">110×</span>
+            <span className="font-black text-foreground">{PAYOUTS[0]}×</span>
             <div className="mt-1 text-[10px]">
               Active balls:{" "}
               <span className="font-black text-foreground">{balls.filter(b => !b.done).length}</span>
