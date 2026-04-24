@@ -51,6 +51,7 @@ export default function Pump() {
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [active, setActive] = useState(false);
   const [pumps, setPumps] = useState(0);
+  const [pendingPump, setPendingPump] = useState(false);
   const [busy, setBusy] = useState(false);
   const [popped, setPopped] = useState(false);
   const [popAt, setPopAt] = useState<number | null>(null);
@@ -83,16 +84,18 @@ export default function Pump() {
         setBet(Number(round.bet ?? bet));
         setDifficulty((round.difficulty ?? "medium") as Difficulty);
         setPumps(Number(round.pumps ?? 0));
+        setPendingPump(false);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
 
-  const currentMult = multForPump(difficulty, pumps);
-  const nextMult = multForPump(difficulty, pumps + 1);
+  const displayPumps = pumps + (pendingPump ? 1 : 0);
+  const currentMult = multForPump(difficulty, displayPumps);
+  const nextMult = multForPump(difficulty, displayPumps + 1);
   const profit = active ? Math.floor(bet * currentMult) - bet : 0;
   // Visual scale: balloon grows with each pump, capped so it doesn't escape.
-  const balloonScale = Math.min(1 + pumps * 0.06, 2.6);
+  const balloonScale = Math.min(1 + displayPumps * 0.06, 2.6);
 
   async function start() {
     if (!profile) return;
@@ -111,6 +114,7 @@ export default function Pump() {
       setActive(true);
       activeRef.current = true;
       setPumps(0);
+      setPendingPump(false);
       setPopped(false);
       setPopAt(null);
     } finally {
@@ -122,6 +126,7 @@ export default function Pump() {
   async function pump() {
     if (!activeRef.current || pumpingRef.current || cashingRef.current) return;
     pumpingRef.current = true;
+    setPendingPump(true);
     setBusy(true);
     playTileClick();
     try {
@@ -137,6 +142,7 @@ export default function Pump() {
         setActive(false);
         activeRef.current = false;
         pendingCashoutRef.current = false;
+        setPendingPump(false);
         toast.error(`Pop! -${formatCoins(bet)}`);
         setTimeout(() => {
           setPumps(0);
@@ -147,6 +153,7 @@ export default function Pump() {
       }
     } finally {
       pumpingRef.current = false;
+      setPendingPump(false);
       setBusy(false);
       // If the user pressed CASHOUT while this pump was in flight, run it now.
       if (pendingCashoutRef.current && activeRef.current) {
@@ -177,6 +184,7 @@ export default function Pump() {
       const lanesLeft = Number(r.pop_at) - pumps;
       setActive(false);
       activeRef.current = false;
+      setPendingPump(false);
       setPopAt(Number(r.pop_at));
       toast.success(
         `+${formatCoins(profitNow)} (${Number(r.multiplier).toFixed(2)}×) — pop was ${lanesLeft} pump${lanesLeft === 1 ? "" : "s"} away!`,
