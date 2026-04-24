@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTrackGame } from "@/hooks/usePresence";
@@ -7,8 +7,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
 import { NumberField } from "@/components/NumberField";
+import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel";
 import { formatCoins } from "@/lib/format";
-import { Rocket, Repeat, Zap } from "lucide-react";
+import { Rocket, Zap } from "lucide-react";
 
 const HOUSE_EDGE = 0.99;
 
@@ -23,18 +24,13 @@ export default function Limbo() {
   const [lastWon, setLastWon] = useState<boolean | null>(null);
   const [history, setHistory] = useState<{ mult: number; won: boolean }[]>([]);
 
-  const [autoBets, setAutoBets] = useState(10);
-  const [autoRunning, setAutoRunning] = useState(false);
-  const [autoLeft, setAutoLeft] = useState(0);
-  const stopAuto = useRef(false);
-
   const winChance = target > 1 ? +(HOUSE_EDGE * 100 / target).toFixed(2) : 0;
 
-  async function rollOnce() {
-    if (!profile) return;
-    if (bet < 1) return toast.error("Bet at least 1 coin");
-    if (bet > profile.coins) return toast.error("Not enough coins");
-    if (target < 1.01 || target > 1000) return toast.error("Target must be 1.01 – 1000");
+  async function rollOnce(): Promise<AutoBetRoundResult | null> {
+    if (!profile) return null;
+    if (bet < 1) { toast.error("Bet at least 1 coin"); return null; }
+    if (bet > profile.coins) { toast.error("Not enough coins"); return null; }
+    if (target < 1.01 || target > 1000) { toast.error("Target must be 1.01 – 1000"); return null; }
 
     setRolling(true);
     setLast(null);
@@ -59,36 +55,17 @@ export default function Limbo() {
     setRolling(false);
     if (error) {
       toast.error(error.message);
-      return;
+      return null;
     }
     if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
     setLast(Math.min(result, 9999));
     setLastWon(won);
     setHistory((h) => [{ mult: result, won }, ...h].slice(0, 10));
-    if (won) {
-      const profit = Math.max(Number(data?.[0]?.payout ?? 0) - bet, 0);
-      toast.success(`+${formatCoins(profit)}`);
-    }
+    const payout = Number(data?.[0]?.payout ?? 0);
+    const profit = won ? Math.max(payout - bet, 0) : -bet;
+    if (won) toast.success(`+${formatCoins(profit)}`);
+    return { won, profit };
   }
-
-  async function runAuto() {
-    if (autoRunning) {
-      stopAuto.current = true;
-      return;
-    }
-    stopAuto.current = false;
-    setAutoRunning(true);
-    setAutoLeft(autoBets);
-    for (let i = 0; i < autoBets; i++) {
-      if (stopAuto.current) break;
-      await rollOnce();
-      setAutoLeft(autoBets - i - 1);
-      await new Promise((r) => setTimeout(r, 250));
-    }
-    setAutoRunning(false);
-  }
-
-  useEffect(() => () => { stopAuto.current = true; }, []);
 
   return (
     <div className="space-y-3 sm:space-y-4">
@@ -148,7 +125,7 @@ export default function Limbo() {
       <div className="rounded-2xl border border-border bg-card/70 p-3 backdrop-blur-xl sm:rounded-3xl sm:p-4">
         <ModeTabs mode={mode} onChange={setMode} />
         <div className="mt-3 space-y-3">
-          <BetControls bet={bet} setBet={setBet} disabled={autoRunning} />
+          <BetControls bet={bet} setBet={setBet} disabled={rolling} />
 
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -161,7 +138,7 @@ export default function Limbo() {
                 min={1.01}
                 max={1000}
                 decimal
-                disabled={autoRunning}
+                disabled={rolling}
                 className="mt-1 text-base font-black tabular-nums"
               />
             </div>
@@ -182,25 +159,9 @@ export default function Limbo() {
             </span>
           </div>
 
-          {mode === "auto" && (
-            <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                Number of bets
-              </label>
-              <NumberField
-                value={autoBets}
-                onChange={setAutoBets}
-                min={1}
-                max={10000}
-                disabled={autoRunning}
-                className="mt-1"
-              />
-            </div>
-          )}
-
           {mode === "manual" ? (
             <Button
-              onClick={rollOnce}
+              onClick={() => rollOnce()}
               disabled={rolling}
               className="h-11 w-full text-base font-black tracking-wider shadow-[0_0_24px_hsl(var(--primary)/0.4)] sm:h-12"
             >
@@ -208,13 +169,7 @@ export default function Limbo() {
               {rolling ? "LAUNCHING..." : "BET"}
             </Button>
           ) : (
-            <Button
-              onClick={runAuto}
-              className={`h-11 w-full text-base font-black tracking-wider sm:h-12 ${autoRunning ? "bg-destructive hover:bg-destructive" : ""}`}
-            >
-              <Repeat className="mr-2 h-4 w-4" />
-              {autoRunning ? `STOP (${autoLeft})` : `START AUTO (${autoBets})`}
-            </Button>
+            <AutoBetPanel bet={bet} setBet={setBet} onBet={rollOnce} />
           )}
         </div>
       </div>
