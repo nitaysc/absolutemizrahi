@@ -675,6 +675,13 @@ export type Database = {
           new_balance: number
         }[]
       }
+      wordle_win: {
+        Args: { _attempts: number; _word: string }
+        Returns: {
+          awarded: number
+          new_balance: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
