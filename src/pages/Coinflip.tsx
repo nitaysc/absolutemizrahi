@@ -94,6 +94,7 @@ export default function Coinflip() {
         )}
       </header>
 
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_320px]">
       <div className="flex flex-col items-center rounded-3xl border border-border bg-card/70 p-8 backdrop-blur-xl">
         <div className="relative h-44 w-44" style={{ perspective: 1000 }}>
           <motion.div
@@ -172,6 +173,7 @@ export default function Coinflip() {
             <AutoBetPanel bet={bet} setBet={setBet} onBet={flip} intervalMs={400} />
           </div>
         )}
+      </div>
       </div>
     </div>
   );
