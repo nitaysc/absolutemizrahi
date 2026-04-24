@@ -145,33 +145,6 @@ export type Database = {
         }
         Relationships: []
       }
-      coin_transfers: {
-        Row: {
-          amount: number
-          created_at: string
-          id: string
-          note: string | null
-          recipient_id: string
-          sender_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          id?: string
-          note?: string | null
-          recipient_id: string
-          sender_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          id?: string
-          note?: string | null
-          recipient_id?: string
-          sender_id?: string
-        }
-        Relationships: []
-      }
       crash_bets: {
         Row: {
           auto_cashout: number | null
@@ -320,6 +293,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_grant_coins: {
+        Args: { _amount: number; _recipient_username: string }
+        Returns: {
+          amount: number
+          recipient_balance: number
+          recipient_username: string
+        }[]
+      }
       bj_action: { Args: { _action: string; _table_id: string }; Returns: Json }
       bj_advance: { Args: { _table_id: string }; Returns: undefined }
       bj_double: {
@@ -473,14 +454,6 @@ export type Database = {
         Returns: {
           awarded: number
           new_balance: number
-        }[]
-      }
-      send_coins: {
-        Args: { _amount: number; _note?: string; _recipient_username: string }
-        Returns: {
-          amount: number
-          new_balance: number
-          recipient_username: string
         }[]
       }
     }
