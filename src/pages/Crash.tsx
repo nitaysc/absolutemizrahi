@@ -366,16 +366,17 @@ export default function Crash() {
         </div>
       </div>
 
-      {/* Live players */}
+      {/* Live players — only count bets that actually belong to the current round */}
+      {(() => null)()}
       <div className="rounded-3xl border border-border bg-card/70 p-5 backdrop-blur-xl">
         <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground">
-          <TrendingUp className="h-4 w-4" /> Players this round ({bets.length})
+          <TrendingUp className="h-4 w-4" /> Players this round ({bets.filter(b => b.round_id === round?.id).length})
         </h2>
-        {bets.length === 0 ? (
+        {bets.filter(b => b.round_id === round?.id).length === 0 ? (
           <p className="text-sm text-muted-foreground">No bets yet — be the first.</p>
         ) : (
           <ul className="divide-y divide-border">
-            {bets.map((b) => (
+            {bets.filter(b => b.round_id === round?.id).map((b) => (
               <li key={b.id} className="flex items-center justify-between py-2 text-sm">
                 <span className="font-bold">{b.username}</span>
                 <span className="tabular-nums text-muted-foreground">{formatCoins(b.bet_amount)}</span>
