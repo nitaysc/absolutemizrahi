@@ -41,6 +41,7 @@ const GAMES = [
   "chicken",
   "plinko",
   "pump",
+  "dragontower",
 ];
 const POS_KEY = "liveStats:pos:v1";
 const OPEN_KEY = "liveStats:open:v1";
@@ -282,7 +283,7 @@ export function LiveStatsWindow() {
                   <SelectContent>
                     {GAMES.map((g) => (
                       <SelectItem key={g} value={g} className="text-xs capitalize">
-                        {g === "all" ? "All games" : g}
+                        {g === "all" ? "All games" : g === "dragontower" ? "Dragon Tower" : g}
                       </SelectItem>
                     ))}
                   </SelectContent>
