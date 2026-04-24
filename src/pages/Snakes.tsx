@@ -21,21 +21,18 @@ type Difficulty = "easy" | "medium" | "hard" | "expert";
  *   - trophy (final big-payout tile near the end of the ring)
  */
 const RING = 16;
-const TROPHY_COUNT_BY_DIFF: Record<Difficulty, number> = {
-  easy: 4,
-  medium: 3,
-  hard: 2,
-  expert: 1,
-};
+// Always exactly ONE jackpot (trophy) per board — the final tile.
+const TROPHY_COUNT = 1;
 
 const DIFF_CFG: Record<
   Difficulty,
   { snakeChance: (i: number) => number; multBase: number; label: string }
 > = {
-  easy:   { snakeChance: (i) => 0.05 + i * 0.010, multBase: 1.10, label: "Easy" },
-  medium: { snakeChance: (i) => 0.10 + i * 0.014, multBase: 1.16, label: "Medium" },
-  hard:   { snakeChance: (i) => 0.16 + i * 0.018, multBase: 1.24, label: "Hard" },
-  expert: { snakeChance: (i) => 0.24 + i * 0.022, multBase: 1.34, label: "Expert" },
+  // Toned-down multipliers so the game isn't OP. Snake odds still scale with distance.
+  easy:   { snakeChance: (i) => 0.06 + i * 0.010, multBase: 1.06, label: "Easy" },
+  medium: { snakeChance: (i) => 0.12 + i * 0.012, multBase: 1.10, label: "Medium" },
+  hard:   { snakeChance: (i) => 0.18 + i * 0.014, multBase: 1.14, label: "Hard" },
+  expert: { snakeChance: (i) => 0.26 + i * 0.016, multBase: 1.18, label: "Expert" },
 };
 
 type Tile =
@@ -46,13 +43,13 @@ type Tile =
 function buildRing(diff: Difficulty): Tile[] {
   const cfg = DIFF_CFG[diff];
   const tiles: Tile[] = new Array(RING);
-  // Reserve last N tiles as trophies (highest payouts).
-  const trophyCount = TROPHY_COUNT_BY_DIFF[diff];
-  const trophyStart = RING - trophyCount;
+  // Single jackpot = the very last tile.
+  const trophyIdx = RING - 1;
 
   for (let i = 1; i < RING; i++) {
-    if (i >= trophyStart) {
-      const base = Math.pow(cfg.multBase, i + 2) * 1.4;
+    if (i === trophyIdx) {
+      // Modest jackpot — meaningful but not absurd.
+      const base = Math.pow(cfg.multBase, i) * 1.6;
       tiles[i] = { kind: "trophy", mult: +base.toFixed(2) };
       continue;
     }
@@ -61,7 +58,7 @@ function buildRing(diff: Difficulty): Tile[] {
       tiles[i] = { kind: "snake" };
     } else {
       const base = Math.pow(cfg.multBase, i);
-      const jitter = 0.9 + Math.random() * 0.3;
+      const jitter = 0.92 + Math.random() * 0.18;
       tiles[i] = { kind: "mult", mult: +(base * jitter).toFixed(2) };
     }
   }
@@ -98,6 +95,7 @@ export default function Snakes() {
   const [mult, setMult] = useState(1);
   const [busy, setBusy] = useState(false);
   const [dice, setDice] = useState<number | null>(null);
+  const [dice2, setDice2] = useState<number | null>(null);
   const [rolling, setRolling] = useState(false);
   const [history, setHistory] = useState<{ mult: number; won: boolean }[]>([]);
   const settledRef = useRef(false);
@@ -117,6 +115,7 @@ export default function Snakes() {
     setPos(0);
     setMult(1);
     setDice(null);
+    setDice2(null);
     settledRef.current = false;
     setActive(true);
     setBusy(false);
@@ -129,13 +128,17 @@ export default function Snakes() {
     let ticks = 0;
     const spin = setInterval(() => {
       setDice(1 + Math.floor(Math.random() * 6));
+      setDice2(1 + Math.floor(Math.random() * 6));
       ticks++;
       if (ticks >= 8) clearInterval(spin);
     }, 70);
 
     await new Promise((r) => setTimeout(r, 650));
-    const r = 1 + Math.floor(Math.random() * 6);
-    setDice(r);
+    const d1 = 1 + Math.floor(Math.random() * 6);
+    const d2 = 1 + Math.floor(Math.random() * 6);
+    setDice(d1);
+    setDice2(d2);
+    const r = d1 + d2;
 
     const startPos = pos;
     const landed = Math.min(RING - 1, startPos + r);
@@ -264,8 +267,13 @@ export default function Snakes() {
                       {/* Dice pair */}
                       <div className="flex gap-2">
                         <DieFace value={dice ?? 1} pulsing={rolling} />
-                        <DieFace value={dice ?? 1} pulsing={rolling} />
+                        <DieFace value={dice2 ?? 1} pulsing={rolling} />
                       </div>
+                      {dice !== null && dice2 !== null && !rolling && (
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          Rolled {dice + dice2}
+                        </div>
+                      )}
                       {/* Multiplier readout */}
                       <motion.div
                         key={mult}
@@ -401,8 +409,8 @@ function RingTile({
     } else if (tile?.kind === "mult") {
       content = <span>{tile.mult.toFixed(2)}×</span>;
     } else if (tile?.kind === "snake") {
-      // Hidden until landed — show neutral placeholder
-      content = <span className={dim}>?</span>;
+      // Snakes are visible on the board so the player can see the danger.
+      content = <span className="text-xl opacity-60 sm:text-2xl">🐍</span>;
     }
   } else {
     if (tile?.kind === "snake") {
