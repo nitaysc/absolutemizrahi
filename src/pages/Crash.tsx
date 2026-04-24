@@ -124,8 +124,11 @@ export default function Crash() {
     if (round?.status !== "running" || !round.start_at) return;
     const check = setInterval(async () => {
       const m = liveMultiplier(round.start_at);
+      // Pay out anyone whose auto-cashout target was hit.
+      if (m > 1.01) {
+        await supabase.rpc("crash_process_autos");
+      }
       // The server knows the real crash_at — call settle and let it decide.
-      // We call it eagerly every 200ms once we *might* have crashed.
       if (m > 1.05) {
         const { data } = await supabase.rpc("crash_settle");
         if (data?.[0]) {
