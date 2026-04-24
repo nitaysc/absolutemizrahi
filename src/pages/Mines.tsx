@@ -4,8 +4,8 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { BetControls } from "@/components/BetControls";
+import { NumberField } from "@/components/NumberField";
 import { formatCoins } from "@/lib/format";
 import { Bomb, Gem } from "lucide-react";
 
@@ -58,14 +58,12 @@ export default function Mines() {
     if (bet > profile.coins) return toast.error("Not enough coins");
     if (mines < 1 || mines > 24) return toast.error("Mines 1-24");
     setBusy(true);
-    setLocalCoins(profile.coins - bet);
     const { data, error } = await supabase.rpc("mines_start", {
       _bet_amount: bet,
       _mines: mines,
     });
     setBusy(false);
     if (error) {
-      setLocalCoins(profile.coins);
       toast.error(error.message);
       return;
     }
@@ -111,9 +109,15 @@ export default function Mines() {
     if (error) return toast.error(error.message);
     const r = data?.[0];
     if (r) setLocalCoins(Number(r.new_balance));
-    toast.success(`+${formatCoins(Number(r?.payout ?? 0))} (${Number(r?.multiplier).toFixed(2)}×)`);
+    if (r) {
+      toast.success(
+        `+${formatCoins(Number(r.payout ?? 0))} (${Number(r.multiplier).toFixed(2)}×)`,
+      );
+    }
     setActive(false);
-    refetch();
+    setTiles(Array(25).fill("hidden"));
+    setRevealedCount(0);
+    setMultiplier(1);
   }
 
   return (
@@ -176,16 +180,13 @@ export default function Mines() {
               <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 Mines
               </label>
-              <Input
-                type="number"
+              <NumberField
+                value={mines}
+                onChange={setMines}
                 min={1}
                 max={24}
-                value={mines}
                 disabled={active}
-                onChange={(e) =>
-                  setMines(Math.max(1, Math.min(24, Math.floor(Number(e.target.value) || 1))))
-                }
-                className="mt-2 text-lg font-bold tabular-nums"
+                className="mt-2"
               />
             </div>
             <div>
