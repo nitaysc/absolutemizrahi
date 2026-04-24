@@ -274,7 +274,8 @@ export default function Plinko() {
       bucket += right;
     }
     const rightsByRow = path.reduce<number[]>((acc, dir) => {
-      acc.push((acc.at(-1) ?? 0) + dir);
+      const prev = acc.length > 0 ? acc[acc.length - 1] : 0;
+      acc.push(prev + dir);
       return acc;
     }, []);
     const multiplier = PAYOUTS[bucket];
