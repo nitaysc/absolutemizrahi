@@ -40,6 +40,7 @@ const GAMES = [
   "crash",
   "chicken",
   "plinko",
+  "pump",
 ];
 const POS_KEY = "liveStats:pos:v1";
 const OPEN_KEY = "liveStats:open:v1";
