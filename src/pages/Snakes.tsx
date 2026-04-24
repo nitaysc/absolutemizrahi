@@ -274,6 +274,7 @@ export default function Snakes() {
         )}
       </header>
 
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_320px]">
       {/* Board */}
       <div className="rounded-2xl border border-border bg-[hsl(220_30%_8%)] p-4 sm:rounded-3xl sm:p-6">
         <div className="mx-auto max-w-md">
@@ -401,6 +402,7 @@ export default function Snakes() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
