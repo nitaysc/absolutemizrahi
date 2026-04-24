@@ -13,6 +13,7 @@ import Limbo from "./pages/Limbo";
 import Crash from "./pages/Crash";
 import Blackjack from "./pages/Blackjack";
 import Chicken from "./pages/Chicken";
+import Plinko from "./pages/Plinko";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/crash" element={<Crash />} />
             <Route path="/blackjack" element={<Blackjack />} />
             <Route path="/chicken" element={<Chicken />} />
+            <Route path="/plinko" element={<Plinko />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/profile" element={<Profile />} />
           </Route>

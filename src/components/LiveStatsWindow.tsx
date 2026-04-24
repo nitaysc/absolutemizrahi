@@ -30,7 +30,17 @@ type BetRow = {
   created_at: string;
 };
 
-const GAMES = ["all", "dice", "limbo", "coinflip", "mines", "blackjack", "crash", "chicken"];
+const GAMES = [
+  "all",
+  "dice",
+  "limbo",
+  "coinflip",
+  "mines",
+  "blackjack",
+  "crash",
+  "chicken",
+  "plinko",
+];
 const POS_KEY = "liveStats:pos:v1";
 const OPEN_KEY = "liveStats:open:v1";
 const W = 290;
@@ -108,8 +118,11 @@ export function LiveStatsWindow() {
       (data ?? []).map((b) => ({
         id: b.id,
         game: b.game,
-        bet_amount: Number(b.bet_amount),
-        payout: Number(b.payout),
+        // bigint columns can come back as strings in some clients —
+        // coerce explicitly so the profit math never silently does
+        // string concatenation or NaN arithmetic.
+        bet_amount: Number(b.bet_amount) || 0,
+        payout: Number(b.payout) || 0,
         won: b.won,
         created_at: b.created_at,
       })),
@@ -148,11 +161,18 @@ export function LiveStatsWindow() {
     [bets, game],
   );
   const stats = useMemo(() => {
-    let wagered = 0, payout = 0, wins = 0, losses = 0;
+    let wagered = 0,
+      payout = 0,
+      wins = 0,
+      losses = 0;
     for (const b of filtered) {
       wagered += b.bet_amount;
       payout += b.payout;
-      if (b.won) wins += 1; else losses += 1;
+      // A bet is a "win" only if we actually got more back than we put in.
+      // Some games (like chicken/plinko on a < 1× landing) record won=true
+      // with a payout below the bet, which made the win/loss counts feel wrong.
+      if (b.payout > b.bet_amount) wins += 1;
+      else losses += 1;
     }
     return { wagered, payout, profit: payout - wagered, wins, losses };
   }, [filtered]);
@@ -164,6 +184,12 @@ export function LiveStatsWindow() {
       return { i: i + 1, profit: cum };
     });
   }, [filtered]);
+
+  // Profit on the most recent bet — handy at-a-glance "did the last
+  // round win?" indicator next to the cumulative profit.
+  const lastDelta = filtered[0]
+    ? filtered[0].payout - filtered[0].bet_amount
+    : 0;
 
   return (
     <>
@@ -269,9 +295,17 @@ export function LiveStatsWindow() {
                   tone={stats.profit >= 0 ? "good" : "bad"}
                   coin
                 />
-                <StatCell label="Wins" value={String(stats.wins)} tone="good" />
+                <StatCell
+                  label="Last bet"
+                  value={`${lastDelta >= 0 ? "+" : ""}${formatCoins(lastDelta)}`}
+                  tone={lastDelta >= 0 ? "good" : "bad"}
+                  coin
+                />
                 <StatCell label="Wagered" value={formatCoins(stats.wagered)} coin />
-                <StatCell label="Losses" value={String(stats.losses)} tone="bad" />
+                <StatCell
+                  label="W / L"
+                  value={`${stats.wins} / ${stats.losses}`}
+                />
               </div>
 
               <div className="mt-2 h-32 w-full rounded-xl border border-border bg-background/40 p-1.5">
