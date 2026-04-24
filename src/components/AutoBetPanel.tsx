@@ -27,8 +27,13 @@ export type AutoBetRoundResult = {
 interface Props {
   bet: number;
   setBet: (n: number) => void;
-  /** Runs a single round. Return null to stop the loop (e.g. error). */
-  onBet: () => Promise<AutoBetRoundResult | null>;
+  /**
+   * Runs a single round. Return null to stop the loop (e.g. error).
+   * The auto loop passes the next stake explicitly via `betOverride`
+   * so the RPC always uses the freshly-computed amount instead of the
+   * page-level `bet` state, which may be stale inside the closure.
+   */
+  onBet: (betOverride?: number) => Promise<AutoBetRoundResult | null>;
   /** Optional: disable the "Start" button (e.g. round in progress). */
   disabled?: boolean;
   /** ms to wait between rounds. Default 250. */
@@ -85,7 +90,9 @@ export function AutoBetPanel({ bet, setBet, onBet, disabled, intervalMs = 250 }:
       setBet(next);
       // Wait one frame so the input visibly updates before the round fires.
       await new Promise((r) => setTimeout(r, 0));
-      const res = await onBet();
+      // Pass the freshly-computed stake explicitly — the host page's
+      // `onBet` closure typically captures a stale `bet` from render.
+      const res = await onBet(next);
       if (!res) break;
       cumulative += res.profit;
       setSession((s) => ({

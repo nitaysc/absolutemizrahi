@@ -24,10 +24,11 @@ export default function Coinflip() {
   const [history, setHistory] = useState<Side[]>([]);
   const rotation = useRef(0);
 
-  async function flip(): Promise<AutoBetRoundResult | null> {
+  async function flip(betOverride?: number): Promise<AutoBetRoundResult | null> {
     if (!profile) return null;
-    if (bet < 1) { toast.error("Bet at least 1 coin"); return null; }
-    if (bet > profile.coins) { toast.error("Not enough coins"); return null; }
+    const stake = betOverride ?? bet;
+    if (stake < 1) { toast.error("Bet at least 1 coin"); return null; }
+    if (stake > profile.coins) { toast.error("Not enough coins"); return null; }
 
     setFlipping(true);
     setWon(null);
@@ -48,7 +49,7 @@ export default function Coinflip() {
 
     const { data, error } = await supabase.rpc("place_bet", {
       _game: "coinflip",
-      _bet_amount: bet,
+      _bet_amount: stake,
       _won: w,
       _multiplier: MULTIPLIER,
       _details: { pick, outcome },
@@ -63,7 +64,7 @@ export default function Coinflip() {
     setWon(w);
     setHistory((h) => [outcome, ...h].slice(0, 12));
     const payout = Number(data?.[0]?.payout ?? 0);
-    const profit = w ? Math.max(payout - bet, 0) : -bet;
+    const profit = w ? Math.max(payout - stake, 0) : -stake;
     if (w) toast.success(`+${formatCoins(profit)} coins!`);
     return { won: w, profit };
   }

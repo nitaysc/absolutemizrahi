@@ -26,10 +26,11 @@ export default function Limbo() {
 
   const winChance = target > 1 ? +(HOUSE_EDGE * 100 / target).toFixed(2) : 0;
 
-  async function rollOnce(): Promise<AutoBetRoundResult | null> {
+  async function rollOnce(betOverride?: number): Promise<AutoBetRoundResult | null> {
     if (!profile) return null;
-    if (bet < 1) { toast.error("Bet at least 1 coin"); return null; }
-    if (bet > profile.coins) { toast.error("Not enough coins"); return null; }
+    const stake = betOverride ?? bet;
+    if (stake < 1) { toast.error("Bet at least 1 coin"); return null; }
+    if (stake > profile.coins) { toast.error("Not enough coins"); return null; }
     if (target < 1.01 || target > 1000) { toast.error("Target must be 1.01 – 1000"); return null; }
 
     setRolling(true);
@@ -47,7 +48,7 @@ export default function Limbo() {
 
     const { data, error } = await supabase.rpc("place_bet", {
       _game: "limbo",
-      _bet_amount: bet,
+      _bet_amount: stake,
       _won: won,
       _multiplier: target,
       _details: { result, target },
@@ -62,7 +63,7 @@ export default function Limbo() {
     setLastWon(won);
     setHistory((h) => [{ mult: result, won }, ...h].slice(0, 10));
     const payout = Number(data?.[0]?.payout ?? 0);
-    const profit = won ? Math.max(payout - bet, 0) : -bet;
+    const profit = won ? Math.max(payout - stake, 0) : -stake;
     if (won) toast.success(`+${formatCoins(profit)}`);
     return { won, profit };
   }
