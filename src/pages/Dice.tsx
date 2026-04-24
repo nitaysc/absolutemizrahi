@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useTrackGame } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Slider } from "@/components/ui/slider";
@@ -16,6 +17,7 @@ type Mode = "manual" | "auto";
 type Dir = "over" | "under";
 
 export default function Dice() {
+  useTrackGame("dice");
   const { profile, setLocalCoins } = useUserProfile();
   const [mode, setMode] = useState<Mode>("manual");
   const [bet, setBet] = useState(10);

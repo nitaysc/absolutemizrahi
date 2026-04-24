@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useTrackGame } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { Bomb, Gem } from "lucide-react";
 type Tile = "hidden" | "gem" | "bomb";
 
 export default function Mines() {
+  useTrackGame("mines");
   const { profile, setLocalCoins } = useUserProfile();
   const [bet, setBet] = useState(10);
   const [mines, setMines] = useState(3);
@@ -113,6 +115,23 @@ export default function Mines() {
       toast.success(
         `+${formatCoins(Number(r.payout ?? 0))} (${Number(r.multiplier).toFixed(2)}×)`,
       );
+      // Reveal the bombs the player avoided so they can see what they dodged.
+      const bombs = (r.bombs as number[]) ?? [];
+      setTiles((prev) => {
+        const next: Tile[] = [...prev];
+        bombs.forEach((b) => {
+          if (next[b] === "hidden") next[b] = "bomb";
+        });
+        return next;
+      });
+      setActive(false);
+      // Auto-clear after a short reveal so the next round starts fresh.
+      setTimeout(() => {
+        setTiles(Array(25).fill("hidden"));
+        setRevealedCount(0);
+        setMultiplier(1);
+      }, 2200);
+      return;
     }
     setActive(false);
     setTiles(Array(25).fill("hidden"));

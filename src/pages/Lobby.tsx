@@ -1,17 +1,18 @@
 import { Link } from "react-router-dom";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { usePresence } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
-import { Dice5, Coins, Gift, TrendingUp, Bomb, Rocket } from "lucide-react";
+import { Dice5, Coins, Gift, TrendingUp, Bomb, Rocket, Zap } from "lucide-react";
 import { formatCoins } from "@/lib/format";
 import mizrahi from "@/assets/absolute-mizrahi.gif";
 
 export default function Lobby() {
   const { profile, refetch } = useUserProfile();
+  const { counts: playing, total } = usePresence();
   const [claiming, setClaiming] = useState(false);
-  const [playing, setPlaying] = useState<Record<string, number>>({});
 
   const canClaim =
     !profile?.last_daily_bonus ||
@@ -26,42 +27,6 @@ export default function Lobby() {
     refetch();
   }
 
-  // Live "playing now" = unique players who placed a bet in the last 5 minutes,
-  // grouped per game. Re-polled every 15s and on realtime bet inserts.
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const since = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      const { data } = await supabase
-        .from("bets")
-        .select("game,user_id")
-        .gte("created_at", since);
-      if (cancelled || !data) return;
-      const counts: Record<string, Set<string>> = {};
-      for (const row of data) {
-        (counts[row.game] ||= new Set()).add(row.user_id);
-      }
-      setPlaying(
-        Object.fromEntries(Object.entries(counts).map(([k, v]) => [k, v.size])),
-      );
-    }
-    load();
-    const t = setInterval(load, 15_000);
-    const channel = supabase
-      .channel("lobby-bets")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "bets" },
-        () => load(),
-      )
-      .subscribe();
-    return () => {
-      cancelled = true;
-      clearInterval(t);
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
   const games = [
     {
       to: "/dice",
@@ -69,6 +34,14 @@ export default function Lobby() {
       title: "DICE",
       icon: Dice5,
       gradient: "from-violet-500 via-fuchsia-500 to-purple-700",
+      iconColor: "text-white",
+    },
+    {
+      to: "/crash",
+      key: "crash",
+      title: "CRASH",
+      icon: Zap,
+      gradient: "from-rose-500 via-red-500 to-orange-600",
       iconColor: "text-white",
     },
     {

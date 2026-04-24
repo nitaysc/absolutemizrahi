@@ -50,6 +50,80 @@ export type Database = {
         }
         Relationships: []
       }
+      crash_bets: {
+        Row: {
+          auto_cashout: number | null
+          bet_amount: number
+          cashed_out_at: number | null
+          created_at: string
+          id: string
+          payout: number
+          round_id: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          auto_cashout?: number | null
+          bet_amount: number
+          cashed_out_at?: number | null
+          created_at?: string
+          id?: string
+          payout?: number
+          round_id: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          auto_cashout?: number | null
+          bet_amount?: number
+          cashed_out_at?: number | null
+          created_at?: string
+          id?: string
+          payout?: number
+          round_id?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crash_bets_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "crash_rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crash_rounds: {
+        Row: {
+          crash_at: number
+          created_at: string
+          ended_at: string | null
+          id: string
+          seq: number
+          start_at: string | null
+          status: string
+        }
+        Insert: {
+          crash_at: number
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          seq?: number
+          start_at?: string | null
+          status?: string
+        }
+        Update: {
+          crash_at?: number
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          seq?: number
+          start_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           coins: number
@@ -128,6 +202,48 @@ export type Database = {
           new_balance: number
         }[]
       }
+      crash_cashout: {
+        Args: never
+        Returns: {
+          busted: boolean
+          multiplier: number
+          new_balance: number
+          payout: number
+        }[]
+      }
+      crash_current_round: {
+        Args: never
+        Returns: {
+          crash_at: number
+          ended_at: string
+          id: string
+          seq: number
+          start_at: string
+          status: string
+        }[]
+      }
+      crash_pick_multiplier: { Args: never; Returns: number }
+      crash_place_bet: {
+        Args: { _auto_cashout?: number; _bet_amount: number }
+        Returns: {
+          new_balance: number
+          round_id: string
+        }[]
+      }
+      crash_settle: {
+        Args: never
+        Returns: {
+          crash_at: number
+          round_id: string
+        }[]
+      }
+      crash_start: {
+        Args: never
+        Returns: {
+          round_id: string
+          start_at: string
+        }[]
+      }
       mines_abandon: {
         Args: never
         Returns: {
@@ -137,6 +253,7 @@ export type Database = {
       mines_cashout: {
         Args: never
         Returns: {
+          bombs: Json
           multiplier: number
           new_balance: number
           payout: number

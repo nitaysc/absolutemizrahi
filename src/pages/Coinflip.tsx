@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useTrackGame } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ const MULTIPLIER = 1.98;
 type Side = "heads" | "tails";
 
 export default function Coinflip() {
+  useTrackGame("coinflip");
   const { profile, setLocalCoins } = useUserProfile();
   const [bet, setBet] = useState(10);
   const [pick, setPick] = useState<Side>("heads");
