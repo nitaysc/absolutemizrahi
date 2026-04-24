@@ -170,11 +170,15 @@ export function LiveStatsWindow() {
     for (const b of filtered) {
       wagered += b.bet_amount;
       payout += b.payout;
-      // A bet is a "win" only if we actually got more back than we put in.
-      // Some games (like chicken/plinko on a < 1× landing) record won=true
-      // with a payout below the bet, which made the win/loss counts feel wrong.
-      if (b.payout > b.bet_amount) wins += 1;
-      else losses += 1;
+      // Source of truth = the `won` boolean each game writes when it
+      // settles the bet. Recomputing from payout vs bet got it wrong on
+      // pushes (blackjack tie pays back the bet but isn't a win) and on
+      // games that intentionally pay <1× as a "win" (chicken/plinko).
+      // Pushes (payout == bet AND not flagged won) are excluded from W/L.
+      const delta = b.payout - b.bet_amount;
+      if (b.won) wins += 1;
+      else if (delta < 0) losses += 1;
+      // delta === 0 && !won → push, ignore
     }
     return { wagered, payout, profit: payout - wagered, wins, losses };
   }, [filtered]);
