@@ -35,7 +35,7 @@ const STEP: Record<Difficulty, number> = {
 const POP_PCT: Record<Difficulty, number> = {
   easy: 4,
   medium: 8,
-  hard: 20,
+  hard: 25,
   insane: 45,
 };
 
