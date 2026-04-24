@@ -11,6 +11,7 @@ import { Slider } from "@/components/ui/slider";
 import { NumberField } from "@/components/NumberField";
 import { formatCoins } from "@/lib/format";
 import { Spade, Clock, LogOut, ArrowLeft, Eye } from "lucide-react";
+import { Trophy } from "lucide-react";
 
 type Card = { s: "S" | "H" | "D" | "C"; r: string };
 type Seat = {
@@ -79,6 +80,15 @@ function PlayingCard({ card, hidden, size = "md", glow }: { card?: Card; hidden?
 
 type ActionLog = { id: number; seat: number; user: string; text: string; tone: "fold" | "check" | "call" | "raise" | "allin" | "info" };
 
+type Announcement = {
+  id: number;
+  title: string;
+  subtitle?: string;
+  winners: { username: string; amount: number; isMe: boolean; cards?: Card[] }[];
+  pot: number;
+  reason: "fold" | "showdown";
+};
+
 export default function Poker() {
   useTrackGame("poker");
   const { tableId = "micro" } = useParams<{ tableId: string }>();
@@ -96,6 +106,8 @@ export default function Poker() {
   const [log, setLog] = useState<ActionLog[]>([]);
   const [seatFlash, setSeatFlash] = useState<Record<number, ActionLog>>({});
   const mySeatIndexRef = useRef<number | null>(null);
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  const announcementIdRef = useRef(0);
 
   function pushLog(entry: Omit<ActionLog, "id">) {
     const id = ++logIdRef.current;
@@ -131,6 +143,44 @@ export default function Poker() {
     if (prev.status !== next.status && next.status !== "waiting") {
       pushLog({ seat: -1, user: "—", text: next.status.toUpperCase(), tone: "info" });
     }
+
+    // Winner detection: when status transitions to "showdown" (or pot empties
+    // mid-hand because everyone else folded), figure out who won what.
+    const becameShowdown = prev.status !== "showdown" && next.status === "showdown";
+    const potEmptiedToZero = prev.pot > 0 && next.pot === 0 && prev.status !== "showdown";
+    if (becameShowdown || potEmptiedToZero) {
+      const winners: Announcement["winners"] = [];
+      for (const s of next.seats) {
+        const p = prev.seats.find((x) => x.seat_index === s.seat_index && x.user_id === s.user_id);
+        if (!p) continue;
+        const gain = s.stack - p.stack;
+        if (gain > 0) {
+          const cards = Array.isArray(s.hole) && s.hole.length > 0 && typeof s.hole[0] === "object"
+            ? (s.hole as Card[]) : undefined;
+          winners.push({ username: s.username, amount: gain, isMe: s.is_me, cards });
+        }
+      }
+      // Determine reason: if only one player wasn't folded going in, it's a fold-win
+      const aliveBefore = prev.seats.filter((s) => s.status === "active" || s.status === "allin").length;
+      const reason: Announcement["reason"] = aliveBefore <= 1 || !becameShowdown ? "fold" : "showdown";
+      if (winners.length > 0) {
+        const id = ++announcementIdRef.current;
+        const title = winners.length === 1
+          ? `${winners[0].username} wins ${formatCoins(winners[0].amount)}`
+          : `Split pot · ${winners.map((w) => w.username).join(" & ")}`;
+        const subtitle = reason === "fold" ? "All others folded" : "Showdown";
+        setAnnouncement({ id, title, subtitle, winners, pot: prev.pot, reason });
+        pushLog({
+          seat: -1, user: "—",
+          text: `${title} (${reason === "fold" ? "fold" : "showdown"})`,
+          tone: "info",
+        });
+        window.setTimeout(() => {
+          setAnnouncement((cur) => (cur && cur.id === id ? null : cur));
+        }, 6000);
+      }
+    }
+
     for (const s of next.seats) {
       const p = prev.seats.find((x) => x.seat_index === s.seat_index && x.user_id === s.user_id);
       if (!p) continue;
