@@ -129,7 +129,17 @@ export function LiveStatsWindow() {
         () => load(),
       )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    // Polling fallback in case the realtime channel hiccups, so wins/losses
+    // always reflect on screen without a manual refresh.
+    const poll = window.setInterval(load, 4000);
+    // Also re-pull when the tab regains focus.
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      supabase.removeChannel(ch);
+      window.clearInterval(poll);
+      window.removeEventListener("focus", onFocus);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user?.id]);
 

@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useMemo, useRef, useState } from "react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTrackGame } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatCoins } from "@/lib/format";
-import { Bird, Car, Skull } from "lucide-react";
+import { Bird } from "lucide-react";
+import { ChickenScene, type LaneState as SceneLaneState } from "@/components/ChickenScene";
 
 /**
  * CHICKEN — Stake-style "Chicken Cross" lane game.
@@ -169,13 +169,6 @@ export default function Chicken() {
   }
 
   // Auto-scroll lane strip so the chicken stays in view.
-  const stripRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!stripRef.current) return;
-    const el = stripRef.current.querySelector<HTMLElement>(`[data-lane="${step}"]`);
-    el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-  }, [step, active]);
-
   const totalLanes = liveCfg.lanes;
   const previewMults = useMemo(
     () =>
@@ -197,82 +190,39 @@ export default function Chicken() {
         </p>
       </header>
 
-      {/* Road */}
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-zinc-900 to-zinc-950 p-3 sm:rounded-3xl sm:p-4">
-        <div
-          ref={stripRef}
-          className="flex gap-2 overflow-x-auto pb-2 [scrollbar-width:thin]"
-        >
-          {/* Sidewalk start */}
-          <LaneCell variant="curb" label="START">
-            {!dead && (
-              <motion.div
-                animate={{ y: [0, -2, 0] }}
-                transition={{ repeat: Infinity, duration: 1.2 }}
-                className="text-3xl"
-              >
-                🐔
-              </motion.div>
-            )}
-          </LaneCell>
+      {/* 3D Road */}
+      <ChickenScene
+        totalLanes={totalLanes}
+        step={step}
+        lanes={lanes as SceneLaneState[]}
+        multipliers={previewMults}
+        dead={dead}
+        active={active}
+      />
 
-          {Array.from({ length: totalLanes }).map((_, i) => {
-            const state = lanes[i] ?? "hidden";
-            const isCurrent = active && !dead && i === step;
-            const mult = previewMults[i];
-            return (
-              <LaneCell
-                key={i}
-                data-lane={i}
-                variant="road"
-                state={state}
-                highlight={isCurrent}
-                label={`${mult.toFixed(2)}×`}
-              >
-                {state === "death" && (
-                  <motion.div
-                    initial={{ scale: 0, rotate: -20 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ type: "spring", stiffness: 280, damping: 14 }}
-                    className="flex flex-col items-center"
-                  >
-                    <Car className="h-7 w-7 text-destructive drop-shadow-[0_0_12px_hsl(var(--destructive)/0.7)]" />
-                  </motion.div>
-                )}
-                {state === "safe" && (
-                  <AnimatePresence>
-                    {/* If we're past this safe lane, leave the chicken footprint */}
-                    {i === step - 1 && !dead && active ? (
-                      <motion.div
-                        layoutId="chicken"
-                        className="text-3xl"
-                        transition={{ type: "spring", stiffness: 240, damping: 18 }}
-                      >
-                        🐔
-                      </motion.div>
-                    ) : (
-                      <span className="text-base">✓</span>
-                    )}
-                  </AnimatePresence>
-                )}
-                {state === "hidden" && isCurrent && (
-                  <motion.div
-                    layoutId="chicken"
-                    className="text-3xl"
-                    transition={{ type: "spring", stiffness: 240, damping: 18 }}
-                  >
-                    🐔
-                  </motion.div>
-                )}
-              </LaneCell>
-            );
-          })}
-
-          {/* End sidewalk */}
-          <LaneCell variant="curb" label="WIN">
-            <span className="text-2xl">🏆</span>
-          </LaneCell>
-        </div>
+      {/* Lane strip preview underneath: small chips with multipliers so players
+          can plan a target without the 3D camera obscuring them. */}
+      <div className="flex gap-1 overflow-x-auto rounded-xl border border-border bg-card/40 p-1.5 [scrollbar-width:thin]">
+        {previewMults.map((m, i) => {
+          const state = lanes[i] ?? "hidden";
+          const isCurrent = active && !dead && i === step;
+          return (
+            <div
+              key={i}
+              className={`shrink-0 rounded-md px-2 py-1 text-[10px] font-black tabular-nums transition ${
+                state === "death"
+                  ? "bg-destructive/20 text-destructive"
+                  : state === "safe"
+                    ? "bg-[hsl(var(--success))]/15 text-[hsl(var(--success))]"
+                    : isCurrent
+                      ? "bg-primary/20 text-primary ring-1 ring-primary"
+                      : "bg-background/40 text-muted-foreground"
+              }`}
+            >
+              {m.toFixed(2)}×
+            </div>
+          );
+        })}
       </div>
 
       {/* Controls */}
@@ -342,57 +292,6 @@ export default function Chicken() {
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function LaneCell({
-  children,
-  variant,
-  state = "hidden",
-  highlight,
-  label,
-  ...rest
-}: {
-  children?: React.ReactNode;
-  variant: "curb" | "road";
-  state?: LaneState;
-  highlight?: boolean;
-  label?: string;
-} & React.HTMLAttributes<HTMLDivElement>) {
-  const base =
-    "relative flex h-28 w-20 shrink-0 flex-col items-center justify-center rounded-xl sm:h-32 sm:w-24";
-  const isCurb = variant === "curb";
-  const tone =
-    state === "death"
-      ? "bg-destructive/15 ring-2 ring-destructive"
-      : state === "safe"
-        ? "bg-[hsl(var(--success))]/10 ring-1 ring-[hsl(var(--success))]/40"
-        : highlight
-          ? "bg-primary/15 ring-2 ring-primary shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
-          : "bg-zinc-800/70 ring-1 ring-zinc-700";
-  return (
-    <div
-      {...rest}
-      className={`${base} ${
-        isCurb
-          ? "bg-gradient-to-b from-emerald-900/40 to-emerald-950/60 ring-1 ring-emerald-800/50"
-          : tone
-      }`}
-    >
-      {/* lane dashes for road tiles */}
-      {!isCurb && (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-y-2 left-0 w-0.5 bg-[repeating-linear-gradient(to_bottom,hsl(var(--muted-foreground)/0.4)_0_6px,transparent_6px_14px)]"
-        />
-      )}
-      <div className="flex h-full items-center justify-center">{children}</div>
-      {label && (
-        <div className="absolute bottom-1 rounded-md bg-background/70 px-1.5 py-0.5 text-[10px] font-black tabular-nums text-foreground">
-          {label}
-        </div>
-      )}
     </div>
   );
 }
