@@ -20,6 +20,7 @@ export interface UserProfile {
   total_wagered: number;
   total_won: number;
   last_daily_bonus: string | null;
+  avatar: string;
 }
 
 interface ProfileContextValue {
@@ -65,6 +66,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         total_wagered: Number(data.total_wagered ?? 0),
         total_won: Number(data.total_won ?? 0),
         last_daily_bonus: data.last_daily_bonus,
+        avatar: ((data as { avatar?: string | null }).avatar ?? "🎰") || "🎰",
       });
     }
     setLoading(false);
@@ -103,6 +105,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
                   total_wagered: Number(d.total_wagered ?? prev.total_wagered),
                   total_won: Number(d.total_won ?? prev.total_won),
                   username: (d.username as string | null) ?? prev.username,
+                  avatar: ((d.avatar as string | null) ?? prev.avatar) || prev.avatar,
                   last_daily_bonus:
                     (d.last_daily_bonus as string | null) ?? prev.last_daily_bonus,
                 }
