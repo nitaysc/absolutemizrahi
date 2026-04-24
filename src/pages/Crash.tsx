@@ -31,6 +31,8 @@ type CrashBet = {
 };
 
 const WAITING_MS = 7000;
+const HISTORY_KEY = "crash:history:v1";
+const HISTORY_MAX = 6;
 
 function liveMultiplier(startAt: string | null): number {
   if (!startAt) return 1;
@@ -50,7 +52,15 @@ export default function Crash() {
   const [autoCashout, setAutoCashout] = useState(2);
   const [useAuto, setUseAuto] = useState(false);
   const [mult, setMult] = useState(1);
-  const [history, setHistory] = useState<number[]>([]);
+  const [history, setHistory] = useState<number[]>(() => {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      if (raw) return (JSON.parse(raw) as number[]).slice(0, HISTORY_MAX);
+    } catch {
+      /* ignore */
+    }
+    return [];
+  });
   const [busy, setBusy] = useState(false);
 
   const myBet = bets.find((b) => b.user_id === user?.id);
@@ -78,6 +88,9 @@ export default function Crash() {
 
   useEffect(() => {
     if (!round?.id) return;
+    // New round → drop any stale bets from the previous round so the
+    // "Players this round" count doesn't show ghosts.
+    setBets([]);
     loadBets(round.id);
     const ch = supabase
       .channel(`crash-${round.id}`)
@@ -152,10 +165,37 @@ export default function Crash() {
     if (round?.status === "crashed" && round.crash_at) {
       setHistory((h) => {
         if (h[0] === round.crash_at) return h;
-        return [round.crash_at!, ...h].slice(0, 12);
+        const next = [round.crash_at!, ...h].slice(0, HISTORY_MAX);
+        try {
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+        } catch {
+          /* ignore quota */
+        }
+        return next;
       });
     }
   }, [round?.status, round?.crash_at]);
+
+  // Seed history from server so navigating away & back keeps the strip filled.
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("crash_rounds")
+        .select("crash_at,status")
+        .eq("status", "crashed")
+        .order("seq", { ascending: false })
+        .limit(HISTORY_MAX);
+      if (!data || data.length === 0) return;
+      const fromDb = data.map((d) => Number(d.crash_at));
+      setHistory((h) => {
+        // Merge: prefer server order, but keep any newer local entries at the front.
+        const merged = [...h, ...fromDb].filter(
+          (v, i, arr) => arr.indexOf(v) === i,
+        );
+        return merged.slice(0, HISTORY_MAX);
+      });
+    })();
+  }, []);
 
   // Detect MY auto-cashout completing (server credited via crash_process_autos)
   // and immediately pull fresh balance + show success toast — no page refresh.
@@ -326,16 +366,17 @@ export default function Crash() {
         </div>
       </div>
 
-      {/* Live players */}
+      {/* Live players — only count bets that actually belong to the current round */}
+      {(() => null)()}
       <div className="rounded-3xl border border-border bg-card/70 p-5 backdrop-blur-xl">
         <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground">
-          <TrendingUp className="h-4 w-4" /> Players this round ({bets.length})
+          <TrendingUp className="h-4 w-4" /> Players this round ({bets.filter(b => b.round_id === round?.id).length})
         </h2>
-        {bets.length === 0 ? (
+        {bets.filter(b => b.round_id === round?.id).length === 0 ? (
           <p className="text-sm text-muted-foreground">No bets yet — be the first.</p>
         ) : (
           <ul className="divide-y divide-border">
-            {bets.map((b) => (
+            {bets.filter(b => b.round_id === round?.id).map((b) => (
               <li key={b.id} className="flex items-center justify-between py-2 text-sm">
                 <span className="font-bold">{b.username}</span>
                 <span className="tabular-nums text-muted-foreground">{formatCoins(b.bet_amount)}</span>
