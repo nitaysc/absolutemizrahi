@@ -50,6 +50,101 @@ export type Database = {
         }
         Relationships: []
       }
+      bj_seats: {
+        Row: {
+          bet: number
+          current_hand: number
+          hands: Json
+          id: string
+          joined_at: string
+          round_seq: number
+          seat_index: number
+          settled: boolean
+          table_id: string
+          total_payout: number
+          user_id: string
+          username: string
+        }
+        Insert: {
+          bet: number
+          current_hand?: number
+          hands?: Json
+          id?: string
+          joined_at?: string
+          round_seq: number
+          seat_index: number
+          settled?: boolean
+          table_id: string
+          total_payout?: number
+          user_id: string
+          username: string
+        }
+        Update: {
+          bet?: number
+          current_hand?: number
+          hands?: Json
+          id?: string
+          joined_at?: string
+          round_seq?: number
+          seat_index?: number
+          settled?: boolean
+          table_id?: string
+          total_payout?: number
+          user_id?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bj_seats_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "bj_tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bj_tables: {
+        Row: {
+          current_hand: number | null
+          current_seat: number | null
+          dealer: Json
+          deck: Json
+          id: string
+          min_bet: number
+          phase_ends_at: string | null
+          round_seq: number
+          seats: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          current_hand?: number | null
+          current_seat?: number | null
+          dealer?: Json
+          deck?: Json
+          id: string
+          min_bet?: number
+          phase_ends_at?: string | null
+          round_seq?: number
+          seats?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          current_hand?: number | null
+          current_seat?: number | null
+          dealer?: Json
+          deck?: Json
+          id?: string
+          min_bet?: number
+          phase_ends_at?: string | null
+          round_seq?: number
+          seats?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       crash_bets: {
         Row: {
           auto_cashout: number | null
@@ -198,6 +293,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bj_action: { Args: { _action: string; _table_id: string }; Returns: Json }
+      bj_advance: { Args: { _table_id: string }; Returns: undefined }
       bj_double: {
         Args: never
         Returns: {
@@ -212,6 +309,7 @@ export type Database = {
       bj_draw: { Args: { _deck: Json }; Returns: Record<string, unknown> }
       bj_fresh_deck: { Args: never; Returns: Json }
       bj_hand_value: { Args: { _hand: Json }; Returns: number }
+      bj_hand_value_arr: { Args: { _cards: Json }; Returns: number }
       bj_hit: {
         Args: never
         Returns: {
@@ -223,6 +321,8 @@ export type Database = {
           status: string
         }[]
       }
+      bj_join_seat: { Args: { _bet: number; _table_id: string }; Returns: Json }
+      bj_next_seat: { Args: { _table_id: string }; Returns: undefined }
       bj_stand: {
         Args: never
         Returns: {
@@ -245,6 +345,7 @@ export type Database = {
           status: string
         }[]
       }
+      bj_table_state: { Args: { _table_id: string }; Returns: Json }
       claim_daily_bonus: {
         Args: never
         Returns: {
