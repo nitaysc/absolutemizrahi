@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTrackGame } from "@/hooks/usePresence";
@@ -7,36 +7,55 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
 import { formatCoins } from "@/lib/format";
-import { Sparkles } from "lucide-react";
+import { Dices, Sparkles } from "lucide-react";
 
 type Difficulty = "easy" | "medium" | "hard" | "expert";
 
-// Snakes & Ladders inspired: 8 rows, each row has N tiles with K snakes.
-// Picking a safe tile climbs you up; picking a snake busts. Cash out anytime.
-// Multiplier = step^row * 0.98 (98% RTP, matches Stake Snakes).
-const CFG: Record<Difficulty, { tiles: number; snakes: number }> = {
-  easy:   { tiles: 4, snakes: 1 }, // 4/3 step
-  medium: { tiles: 3, snakes: 1 }, // 3/2 step
-  hard:   { tiles: 2, snakes: 1 }, // 2/1 step
-  expert: { tiles: 4, snakes: 3 }, // 4/1 step
-};
-const ROWS = 8;
-const HOUSE = 0.98;
+// Board: serpentine 6 cols × N rows. Player rolls 1d6 and advances.
+// Each tile reveals on landing: SNAKE (bust) or MULTIPLIER (cumulative).
+// Snake density and multiplier curve scale with difficulty (~97% RTP target).
+const COLS = 6;
+const ROWS = 8; // 48 tiles
+const TOTAL = COLS * ROWS;
 
-function stepFor(d: Difficulty) {
-  const { tiles, snakes } = CFG[d];
-  return tiles / (tiles - snakes);
-}
-function multAt(d: Difficulty, row: number) {
-  if (row <= 0) return 1;
-  return +(Math.pow(stepFor(d), row) * HOUSE).toFixed(4);
+const DIFF_CFG: Record<
+  Difficulty,
+  { snakeChance: (i: number) => number; multBase: number; label: string }
+> = {
+  easy:   { snakeChance: (i) => 0.06 + i * 0.004, multBase: 1.06, label: "Easy" },
+  medium: { snakeChance: (i) => 0.10 + i * 0.006, multBase: 1.10, label: "Medium" },
+  hard:   { snakeChance: (i) => 0.16 + i * 0.008, multBase: 1.16, label: "Hard" },
+  expert: { snakeChance: (i) => 0.24 + i * 0.010, multBase: 1.26, label: "Expert" },
+};
+
+type Tile =
+  | { kind: "snake" }
+  | { kind: "mult"; mult: number };
+
+function buildBoard(diff: Difficulty): Tile[] {
+  const cfg = DIFF_CFG[diff];
+  const tiles: Tile[] = [];
+  for (let i = 0; i < TOTAL; i++) {
+    const snakeP = Math.min(0.55, cfg.snakeChance(i));
+    if (Math.random() < snakeP) {
+      tiles.push({ kind: "snake" });
+    } else {
+      // Multiplier increases with depth + small jitter.
+      const base = Math.pow(cfg.multBase, i + 1);
+      const jitter = 0.85 + Math.random() * 0.35;
+      tiles.push({ kind: "mult", mult: +(base * jitter).toFixed(2) });
+    }
+  }
+  return tiles;
 }
 
-type Floor = {
-  picked?: number;
-  hitSnake?: boolean;
-  snakes: number[]; // revealed positions
-};
+// Board layout: row 0 (bottom) goes left→right, row 1 right→left, etc.
+function tileToCoord(idx: number) {
+  const row = Math.floor(idx / COLS);
+  const colInRow = idx % COLS;
+  const col = row % 2 === 0 ? colInRow : COLS - 1 - colInRow;
+  return { row, col };
+}
 
 export default function Snakes() {
   useTrackGame("snakes");
@@ -44,18 +63,15 @@ export default function Snakes() {
   const [bet, setBet] = useState(10);
   const [diff, setDiff] = useState<Difficulty>("medium");
   const [active, setActive] = useState(false);
-  const [progress, setProgress] = useState(0); // rows climbed
-  const [floors, setFloors] = useState<Floor[]>([]);
+  const [board, setBoard] = useState<Tile[]>([]);
+  const [revealed, setRevealed] = useState<boolean[]>([]);
+  const [pos, setPos] = useState<number>(-1); // -1 = off board (start)
+  const [mult, setMult] = useState(1);
   const [busy, setBusy] = useState(false);
+  const [dice, setDice] = useState<number | null>(null);
+  const [rolling, setRolling] = useState(false);
   const [history, setHistory] = useState<{ mult: number; won: boolean }[]>([]);
-
-  const cfg = CFG[diff];
-  const currentMult = multAt(diff, progress);
-  const nextMult = multAt(diff, progress + 1);
-
-  function freshFloors(): Floor[] {
-    return Array.from({ length: ROWS }, () => ({ snakes: [] }));
-  }
+  const settledRef = useRef(false);
 
   async function start() {
     if (!profile || active) return;
@@ -63,90 +79,110 @@ export default function Snakes() {
     if (bet > profile.coins) return toast.error("Not enough coins");
     setBusy(true);
     setLocalCoins(profile.coins - bet);
-    setFloors(freshFloors());
-    setProgress(0);
+    const b = buildBoard(diff);
+    setBoard(b);
+    setRevealed(Array(TOTAL).fill(false));
+    setPos(-1);
+    setMult(1);
+    setDice(null);
+    settledRef.current = false;
     setActive(true);
     setBusy(false);
   }
 
-  async function pick(tile: number) {
-    if (!active || busy) return;
+  async function roll() {
+    if (!active || busy || rolling) return;
+    setRolling(true);
     setBusy(true);
-    const row = progress;
-    // Roll snakes for this row.
-    const positions = Array.from({ length: cfg.tiles }, (_, i) => i);
-    const snakes: number[] = [];
-    for (let i = 0; i < cfg.snakes; i++) {
-      const idx = Math.floor(Math.random() * positions.length);
-      snakes.push(positions.splice(idx, 1)[0]);
-    }
-    const hitSnake = snakes.includes(tile);
+    // Quick dice animation
+    let ticks = 0;
+    const spin = setInterval(() => {
+      setDice(1 + Math.floor(Math.random() * 6));
+      ticks++;
+      if (ticks >= 8) clearInterval(spin);
+    }, 70);
 
-    setFloors((arr) => {
+    await new Promise((r) => setTimeout(r, 650));
+    const roll = 1 + Math.floor(Math.random() * 6);
+    setDice(roll);
+
+    // Move tile by tile with small delays for tension.
+    const start = pos;
+    let landed = Math.min(TOTAL - 1, start + roll);
+    for (let i = start + 1; i <= landed; i++) {
+      setPos(i);
+      await new Promise((r) => setTimeout(r, 140));
+    }
+
+    // Reveal landed tile
+    setRevealed((arr) => {
       const next = arr.slice();
-      next[row] = { picked: tile, hitSnake, snakes };
+      next[landed] = true;
       return next;
     });
+    const tile = board[landed];
 
-    if (hitSnake) {
-      const stake = bet;
-      const { data, error } = await supabase.rpc("place_bet", {
-        _game: "snakes",
-        _bet_amount: stake,
-        _won: false,
-        _multiplier: 0,
-        _details: { difficulty: diff, row: row + 1, hit_snake: true },
-      });
-      setActive(false);
-      setBusy(false);
-      if (error) return toast.error(error.message);
-      if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
-      setHistory((h) => [{ mult: 0, won: false }, ...h].slice(0, 10));
-      toast.error(`Snake on row ${row + 1}!`);
+    if (tile.kind === "snake") {
+      await settle(false, 0, landed);
+      setRolling(false);
       return;
     }
 
-    const newRow = row + 1;
-    setProgress(newRow);
+    const newMult = +(mult * tile.mult).toFixed(2);
+    setMult(newMult);
 
-    // Reached the top: auto-cashout.
-    if (newRow >= ROWS) {
-      await cashoutAt(newRow);
+    // Auto-cashout if reached the final tile.
+    if (landed >= TOTAL - 1) {
+      await settle(true, newMult, landed);
+      setRolling(false);
       return;
     }
     setBusy(false);
+    setRolling(false);
   }
 
-  async function cashoutAt(row: number) {
+  async function cashout() {
+    if (!active || busy || rolling || pos < 0) return;
+    setBusy(true);
+    await settle(true, mult, pos);
+  }
+
+  async function settle(won: boolean, finalMult: number, landed: number) {
+    if (settledRef.current) return;
+    settledRef.current = true;
     const stake = bet;
-    const finalMult = multAt(diff, row);
     const { data, error } = await supabase.rpc("place_bet", {
       _game: "snakes",
       _bet_amount: stake,
-      _won: true,
-      _multiplier: finalMult,
-      _details: { difficulty: diff, row, cashed_out: true },
+      _won: won && finalMult > 0,
+      _multiplier: won ? finalMult : 0,
+      _details: { difficulty: diff, tile: landed + 1, hit_snake: !won },
     });
     setActive(false);
     setBusy(false);
     if (error) return toast.error(error.message);
     if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
-    const payout = Number(data?.[0]?.payout ?? 0);
-    setHistory((h) => [{ mult: finalMult, won: true }, ...h].slice(0, 10));
-    toast.success(`+${formatCoins(payout - stake)} @ ${finalMult.toFixed(2)}×`);
+    if (won) {
+      const payout = Number(data?.[0]?.payout ?? 0);
+      setHistory((h) => [{ mult: finalMult, won: true }, ...h].slice(0, 10));
+      toast.success(`+${formatCoins(payout - stake)} @ ${finalMult.toFixed(2)}×`);
+    } else {
+      setHistory((h) => [{ mult: 0, won: false }, ...h].slice(0, 10));
+      toast.error(`Snake on tile ${landed + 1}!`);
+    }
   }
 
-  async function cashout() {
-    if (!active || busy || progress < 1) return;
-    setBusy(true);
-    await cashoutAt(progress);
-  }
-
-  // Render rows top → bottom (top = highest multiplier).
-  const rows = useMemo(
+  // Render rows top→bottom (highest tile index first row visually).
+  const rowsRender = useMemo(
     () => Array.from({ length: ROWS }, (_, i) => ROWS - 1 - i),
     [],
   );
+
+  function tileAt(row: number, col: number): { idx: number; tile: Tile | undefined } {
+    const colInRow = row % 2 === 0 ? col : COLS - 1 - col;
+    const idx = row * COLS + colInRow;
+    return { idx, tile: board[idx] };
+  }
 
   return (
     <div className="space-y-3 sm:space-y-4">
@@ -156,7 +192,7 @@ export default function Snakes() {
             <span className="text-2xl sm:text-3xl">🐍</span> SNAKES
           </h1>
           <p className="text-xs text-muted-foreground sm:text-sm">
-            Climb the ladder. Dodge the snakes. Cash out anytime.
+            Roll the dice. Stack multipliers. Don't get bit.
           </p>
         </div>
         {history.length > 0 && (
@@ -177,84 +213,106 @@ export default function Snakes() {
         )}
       </header>
 
-      {/* Ladder */}
-      <div className="rounded-2xl border border-border bg-gradient-to-b from-emerald-950/40 via-card/70 to-emerald-900/20 p-3 backdrop-blur-xl sm:rounded-3xl sm:p-4">
+      {/* Board */}
+      <div className="rounded-2xl border border-border bg-gradient-to-b from-emerald-950/40 via-card/70 to-emerald-900/20 p-2 backdrop-blur-xl sm:rounded-3xl sm:p-4">
         <div className="flex flex-col gap-1.5">
-          {rows.map((rowIdx) => {
-            const floor = floors[rowIdx];
-            const isCurrent = active && progress === rowIdx;
-            const isPast = floor?.picked !== undefined;
-            const rowMult = multAt(diff, rowIdx + 1);
-
-            return (
-              <div key={rowIdx} className="flex items-center gap-2">
-                <div className="w-14 shrink-0 text-right text-[10px] font-bold tabular-nums text-muted-foreground sm:text-xs">
-                  {rowMult.toFixed(2)}×
-                </div>
-                <div
-                  className={`grid flex-1 gap-1.5 rounded-xl p-1.5 transition ${
-                    isCurrent
-                      ? "bg-primary/10 ring-2 ring-primary shadow-[0_0_24px_hsl(var(--primary)/0.35)]"
-                      : "bg-background/30"
-                  }`}
-                  style={{ gridTemplateColumns: `repeat(${cfg.tiles}, minmax(0, 1fr))` }}
-                >
-                  {Array.from({ length: cfg.tiles }, (_, t) => {
-                    const isSnake = floor?.snakes.includes(t);
-                    const isPicked = floor?.picked === t;
-                    const reveal = isPast;
-                    return (
-                      <button
-                        key={t}
-                        disabled={!isCurrent || busy}
-                        onClick={() => pick(t)}
-                        className={`relative flex h-9 items-center justify-center rounded-lg text-base font-black transition sm:h-10 sm:text-lg ${
-                          reveal
-                            ? isSnake
-                              ? isPicked
-                                ? "bg-destructive/30 ring-2 ring-destructive"
-                                : "bg-destructive/15 text-destructive/70"
-                              : isPicked
-                                ? "bg-[hsl(var(--success))]/30 ring-2 ring-[hsl(var(--success))]"
-                                : "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]/70"
-                            : isCurrent
-                              ? "bg-card hover:bg-primary/20 hover:scale-[1.03]"
-                              : "bg-background/40 opacity-50"
-                        }`}
-                      >
-                        <AnimatePresence>
-                          {reveal && (
-                            <motion.span
-                              initial={{ scale: 0, rotate: -90 }}
-                              animate={{ scale: 1, rotate: 0 }}
-                              transition={{ type: "spring", stiffness: 320, damping: 18 }}
-                            >
-                              {isSnake ? "🐍" : "💎"}
-                            </motion.span>
-                          )}
-                        </AnimatePresence>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+          {rowsRender.map((row) => (
+            <div
+              key={row}
+              className="grid gap-1.5"
+              style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}
+            >
+              {Array.from({ length: COLS }, (_, col) => {
+                const { idx, tile } = tileAt(row, col);
+                const isPlayer = pos === idx;
+                const isRevealed = revealed[idx];
+                const isStart = false;
+                return (
+                  <div
+                    key={col}
+                    className={`relative flex aspect-square items-center justify-center rounded-lg text-[10px] font-black transition sm:rounded-xl sm:text-xs ${
+                      isPlayer
+                        ? "ring-2 ring-primary shadow-[0_0_20px_hsl(var(--primary)/0.5)]"
+                        : ""
+                    } ${
+                      isRevealed
+                        ? tile?.kind === "snake"
+                          ? "bg-destructive/25 text-destructive"
+                          : "bg-[hsl(var(--success))]/20 text-[hsl(var(--success))]"
+                        : "bg-card/70 text-muted-foreground"
+                    }`}
+                  >
+                    <span className="absolute left-1 top-0.5 text-[8px] opacity-40 tabular-nums">
+                      {idx + 1}
+                    </span>
+                    {isRevealed ? (
+                      tile?.kind === "snake" ? (
+                        <motion.span
+                          initial={{ scale: 0, rotate: -90 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ type: "spring", stiffness: 300, damping: 16 }}
+                          className="text-base sm:text-xl"
+                        >
+                          🐍
+                        </motion.span>
+                      ) : (
+                        <motion.span
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="tabular-nums"
+                        >
+                          {tile?.kind === "mult" ? `${tile.mult.toFixed(2)}×` : ""}
+                        </motion.span>
+                      )
+                    ) : (
+                      <span className="opacity-30">?</span>
+                    )}
+                    <AnimatePresence>
+                      {isPlayer && (
+                        <motion.div
+                          layoutId="player-token"
+                          className="absolute inset-1 rounded-md bg-primary/30 ring-2 ring-primary"
+                          transition={{ type: "spring", stiffness: 360, damping: 26 }}
+                        >
+                          <div className="flex h-full w-full items-center justify-center text-base sm:text-lg">
+                            🎩
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </div>
 
+        {/* Status bar */}
         <div className="mt-3 flex items-center justify-between rounded-xl border border-border bg-background/50 p-2 text-xs">
           <span className="text-muted-foreground">
-            Now <span className="font-black text-foreground tabular-nums">{currentMult.toFixed(2)}×</span>
-          </span>
-          {active && progress < ROWS && (
-            <span className="text-muted-foreground">
-              Next <span className="font-black text-primary tabular-nums">{nextMult.toFixed(2)}×</span>
+            Tile{" "}
+            <span className="font-black text-foreground tabular-nums">
+              {pos < 0 ? "—" : `${pos + 1}/${TOTAL}`}
             </span>
-          )}
+          </span>
+          <span className="text-muted-foreground">
+            Mult <span className="font-black text-primary tabular-nums">{mult.toFixed(2)}×</span>
+          </span>
+          <span className="flex items-center gap-1 text-muted-foreground">
+            <Dices className="h-3 w-3" />
+            <motion.span
+              key={dice ?? "none"}
+              initial={{ scale: 0.6, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              className="font-black text-foreground tabular-nums"
+            >
+              {dice ?? "—"}
+            </motion.span>
+          </span>
           <span className="text-muted-foreground">
             Pays{" "}
             <span className="font-black text-foreground tabular-nums">
-              {formatCoins(Math.floor(bet * currentMult))}
+              {formatCoins(Math.floor(bet * mult))}
             </span>
           </span>
         </div>
@@ -290,16 +348,25 @@ export default function Snakes() {
               onClick={start}
               className="h-11 w-full text-base font-black tracking-wider shadow-[0_0_24px_hsl(var(--primary)/0.4)] sm:h-12"
             >
-              <Sparkles className="mr-2 h-4 w-4" /> START CLIMB
+              <Sparkles className="mr-2 h-4 w-4" /> PLACE BET
             </Button>
           ) : (
-            <Button
-              onClick={cashout}
-              disabled={progress < 1 || busy}
-              className="h-11 w-full bg-[hsl(var(--success))] text-base font-black tracking-wider text-background hover:bg-[hsl(var(--success))]/90 disabled:opacity-60 sm:h-12"
-            >
-              CASH OUT @ {currentMult.toFixed(2)}×
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                onClick={roll}
+                disabled={busy || rolling || pos >= TOTAL - 1}
+                className="h-11 text-base font-black tracking-wider sm:h-12"
+              >
+                <Dices className="mr-2 h-4 w-4" /> ROLL
+              </Button>
+              <Button
+                onClick={cashout}
+                disabled={busy || rolling || pos < 0}
+                className="h-11 bg-[hsl(var(--success))] text-base font-black tracking-wider text-background hover:bg-[hsl(var(--success))]/90 disabled:opacity-60 sm:h-12"
+              >
+                CASH {mult.toFixed(2)}×
+              </Button>
+            </div>
           )}
         </div>
       </div>
