@@ -86,7 +86,7 @@ export default function Plinko() {
   // Bucket center X (bucket i, i=0..16). Final landing column == sum of rights.
   // Bucket cells are rendered as 17 equal flex divs spanning the SVG width.
   const bucketX = useCallback(
-    (i: number) => SIDE_PAD + i * COL,
+    (i: number) => SIDE_PAD + i * COL + COL / 2,
     []
   );
   const floorY = TOP_PAD + (ROWS + 1) * ROW_H;
@@ -346,8 +346,8 @@ export default function Plinko() {
             <div
               className="mt-1 flex w-full gap-[2px]"
               style={{
-                paddingLeft: `${(SIDE_PAD - COL / 2) / BOARD_W * 100}%`,
-                paddingRight: `${(SIDE_PAD - COL / 2) / BOARD_W * 100}%`,
+                paddingLeft: `${(SIDE_PAD / BOARD_W) * 100}%`,
+                paddingRight: `${(SIDE_PAD / BOARD_W) * 100}%`,
               }}
             >
               {PAYOUTS.map((m, i) => (
