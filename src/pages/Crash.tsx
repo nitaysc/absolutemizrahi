@@ -170,7 +170,10 @@ export default function Crash() {
     if (r) {
       setLocalCoins(Number(r.new_balance));
       if (r.busted) toast.error("Too late — busted");
-      else toast.success(`+${formatCoins(Number(r.payout))} (${Number(r.multiplier).toFixed(2)}×)`);
+      else {
+        const profit = Math.max(Number(r.payout) - bet, 0);
+        toast.success(`+${formatCoins(profit)} (${Number(r.multiplier).toFixed(2)}×)`);
+      }
     }
     if (round) loadBets(round.id);
   }
@@ -274,7 +277,7 @@ export default function Crash() {
           )}
           {myBet?.cashed_out_at && (
             <div className="rounded-xl bg-[hsl(var(--success))]/15 p-3 text-center text-sm font-bold text-[hsl(var(--success))]">
-              Cashed out at {Number(myBet.cashed_out_at).toFixed(2)}× (+{formatCoins(myBet.payout)})
+              Cashed out at {Number(myBet.cashed_out_at).toFixed(2)}× (+{formatCoins(Math.max(myBet.payout - myBet.bet_amount, 0))})
             </div>
           )}
           {myBet && status === "crashed" && !myBet.cashed_out_at && (
@@ -300,7 +303,7 @@ export default function Crash() {
                 <span className="tabular-nums text-muted-foreground">{formatCoins(b.bet_amount)}</span>
                 {b.cashed_out_at ? (
                   <span className="font-black text-[hsl(var(--success))]">
-                    {Number(b.cashed_out_at).toFixed(2)}× → +{formatCoins(b.payout)}
+                    {Number(b.cashed_out_at).toFixed(2)}× → +{formatCoins(Math.max(b.payout - b.bet_amount, 0))}
                   </span>
                 ) : status === "crashed" ? (
                   <span className="font-black text-destructive">BUST</span>

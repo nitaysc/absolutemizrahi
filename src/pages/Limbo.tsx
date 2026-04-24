@@ -65,7 +65,10 @@ export default function Limbo() {
     setLast(Math.min(result, 9999));
     setLastWon(won);
     setHistory((h) => [{ mult: result, won }, ...h].slice(0, 10));
-    if (won) toast.success(`+${formatCoins(data?.[0]?.payout ?? 0)}`);
+    if (won) {
+      const profit = Math.max(Number(data?.[0]?.payout ?? 0) - bet, 0);
+      toast.success(`+${formatCoins(profit)}`);
+    }
   }
 
   async function runAuto() {
