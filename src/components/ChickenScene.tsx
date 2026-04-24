@@ -20,6 +20,12 @@ interface Props {
   multipliers: number[];
   dead: boolean;
   active: boolean;
+  /** Lane index of the car that hit the chicken (only set on death). */
+  deathLane?: number | null;
+  /** True after a successful cashout — used to flag the would-have-died lane. */
+  cashedOut?: boolean;
+  /** Index of the next death lane after cashout (for "you would have died here" marker). */
+  nextDeathLane?: number | null;
 }
 
 const LANE_DEPTH = 3.2;
