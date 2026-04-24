@@ -260,10 +260,11 @@ export default function Plinko() {
     };
   }, [pegX, pegY, bucketX, laneX, floorY]);
 
-  async function drop(): Promise<AutoBetRoundResult | null> {
+  async function drop(betOverride?: number): Promise<AutoBetRoundResult | null> {
     if (!profile) return null;
-    if (bet < 1) { toast.error("Bet at least 1 coin"); return null; }
-    if (bet > profile.coins) { toast.error("Not enough coins"); return null; }
+    const stake = betOverride ?? bet;
+    if (stake < 1) { toast.error("Bet at least 1 coin"); return null; }
+    if (stake > profile.coins) { toast.error("Not enough coins"); return null; }
 
     playTileClick();
 
@@ -284,7 +285,7 @@ export default function Plinko() {
 
     const { data, error } = await supabase.rpc("place_bet", {
       _game: "plinko",
-      _bet_amount: bet,
+      _bet_amount: stake,
       _won: multiplier >= 1,
       _multiplier: multiplier,
       _details: { bucket, path, rows: ROWS },
@@ -299,7 +300,7 @@ export default function Plinko() {
       rightsByRow,
       bucket,
       multiplier,
-      bet,
+      bet: stake,
       x: BOARD_W / 2 + (Math.random() - 0.5) * 4,
       y: TOP_PAD - 6,
       vx: (Math.random() - 0.5) * 18,
@@ -312,8 +313,8 @@ export default function Plinko() {
     ballsRef.current = [...ballsRef.current, newBall];
     force((n) => n + 1);
     const won = multiplier >= 1;
-    const payout = Math.floor(bet * multiplier);
-    return { won, profit: payout - bet };
+    const payout = Math.floor(stake * multiplier);
+    return { won, profit: payout - stake };
   }
 
   // Build peg grid once
