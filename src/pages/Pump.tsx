@@ -32,11 +32,11 @@ const STEP: Record<Difficulty, number> = {
   hard: 1.32,
   insane: 1.70,
 };
-const POP_PCT: Record<Difficulty, number> = {
-  easy: 1,
-  medium: 4,
-  hard: 10,
-  insane: 25,
+const POP_RANGE: Record<Difficulty, [number, number]> = {
+  easy: [1, 4],
+  medium: [4, 8],
+  hard: [10, 20],
+  insane: [25, 35],
 };
 
 function multForPump(diff: Difficulty, pumps: number) {
@@ -237,7 +237,7 @@ export default function Pump() {
               <SelectContent>
                 {(Object.keys(STEP) as Difficulty[]).map((d) => (
                   <SelectItem key={d} value={d}>
-                    {d.charAt(0).toUpperCase() + d.slice(1)} — {POP_PCT[d]}% pop / pump · ×{STEP[d]}
+                    {d.charAt(0).toUpperCase() + d.slice(1)} — {POP_RANGE[d][0]}–{POP_RANGE[d][1]}% pop / pump · ×{STEP[d]}
                   </SelectItem>
                 ))}
               </SelectContent>
