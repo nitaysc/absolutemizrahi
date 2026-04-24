@@ -1,4 +1,11 @@
-import { useState, useEffect } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  createContext,
+  useContext,
+  ReactNode,
+} from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -14,24 +21,24 @@ export interface UserProfile {
   last_daily_bonus: string | null;
 }
 
-export function useUserProfile() {
+interface ProfileContextValue {
+  profile: UserProfile | null;
+  loading: boolean;
+  refetch: () => Promise<void>;
+  updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: Error | null }>;
+  /** Patch the local balance immediately (server is source of truth, refetch will reconcile). */
+  setLocalCoins: (coins: number) => void;
+}
+
+const ProfileContext = createContext<ProfileContextValue | null>(null);
+
+export function ProfileProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) {
-      setProfile(null);
-      setLoading(false);
-      return;
-    }
-
-    fetchProfile();
-  }, [user]);
-
-  async function fetchProfile() {
+  const fetchProfile = useCallback(async () => {
     if (!user) return;
-    
     setLoading(true);
     const { data, error } = await supabase
       .from('profiles')
@@ -54,25 +61,81 @@ export function useUserProfile() {
       });
     }
     setLoading(false);
-  }
+  }, [user]);
 
-  async function updateProfile(updates: Partial<UserProfile>) {
+  useEffect(() => {
+    if (!user) {
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
+    fetchProfile();
+
+    // Realtime: keep balance in sync across tabs / RPC calls
+    const channel = supabase
+      .channel(`profile-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+          filter: `id=eq.${user.id}`,
+        },
+        (payload) => {
+          const d = payload.new as Record<string, unknown>;
+          setProfile((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  coins: Number(d.coins ?? prev.coins),
+                  total_wagered: Number(d.total_wagered ?? prev.total_wagered),
+                  total_won: Number(d.total_won ?? prev.total_won),
+                  username: (d.username as string | null) ?? prev.username,
+                  last_daily_bonus:
+                    (d.last_daily_bonus as string | null) ?? prev.last_daily_bonus,
+                }
+              : prev,
+          );
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, fetchProfile]);
+
+  const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
     if (!user) return { error: new Error('No user') };
-    
     const { error } = await supabase
       .from('profiles')
       .update(updates as any)
       .eq('id', user.id);
-
     if (error) {
       toast.error('Failed to update profile');
       return { error };
     }
-
     setProfile(prev => prev ? { ...prev, ...updates } : null);
     toast.success('Profile updated');
     return { error: null };
-  }
+  }, [user]);
 
-  return { profile, loading, updateProfile, refetch: fetchProfile };
+  const setLocalCoins = useCallback((coins: number) => {
+    setProfile((prev) => (prev ? { ...prev, coins } : prev));
+  }, []);
+
+  return (
+    <ProfileContext.Provider
+      value={{ profile, loading, refetch: fetchProfile, updateProfile, setLocalCoins }}
+    >
+      {children}
+    </ProfileContext.Provider>
+  );
+}
+
+export function useUserProfile(): ProfileContextValue {
+  const ctx = useContext(ProfileContext);
+  if (!ctx) throw new Error("useUserProfile must be used inside <ProfileProvider>");
+  return ctx;
 }
