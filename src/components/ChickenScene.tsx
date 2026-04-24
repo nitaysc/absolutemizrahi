@@ -306,6 +306,99 @@ function CrashedCar() {
   );
 }
 
+/**
+ * Incoming car. When `animateIn` is true (the lane that just killed the chicken),
+ * it slams in from the left, shakes briefly on impact, then settles as a wreck.
+ * For revealed-but-not-hit death lanes (cashout reveal), it just sits in place.
+ */
+function IncomingCar({ animateIn }: { animateIn: boolean }) {
+  const ref = useRef<THREE.Group>(null);
+  const t = useRef(0);
+  useFrame((_, dt) => {
+    if (!ref.current) return;
+    if (!animateIn) {
+      ref.current.position.x = 0;
+      ref.current.rotation.z = 0.1;
+      return;
+    }
+    t.current += dt;
+    const phase = t.current;
+    if (phase < 0.35) {
+      // Slam in from off-screen left
+      const k = phase / 0.35;
+      ref.current.position.x = -10 + k * 10;
+      ref.current.rotation.z = 0;
+    } else if (phase < 0.6) {
+      // Impact shake
+      const k = (phase - 0.35) / 0.25;
+      ref.current.position.x = Math.sin(k * Math.PI * 8) * 0.15;
+      ref.current.rotation.z = Math.sin(k * Math.PI * 6) * 0.18;
+    } else {
+      // Settle as wreck
+      ref.current.position.x = 0;
+      ref.current.rotation.z = 0.12;
+    }
+  });
+  return (
+    <group ref={ref} position={[-10, 0.7, 0]}>
+      <mesh castShadow>
+        <boxGeometry args={[1.6, 0.7, 0.9]} />
+        <meshStandardMaterial color="#dc2626" metalness={0.5} roughness={0.4} />
+      </mesh>
+      <mesh position={[0, 0.5, 0]} castShadow>
+        <boxGeometry args={[1.0, 0.45, 0.85]} />
+        <meshStandardMaterial color="#7f1d1d" metalness={0.4} roughness={0.5} />
+      </mesh>
+      {[
+        [-0.6, -0.35, 0.5],
+        [0.6, -0.35, 0.5],
+        [-0.6, -0.35, -0.5],
+        [0.6, -0.35, -0.5],
+      ].map((p, i) => (
+        <mesh key={i} position={p as [number, number, number]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.18, 0.18, 0.18, 16]} />
+          <meshStandardMaterial color="#0a0a0a" />
+        </mesh>
+      ))}
+      {/* Headlights */}
+      <mesh position={[-0.7, 0.05, 0.45]}>
+        <sphereGeometry args={[0.1, 8, 8]} />
+        <meshStandardMaterial color="#fef9c3" emissive="#fef9c3" emissiveIntensity={1.5} />
+      </mesh>
+      <mesh position={[-0.7, 0.05, -0.45]}>
+        <sphereGeometry args={[0.1, 8, 8]} />
+        <meshStandardMaterial color="#fef9c3" emissive="#fef9c3" emissiveIntensity={1.5} />
+      </mesh>
+      <pointLight color="#ef4444" intensity={0.8} distance={3} position={[0, 0.5, 0]} />
+    </group>
+  );
+}
+
+/** Pulsing red skull-ish marker shown on the lane the player would have died on. */
+function WouldHaveDiedMarker() {
+  const ref = useRef<THREE.Mesh>(null);
+  useFrame(() => {
+    if (!ref.current) return;
+    const s = 1 + 0.15 * Math.sin(performance.now() * 0.006);
+    ref.current.scale.set(s, s, s);
+  });
+  return (
+    <group position={[0, 1.2, 0]}>
+      <mesh ref={ref}>
+        <octahedronGeometry args={[0.45, 0]} />
+        <meshStandardMaterial
+          color="#7f1d1d"
+          emissive="#ef4444"
+          emissiveIntensity={1.2}
+          transparent
+          opacity={0.9}
+        />
+      </mesh>
+      <pointLight color="#ef4444" intensity={1} distance={3} />
+    </group>
+  );
+}
+
 function Chicken({ z, dead }: { z: number; dead: boolean }) {
   const ref = useRef<THREE.Group>(null);
   const targetZ = useRef(z);
