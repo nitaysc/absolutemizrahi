@@ -58,6 +58,7 @@ export type Database = {
           email: string | null
           id: string
           last_daily_bonus: string | null
+          mines_round: Json | null
           total_wagered: number
           total_won: number
           updated_at: string | null
@@ -70,6 +71,7 @@ export type Database = {
           email?: string | null
           id: string
           last_daily_bonus?: string | null
+          mines_round?: Json | null
           total_wagered?: number
           total_won?: number
           updated_at?: string | null
@@ -82,6 +84,7 @@ export type Database = {
           email?: string | null
           id?: string
           last_daily_bonus?: string | null
+          mines_round?: Json | null
           total_wagered?: number
           total_won?: number
           updated_at?: string | null
@@ -98,6 +101,36 @@ export type Database = {
         Args: never
         Returns: {
           awarded: number
+          new_balance: number
+        }[]
+      }
+      mines_abandon: {
+        Args: never
+        Returns: {
+          new_balance: number
+        }[]
+      }
+      mines_cashout: {
+        Args: never
+        Returns: {
+          multiplier: number
+          new_balance: number
+          payout: number
+        }[]
+      }
+      mines_reveal: {
+        Args: { _tile: number }
+        Returns: {
+          bombs: Json
+          ended: boolean
+          hit_bomb: boolean
+          multiplier: number
+          revealed: Json
+        }[]
+      }
+      mines_start: {
+        Args: { _bet_amount: number; _mines: number }
+        Returns: {
           new_balance: number
         }[]
       }

@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
-import { Dice5, Coins, Gift, TrendingUp } from "lucide-react";
+import { Dice5, Coins, Gift, TrendingUp, Bomb, Rocket } from "lucide-react";
 import { formatCoins } from "@/lib/format";
 import mizrahi from "@/assets/absolute-mizrahi.gif";
 
@@ -32,6 +32,20 @@ export default function Lobby() {
       desc: "Roll over or under. Set your edge, pick your multiplier.",
       icon: Dice5,
       gradient: "from-primary/30 to-primary/5",
+    },
+    {
+      to: "/limbo",
+      title: "LIMBO",
+      desc: "Pick a target multiplier. Pure adrenaline.",
+      icon: Rocket,
+      gradient: "from-violet-500/30 to-violet-500/5",
+    },
+    {
+      to: "/mines",
+      title: "MINES",
+      desc: "Reveal gems, dodge bombs, cash out big.",
+      icon: Bomb,
+      gradient: "from-emerald-500/30 to-emerald-500/5",
     },
     {
       to: "/coinflip",
