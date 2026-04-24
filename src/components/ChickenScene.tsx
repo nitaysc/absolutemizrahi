@@ -164,11 +164,15 @@ function Lane({
   state,
   multiplier,
   highlight,
+  isDeathHit,
+  wouldHaveDied,
 }: {
   z: number;
   state: LaneState;
   multiplier: number;
   highlight: boolean;
+  isDeathHit?: boolean;
+  wouldHaveDied?: boolean;
 }) {
   const stripeRef = useRef<THREE.Mesh>(null);
   useFrame((_, dt) => {
@@ -246,8 +250,11 @@ function Lane({
         </group>
       </Float>
 
-      {/* Death car */}
-      {state === "death" && <CrashedCar />}
+      {/* Death car: incoming car animates in then becomes a wreck */}
+      {state === "death" && <IncomingCar animateIn={!!isDeathHit} />}
+
+      {/* "You would have died here" marker shown after a successful cashout. */}
+      {wouldHaveDied && state !== "death" && <WouldHaveDiedMarker />}
 
       {/* Multiplier text overlay using HTML inside Canvas isn't available here;
           we encode value in the scale of a small bar so players still see relative magnitude. */}
