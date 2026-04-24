@@ -53,6 +53,7 @@ export default function Crash() {
   const [busy, setBusy] = useState(false);
 
   const myBet = bets.find((b) => b.user_id === user?.id);
+  const lastAutoNotified = useRef<string | null>(null);
 
   // Poll round + bets
   async function loadRound() {
@@ -148,6 +149,27 @@ export default function Crash() {
       });
     }
   }, [round?.status, round?.crash_at]);
+
+  // Detect MY auto-cashout completing (server credited via crash_process_autos)
+  // and immediately pull fresh balance + show success toast — no page refresh.
+  useEffect(() => {
+    if (!myBet || !user?.id) return;
+    if (!myBet.cashed_out_at || !myBet.auto_cashout) return;
+    if (lastAutoNotified.current === myBet.id) return;
+    lastAutoNotified.current = myBet.id;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("coins")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (data?.coins != null) setLocalCoins(Number(data.coins));
+      const profit = Math.max(myBet.payout - myBet.bet_amount, 0);
+      toast.success(
+        `Auto cashout +${formatCoins(profit)} (${Number(myBet.cashed_out_at).toFixed(2)}×)`,
+      );
+    })();
+  }, [myBet?.id, myBet?.cashed_out_at, myBet?.auto_cashout, myBet?.payout, myBet?.bet_amount, user?.id, setLocalCoins]);
 
   async function placeBet() {
     if (!profile) return;
