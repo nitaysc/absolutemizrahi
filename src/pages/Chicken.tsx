@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useMemo, useRef, useState } from "react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTrackGame } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatCoins } from "@/lib/format";
-import { Bird, Car, Skull } from "lucide-react";
+import { Bird } from "lucide-react";
 import { ChickenScene, type LaneState as SceneLaneState } from "@/components/ChickenScene";
 
 /**
@@ -293,57 +292,6 @@ export default function Chicken() {
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function LaneCell({
-  children,
-  variant,
-  state = "hidden",
-  highlight,
-  label,
-  ...rest
-}: {
-  children?: React.ReactNode;
-  variant: "curb" | "road";
-  state?: LaneState;
-  highlight?: boolean;
-  label?: string;
-} & React.HTMLAttributes<HTMLDivElement>) {
-  const base =
-    "relative flex h-28 w-20 shrink-0 flex-col items-center justify-center rounded-xl sm:h-32 sm:w-24";
-  const isCurb = variant === "curb";
-  const tone =
-    state === "death"
-      ? "bg-destructive/15 ring-2 ring-destructive"
-      : state === "safe"
-        ? "bg-[hsl(var(--success))]/10 ring-1 ring-[hsl(var(--success))]/40"
-        : highlight
-          ? "bg-primary/15 ring-2 ring-primary shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
-          : "bg-zinc-800/70 ring-1 ring-zinc-700";
-  return (
-    <div
-      {...rest}
-      className={`${base} ${
-        isCurb
-          ? "bg-gradient-to-b from-emerald-900/40 to-emerald-950/60 ring-1 ring-emerald-800/50"
-          : tone
-      }`}
-    >
-      {/* lane dashes for road tiles */}
-      {!isCurb && (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-y-2 left-0 w-0.5 bg-[repeating-linear-gradient(to_bottom,hsl(var(--muted-foreground)/0.4)_0_6px,transparent_6px_14px)]"
-        />
-      )}
-      <div className="flex h-full items-center justify-center">{children}</div>
-      {label && (
-        <div className="absolute bottom-1 rounded-md bg-background/70 px-1.5 py-0.5 text-[10px] font-black tabular-nums text-foreground">
-          {label}
-        </div>
-      )}
     </div>
   );
 }
