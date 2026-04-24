@@ -126,6 +126,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          blackjack_round: Json | null
           coins: number
           created_at: string | null
           display_name: string | null
@@ -139,6 +140,7 @@ export type Database = {
           username: string | null
         }
         Insert: {
+          blackjack_round?: Json | null
           coins?: number
           created_at?: string | null
           display_name?: string | null
@@ -152,6 +154,7 @@ export type Database = {
           username?: string | null
         }
         Update: {
+          blackjack_round?: Json | null
           coins?: number
           created_at?: string | null
           display_name?: string | null
@@ -195,6 +198,53 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bj_double: {
+        Args: never
+        Returns: {
+          dealer: Json
+          multiplier: number
+          new_balance: number
+          payout: number
+          player: Json
+          status: string
+        }[]
+      }
+      bj_draw: { Args: { _deck: Json }; Returns: Record<string, unknown> }
+      bj_fresh_deck: { Args: never; Returns: Json }
+      bj_hand_value: { Args: { _hand: Json }; Returns: number }
+      bj_hit: {
+        Args: never
+        Returns: {
+          dealer: Json
+          multiplier: number
+          new_balance: number
+          payout: number
+          player: Json
+          status: string
+        }[]
+      }
+      bj_stand: {
+        Args: never
+        Returns: {
+          dealer: Json
+          multiplier: number
+          new_balance: number
+          payout: number
+          player: Json
+          status: string
+        }[]
+      }
+      bj_start: {
+        Args: { _bet_amount: number }
+        Returns: {
+          dealer: Json
+          multiplier: number
+          new_balance: number
+          payout: number
+          player: Json
+          status: string
+        }[]
+      }
       claim_daily_bonus: {
         Args: never
         Returns: {
@@ -230,6 +280,7 @@ export type Database = {
           round_id: string
         }[]
       }
+      crash_process_autos: { Args: never; Returns: undefined }
       crash_settle: {
         Args: never
         Returns: {
