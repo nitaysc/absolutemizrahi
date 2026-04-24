@@ -239,7 +239,7 @@ export default function Plinko() {
     const { data, error } = await supabase.rpc("place_bet", {
       _game: "plinko",
       _bet_amount: bet,
-      _won: true,
+      _won: multiplier >= 1,
       _multiplier: multiplier,
       _details: { bucket, path, rows: ROWS },
     });
