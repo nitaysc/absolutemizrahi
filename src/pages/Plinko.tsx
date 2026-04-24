@@ -12,16 +12,24 @@ import { playGem, playBomb, playTileClick } from "@/lib/sfx";
 
 /**
  * Plinko — Stake-style.
- * Single risk profile (16 rows) with a Stake-like medium-risk payout table.
- * The ball is animated by stepping left/right at each row randomly; the
- * resulting bucket index decides the multiplier. Result is recorded via
- * `place_bet` so it counts in Live Stats.
+ * Triangular peg field: row r has (r+3) pegs (top row = 3 pegs … bottom row = 18 pegs),
+ * giving 17 landing slots. Ball steps left/right at each row; eased "gravity" tween
+ * between rows + small horizontal overshoot per peg gives the smooth Stake feel.
  */
 const ROWS = 16;
-/** 17 buckets, symmetric, medium-risk style. House edge baked in. */
+/** 17 buckets, symmetric medium-risk Stake-like payouts. */
 const PAYOUTS: number[] = [
-  16, 9, 2, 1.4, 1.4, 1.2, 1.1, 1, 0.5, 1, 1.1, 1.2, 1.4, 1.4, 2, 9, 16,
+  110, 41, 10, 5, 3, 1.5, 1, 0.5, 0.3, 0.5, 1, 1.5, 3, 5, 10, 41, 110,
 ];
+const BUCKETS = PAYOUTS.length; // 17
+
+/** Logical SVG units. */
+const COL = 40; // horizontal spacing between adjacent peg columns
+const ROW_H = 38; // vertical spacing between rows
+const TOP_PAD = 24;
+const SIDE_PAD = 20;
+const BOARD_W = SIDE_PAD * 2 + (BUCKETS - 1) * COL;
+const BOARD_H = TOP_PAD + (ROWS + 1) * ROW_H + 70; // +bucket strip
 
 type Drop = {
   id: number;
@@ -39,22 +47,22 @@ export default function Plinko() {
   const [busy, setBusy] = useState(false);
   const [drops, setDrops] = useState<Drop[]>([]);
   const [recent, setRecent] = useState<{ mult: number; won: boolean }[]>([]);
+  const [hitPeg, setHitPeg] = useState<{ r: number; c: number; t: number } | null>(null);
+  const [hitBucket, setHitBucket] = useState<{ i: number; t: number } | null>(null);
   const idRef = useRef(0);
 
-  // Auto-clean very old animated balls so the DOM stays light.
+  // Trim old animated balls so the SVG stays light.
   useEffect(() => {
-    if (drops.length === 0) return;
-    const t = window.setTimeout(() => {
-      setDrops((d) => d.slice(-6));
-    }, 4000);
+    if (drops.length <= 6) return;
+    const t = window.setTimeout(() => setDrops((d) => d.slice(-6)), 2500);
     return () => window.clearTimeout(t);
   }, [drops]);
 
   function bucketColor(mult: number) {
-    if (mult >= 9) return "bg-rose-500 text-white";
-    if (mult >= 2) return "bg-amber-500 text-black";
-    if (mult >= 1.2) return "bg-orange-400 text-black";
-    if (mult >= 1) return "bg-yellow-400 text-black";
+    if (mult >= 41) return "bg-rose-500 text-white";
+    if (mult >= 5) return "bg-orange-500 text-black";
+    if (mult >= 1.5) return "bg-amber-400 text-black";
+    if (mult >= 1) return "bg-yellow-300 text-black";
     return "bg-emerald-500 text-black";
   }
 
@@ -66,7 +74,7 @@ export default function Plinko() {
     setBusy(true);
     playTileClick();
 
-    // Pick path and bucket client-side (fair — purely cosmetic outcome).
+    // Pick path client-side (cosmetic — server records the result).
     const path: number[] = [];
     let bucket = 0;
     for (let r = 0; r < ROWS; r++) {
@@ -75,12 +83,12 @@ export default function Plinko() {
       bucket += right;
     }
     const multiplier = PAYOUTS[bucket];
-    const won = multiplier >= 1; // we still always pay `floor(bet*mult)`; "won" means net >= 0
+    const won = multiplier >= 1;
 
     const { data, error } = await supabase.rpc("place_bet", {
       _game: "plinko",
       _bet_amount: bet,
-      _won: true, // pay the exact multiplier always (server pays floor(bet*mult))
+      _won: true, // pay exact multiplier (server pays floor(bet*mult))
       _multiplier: multiplier,
       _details: { bucket, path, rows: ROWS },
     });
@@ -92,14 +100,33 @@ export default function Plinko() {
 
     const id = ++idRef.current;
     setDrops((d) => [...d, { id, path, bucket, multiplier, bet }]);
-    // Sound on landing — fire after the animation roughly finishes.
-    window.setTimeout(() => {
-      if (multiplier >= 2) playGem();
-      else if (multiplier < 1) playBomb();
-      else playTileClick();
-      setRecent((r) => [{ mult: multiplier, won }, ...r].slice(0, 8));
-      setBusy(false);
-    }, ROWS * 90 + 200);
+
+    // Schedule subtle peg-hit ticks during the fall.
+    const stepMs = 95;
+    let col = 1; // ball enters between top-row pegs (3 pegs → cols 0,1,2 — start centered)
+    for (let r = 0; r < ROWS; r++) {
+      const right = path[r];
+      const c = col + right;
+      window.setTimeout(() => {
+        setHitPeg({ r, c, t: Date.now() });
+        // very soft tick — reuse tileClick at low importance
+        if (r % 2 === 0) playTileClick();
+      }, r * stepMs + 60);
+      col = c;
+    }
+
+    // Landing
+    window.setTimeout(
+      () => {
+        setHitBucket({ i: bucket, t: Date.now() });
+        if (multiplier >= 5) playGem();
+        else if (multiplier < 1) playBomb();
+        else playTileClick();
+        setRecent((r) => [{ mult: multiplier, won }, ...r].slice(0, 8));
+        setBusy(false);
+      },
+      ROWS * stepMs + 120
+    );
   }
 
   return (
@@ -119,28 +146,23 @@ export default function Plinko() {
               <li
                 key={i}
                 className={`rounded-md px-2 py-1 text-[10px] font-black tabular-nums ${
-                  h.mult >= 2
-                    ? "bg-amber-500/20 text-amber-400"
+                  h.mult >= 5
+                    ? "bg-rose-500/20 text-rose-400"
                     : h.mult >= 1
-                      ? "bg-yellow-400/15 text-yellow-300"
+                      ? "bg-amber-400/15 text-amber-300"
                       : "bg-destructive/15 text-destructive"
                 }`}
               >
-                {h.mult.toFixed(2)}×
+                {h.mult}×
               </li>
             ))}
           </ul>
         )}
       </header>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_300px]">
-        {/* Board */}
-        <div className="relative rounded-2xl border border-border bg-card/70 p-3 backdrop-blur-xl sm:rounded-3xl sm:p-5">
-          <Board drops={drops} bucketColor={bucketColor} />
-        </div>
-
-        {/* Controls */}
-        <div className="space-y-4 rounded-2xl border border-border bg-card/70 p-4 backdrop-blur-xl sm:rounded-3xl sm:p-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[300px_1fr]">
+        {/* Controls — left like Stake */}
+        <div className="order-2 space-y-4 rounded-2xl border border-border bg-card/70 p-4 backdrop-blur-xl sm:rounded-3xl sm:p-5 md:order-1">
           <BetControls bet={bet} setBet={setBet} disabled={busy} />
           <Button
             onClick={drop}
@@ -150,80 +172,104 @@ export default function Plinko() {
             {busy ? "DROPPING..." : `DROP BALL (${formatCoins(bet)})`}
           </Button>
           <div className="rounded-xl bg-background/60 p-3 text-[11px] text-muted-foreground">
-            16 rows · 17 buckets · Edge multipliers up to <span className="font-black text-foreground">16×</span>
+            16 rows · 17 buckets · Edge multipliers up to{" "}
+            <span className="font-black text-foreground">110×</span>
           </div>
+        </div>
+
+        {/* Board — right */}
+        <div className="order-1 relative rounded-2xl border border-border bg-card/70 p-3 backdrop-blur-xl sm:rounded-3xl sm:p-5 md:order-2">
+          <Board
+            drops={drops}
+            hitPeg={hitPeg}
+            hitBucket={hitBucket}
+            bucketColor={bucketColor}
+          />
         </div>
       </div>
     </div>
   );
 }
 
+/* ------------------------------ Board ------------------------------ */
+
 function Board({
   drops,
+  hitPeg,
+  hitBucket,
   bucketColor,
 }: {
   drops: Drop[];
+  hitPeg: { r: number; c: number; t: number } | null;
+  hitBucket: { i: number; t: number } | null;
   bucketColor: (m: number) => string;
 }) {
-  // Geometry: triangular peg grid. Row r has (r+3) pegs (start with 3 at top).
+  // Pegs: row r has (r+3) pegs, centered. Bottom row has ROWS+2 = 18 pegs → 17 gaps.
   const pegRows = useMemo(() => {
-    const rows: { x: number; y: number }[][] = [];
+    const rows: { x: number; y: number; r: number; c: number }[][] = [];
     for (let r = 0; r < ROWS; r++) {
       const count = r + 3;
-      const row: { x: number; y: number }[] = [];
-      const totalWidth = (PAYOUTS.length - 1) * 100; // logical units
-      const spacing = totalWidth / (count + 1);
-      for (let i = 0; i < count; i++) {
-        const x = spacing * (i + 1);
-        const y = (r + 1) * 100; // row spacing = 100 logical units
-        row.push({ x, y });
+      const rowWidth = (count - 1) * COL;
+      const startX = (BOARD_W - rowWidth) / 2;
+      const y = TOP_PAD + (r + 1) * ROW_H;
+      const row: { x: number; y: number; r: number; c: number }[] = [];
+      for (let c = 0; c < count; c++) {
+        row.push({ x: startX + c * COL, y, r, c });
       }
       rows.push(row);
     }
     return rows;
   }, []);
 
-  const totalWidth = (PAYOUTS.length - 1) * 100;
-  const totalHeight = (ROWS + 2) * 100;
-
-  // Compute ball x at each row from path (right-step decisions).
+  // X position the ball occupies *between* rows after taking step `right` at row r.
+  // Indexing: before row 0, ball is centered. After row r, ball sits in gap `col`
+  // of row r (which has r+3 pegs and r+2 gaps), where col = sum of rights so far - ?
+  // We compute incrementally instead.
   function ballPath(path: number[]) {
-    // Start above row 0 centered.
-    const points: { x: number; y: number }[] = [];
-    points.push({ x: totalWidth / 2, y: 0 });
-    let bucket = 0;
+    const pts: { x: number; y: number }[] = [];
+    // Start above center, between the top row's middle pegs.
+    pts.push({ x: BOARD_W / 2, y: TOP_PAD - 10 });
+    let col = 1; // top row has 3 pegs (cols 0,1,2); ball enters between col 1 area
     for (let r = 0; r < ROWS; r++) {
-      bucket += path[r];
-      // After row r, ball sits between pegs of row r+1.
-      // Position it at the slot between left/right peg = roughly bucket index along width
-      const spacing = totalWidth / (r + 4);
-      const x = spacing * (bucket + 1) + (spacing - spacing) * 0; // simple
-      const y = (r + 1) * 100;
-      points.push({ x, y });
+      const right = path[r];
+      // After hitting row r, ball nudges to between pegs of row r+1.
+      // Compute x as midpoint between peg (r, col) and peg (r, col+1) shifted by step.
+      const nextCol = col + right;
+      // Peg row r has count = r+3 pegs; the ball lands between peg `nextCol-1` and `nextCol` of the NEXT row.
+      const count = r + 3;
+      const rowWidth = (count - 1) * COL;
+      const startX = (BOARD_W - rowWidth) / 2;
+      // Position between peg `col` and peg `nextCol` of current row, just below it.
+      const xLeft = startX + col * COL;
+      const xRight = startX + nextCol * COL;
+      const x = (xLeft + xRight) / 2;
+      const y = TOP_PAD + (r + 1) * ROW_H + ROW_H * 0.5;
+      pts.push({ x, y });
+      col = nextCol;
     }
-    // Land in the bucket
-    const finalX = (bucket / (PAYOUTS.length - 1)) * totalWidth;
-    points.push({ x: finalX, y: totalHeight - 60 });
-    return points;
+    // Final landing in bucket — bucket index === col (cumulative rights), 0..16.
+    const bucketX = SIDE_PAD + col * COL;
+    pts.push({ x: bucketX, y: TOP_PAD + (ROWS + 1) * ROW_H + 18 });
+    return pts;
   }
 
   return (
-    <div className="relative mx-auto w-full" style={{ maxWidth: 560 }}>
+    <div className="relative mx-auto w-full" style={{ maxWidth: 640 }}>
       <svg
-        viewBox={`0 0 ${totalWidth} ${totalHeight}`}
+        viewBox={`0 0 ${BOARD_W} ${BOARD_H}`}
         className="h-auto w-full"
         preserveAspectRatio="xMidYMid meet"
       >
         {/* Pegs */}
-        {pegRows.flat().map((p, i) => (
-          <circle
-            key={i}
-            cx={p.x}
-            cy={p.y}
-            r={6}
-            className="fill-foreground/40"
-          />
-        ))}
+        {pegRows.flat().map((p) => {
+          const lit =
+            hitPeg && hitPeg.r === p.r && hitPeg.c === p.c
+              ? hitPeg.t
+              : 0;
+          return (
+            <Peg key={`${p.r}-${p.c}`} x={p.x} y={p.y} litKey={lit} />
+          );
+        })}
 
         {/* Animated balls */}
         {drops.map((d) => {
@@ -233,13 +279,13 @@ function Board({
       </svg>
 
       {/* Bucket row */}
-      <div className="mt-1 flex w-full gap-[2px]">
+      <div className="mt-2 flex w-full gap-[3px] px-[2px]">
         {PAYOUTS.map((m, i) => (
           <BucketCell
             key={i}
             mult={m}
             tone={bucketColor(m)}
-            highlight={drops[drops.length - 1]?.bucket === i}
+            highlight={hitBucket?.i === i ? hitBucket.t : 0}
           />
         ))}
       </div>
@@ -247,26 +293,58 @@ function Board({
   );
 }
 
+/* ------------------------------ Peg ------------------------------ */
+
+function Peg({ x, y, litKey }: { x: number; y: number; litKey: number }) {
+  return (
+    <g>
+      <circle cx={x} cy={y} r={3.2} className="fill-foreground/70" />
+      <AnimatePresence>
+        {litKey > 0 && (
+          <motion.circle
+            key={litKey}
+            cx={x}
+            cy={y}
+            initial={{ r: 3.2, opacity: 0.9 }}
+            animate={{ r: 9, opacity: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="fill-primary"
+          />
+        )}
+      </AnimatePresence>
+    </g>
+  );
+}
+
+/* ------------------------------ Ball ------------------------------ */
+
 function Ball({ points }: { points: { x: number; y: number }[] }) {
-  // Animate the ball through each row position with framer-motion.
+  // Smooth gravity-like fall: easeIn cy keyframes, slightly snappier cx.
+  const xs = points.map((p) => p.x);
+  const ys = points.map((p) => p.y);
+  const times = points.map((_, i) => i / (points.length - 1));
+  const dur = points.length * 0.095;
   return (
     <motion.circle
-      r={9}
+      r={6.5}
       className="fill-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.7)]"
-      initial={{ cx: points[0].x, cy: points[0].y, opacity: 0 }}
+      initial={{ cx: xs[0], cy: ys[0], opacity: 0 }}
       animate={{
-        cx: points.map((p) => p.x),
-        cy: points.map((p) => p.y),
+        cx: xs,
+        cy: ys,
         opacity: [0, 1, 1, 1, 1, 1],
       }}
       transition={{
-        duration: points.length * 0.09,
+        duration: dur,
         ease: "easeIn",
-        times: points.map((_, i) => i / (points.length - 1)),
+        times,
       }}
     />
   );
 }
+
+/* ------------------------------ Bucket ------------------------------ */
 
 function BucketCell({
   mult,
@@ -275,28 +353,21 @@ function BucketCell({
 }: {
   mult: number;
   tone: string;
-  highlight: boolean;
+  highlight: number;
 }) {
   return (
     <div className="relative flex-1">
-      <AnimatePresence>
-        {highlight && (
-          <motion.div
-            key="hl"
-            initial={{ scale: 1, opacity: 0 }}
-            animate={{ scale: [1, 1.3, 1], opacity: [0, 1, 0] }}
-            transition={{ duration: 0.6 }}
-            className={`absolute inset-0 -z-0 rounded-md ${tone} opacity-60`}
-          />
-        )}
-      </AnimatePresence>
-      <div
-        className={`relative z-10 rounded-md px-1 py-1.5 text-center text-[10px] font-black tabular-nums sm:text-xs ${tone} ${
+      <motion.div
+        key={highlight}
+        initial={{ y: 0 }}
+        animate={highlight ? { y: [0, 6, 0] } : { y: 0 }}
+        transition={{ duration: 0.35, ease: "easeOut" }}
+        className={`relative rounded-md px-1 py-1.5 text-center text-[10px] font-black tabular-nums shadow-[0_3px_0_rgba(0,0,0,0.25)] sm:text-xs ${tone} ${
           highlight ? "ring-2 ring-foreground" : ""
         }`}
       >
         {mult}×
-      </div>
+      </motion.div>
     </div>
   );
 }
