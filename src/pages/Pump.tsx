@@ -170,7 +170,7 @@ export default function Pump() {
       pendingCashoutRef.current = true;
       return;
     }
-    if (pumps < 1) return;
+    if (displayPumps < 1) return;
     cashingRef.current = true;
     setBusy(true);
     try {
@@ -324,7 +324,7 @@ export default function Pump() {
               </Button>
               <Button
                 onClick={cashout}
-                disabled={pumps < 1 || cashingRef.current}
+                disabled={displayPumps < 1 || cashingRef.current}
                 className="h-12 bg-[hsl(var(--success))] text-background hover:bg-[hsl(var(--success))]/90"
               >
                 CASHOUT
