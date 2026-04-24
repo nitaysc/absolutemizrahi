@@ -122,12 +122,22 @@ export default function DragonTower() {
     if (!r) return;
 
     const eggs = (r.eggs as number[]) ?? [];
+    const allFloors = (r.all_floors as number[][] | null) ?? null;
     if (r.hit_egg) {
       playBomb();
       setExploded({ floor, tile });
       setFloors((prev) => {
         const next = [...prev];
-        next[floor] = { pick: tile, revealedEggs: eggs, cleared: false };
+        // Reveal every floor's eggs / safe steps so the player can see
+        // what they would have walked into.
+        for (let i = 0; i < FLOORS; i++) {
+          const floorEggs = allFloors?.[i] ?? (i === floor ? eggs : undefined);
+          next[i] = {
+            pick: i === floor ? tile : next[i]?.pick,
+            revealedEggs: floorEggs ?? next[i]?.revealedEggs,
+            cleared: i < floor,
+          };
+        }
         return next;
       });
       setActive(false);
