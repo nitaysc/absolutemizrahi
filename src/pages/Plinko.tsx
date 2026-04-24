@@ -52,6 +52,7 @@ type Ball = {
   nextRow: number;       // next row to bias toward (matches predetermined path)
   done: boolean;
   hue: number;
+  spawnedAt: number;     // for stuck-ball watchdog
 };
 
 export default function Plinko() {
@@ -115,6 +116,15 @@ export default function Plinko() {
         if (b.done) continue;
         needRender = true;
 
+        // Watchdog: if a ball has been alive way too long (stuck on a peg
+        // with near-zero velocity), force it down to its bucket.
+        if (ts - b.spawnedAt > 6000) {
+          b.x = bucketX(b.bucket);
+          b.y = floorY;
+          b.vx = 0;
+          b.vy = 0;
+        }
+
         // Sub-stepped semi-implicit Euler with circle-circle collisions
         // against the actual peg disks. This produces a real "tap and
         // deflect" instead of teleporting between rows.
@@ -150,14 +160,19 @@ export default function Plinko() {
                   b.vx = (b.vx - 2 * vDotN * nx) * RESTITUTION;
                   b.vy = (b.vy - 2 * vDotN * ny) * RESTITUTION;
 
-                  // Gentle bias toward the predetermined path so the ball
-                  // still ends up in the right bucket — applied as a small
-                  // sideways nudge, NOT a teleport.
+                  // Bias toward the predetermined path so the visual
+                  // landing matches the server-recorded bucket. Applied as
+                  // a sideways nudge proportional to current fall speed
+                  // (stronger than a flat number → reliably lands right).
                   if (r === b.nextRow) {
                     const wantRight = b.path[r] === 1;
-                    b.vx += (wantRight ? 1 : -1) * 22;
+                    b.vx = (wantRight ? 1 : -1) * Math.max(40, Math.abs(b.vy) * 0.55);
                     b.nextRow = r + 1;
                   }
+
+                  // Anti-stuck: ensure ball keeps moving downward after
+                  // any peg contact so it can't rest on top of a peg.
+                  if (b.vy < 25) b.vy = 25;
 
                   litPegsRef.current.set(`${r}-${c}`, performance.now());
                   if ((r + c) % 3 === 0) playTileClick();
@@ -176,15 +191,19 @@ export default function Plinko() {
           }
         }
 
-        // After clearing all rows, gently steer to the predetermined bucket
-        // so the visual landing matches the server-recorded outcome.
+        // After clearing all rows, strongly steer to the predetermined
+        // bucket so the visual landing always matches the recorded result.
         if (b.y > pegY(ROWS - 1) + ROW_H * 0.5) {
           const targetX = bucketX(b.bucket);
-          b.vx += (targetX - b.x) * 5 * dt;
-          b.vx *= Math.pow(0.82, dt * 60);
+          const dxT = targetX - b.x;
+          b.vx = dxT * 6;            // direct steer — no overshoot
+          if (Math.abs(dxT) < 1.5) b.x = targetX; // snap last sliver
         }
 
         if (b.y >= floorY) {
+          // Hard-snap X to the recorded bucket on landing so the visual
+          // bucket highlight always matches the multiplier paid out.
+          b.x = bucketX(b.bucket);
           b.done = true;
           setHitBucket({ i: b.bucket, t: Date.now() });
           if (b.multiplier >= 5) playGem();
@@ -260,6 +279,7 @@ export default function Plinko() {
       nextRow: 0,
       done: false,
       hue: Math.floor(Math.random() * 360),
+      spawnedAt: performance.now(),
     };
     ballsRef.current = [...ballsRef.current, newBall];
     force((n) => n + 1);
