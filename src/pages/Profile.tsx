@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { AVATAR_OPTIONS } from "@/lib/avatars";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
 
 interface Bet {
   id: string;
@@ -29,6 +30,8 @@ export default function Profile() {
   const [grantTo, setGrantTo] = useState("");
   const [grantAmount, setGrantAmount] = useState("");
   const [granting, setGranting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const isAdmin = user?.email?.toLowerCase() === "ps4spotifynitay@gmail.com";
 
@@ -36,15 +39,40 @@ export default function Profile() {
     if (profile?.username) setName(profile.username);
   }, [profile?.username]);
 
-  async function pickAvatar(emoji: string) {
-    if (!user || emoji === profile?.avatar) return;
+  async function pickAvatar(value: string) {
+    if (!user || value === profile?.avatar) return;
     const { error } = await supabase
       .from("profiles")
-      .update({ avatar: emoji })
+      .update({ avatar: value })
       .eq("id", user.id);
     if (error) return toast.error(error.message);
     toast.success("Avatar updated");
     refetch();
+  }
+
+  async function uploadAvatar(file: File) {
+    if (!user) return;
+    if (!file.type.startsWith("image/")) return toast.error("Pick an image file");
+    if (file.size > 5 * 1024 * 1024) return toast.error("Max 5 MB");
+    setUploading(true);
+    try {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      // Stable per-user filename (with cache-bust via ?t=) so the public
+      // URL is the same across uploads and old images get overwritten.
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      const url = `${data.publicUrl}?t=${Date.now()}`;
+      await pickAvatar(url);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
   }
 
   useEffect(() => {
@@ -129,8 +157,8 @@ export default function Profile() {
     <div className="space-y-6">
       <header>
         <div className="flex items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-primary/40 bg-card text-3xl shadow-[0_0_22px_hsl(var(--primary)/0.25)]">
-            {profile?.avatar ?? "🎰"}
+          <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border-2 border-primary/40 bg-card shadow-[0_0_22px_hsl(var(--primary)/0.25)]">
+            <PlayerAvatar avatar={profile?.avatar} size={56} className="rounded-2xl" />
           </div>
           <div>
             <h1 className="text-3xl font-black tracking-tight">PROFILE</h1>
@@ -143,7 +171,36 @@ export default function Profile() {
         <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
           Avatar · seen by other players in poker, blackjack & multiplayer games
         </label>
-        <div className="mt-3 grid grid-cols-8 gap-2 sm:grid-cols-12">
+
+        {/* Upload your own picture */}
+        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-primary/40 bg-background/40 p-3">
+          <PlayerAvatar avatar={profile?.avatar} size={56} ring />
+          <div className="flex-1 min-w-[160px]">
+            <div className="text-sm font-bold">Upload your own picture</div>
+            <div className="text-xs text-muted-foreground">JPG / PNG / WEBP · max 5 MB · square works best</div>
+          </div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) uploadAvatar(f);
+            }}
+          />
+          <Button
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? "Uploading…" : "Upload image"}
+          </Button>
+        </div>
+
+        <div className="mt-4 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+          …or pick an emoji
+        </div>
+        <div className="mt-2 grid grid-cols-8 gap-2 sm:grid-cols-12">
           {AVATAR_OPTIONS.map((emoji) => {
             const active = profile?.avatar === emoji;
             return (

@@ -12,6 +12,7 @@ import { NumberField } from "@/components/NumberField";
 import { formatCoins } from "@/lib/format";
 import { Spade, Clock, LogOut, ArrowLeft, Eye } from "lucide-react";
 import { Trophy } from "lucide-react";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
 
 type Card = { s: "S" | "H" | "D" | "C"; r: string };
 type Seat = {
@@ -461,7 +462,7 @@ export default function Poker() {
                     isCurrent ? "border-primary bg-primary/30 shadow-[0_0_20px_hsl(var(--primary)/0.6)] ring-2 ring-primary" : "border-border bg-black/60"
                   }`}>
                     <span className="flex items-center gap-1 text-white">
-                      <span className="text-base leading-none">{seat.avatar ?? "🎰"}</span>
+                      <PlayerAvatar avatar={seat.avatar} size={18} />
                       {seat.username}
                       {isDealer && <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-[9px] font-black text-black">D</span>}
                     </span>
