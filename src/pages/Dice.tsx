@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTrackGame } from "@/hooks/usePresence";
@@ -32,7 +32,7 @@ export default function Dice() {
   const profit = Math.floor(bet * multiplier) - bet;
 
   async function rollOnce(): Promise<AutoBetRoundResult | null> {
-    if (!profile) return false;
+    if (!profile) return null;
     if (bet < 1) {
       toast.error("Bet at least 1 coin");
       return null;
