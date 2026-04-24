@@ -129,8 +129,8 @@ function UserPill({
       className="flex items-center gap-2 rounded-full border border-border bg-card/80 py-1 pl-1 pr-3 transition hover:bg-card"
       aria-label="Open profile"
     >
-      <PlayerAvatar avatar={avatar} size={28} />
-      <span className="hidden max-w-[120px] truncate text-sm font-bold sm:inline">
+      <PlayerAvatar avatar={avatar} size={32} ring />
+      <span className="max-w-[120px] truncate text-sm font-bold">
         {username}
       </span>
     </button>
