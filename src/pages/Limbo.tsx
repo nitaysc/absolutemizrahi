@@ -95,6 +95,7 @@ export default function Limbo() {
         )}
       </header>
 
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_320px] sm:gap-4">
       <div className="relative flex min-h-[140px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-border bg-card/70 p-4 backdrop-blur-xl sm:min-h-[200px] sm:rounded-3xl sm:p-6">
         <AnimatePresence mode="wait">
           <motion.div
@@ -173,6 +174,7 @@ export default function Limbo() {
             <AutoBetPanel bet={bet} setBet={setBet} onBet={rollOnce} />
           )}
         </div>
+      </div>
       </div>
     </div>
   );

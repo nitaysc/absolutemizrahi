@@ -213,6 +213,8 @@ export default function Chicken() {
         </p>
       </header>
 
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_320px] sm:gap-4">
+      <div className="space-y-3 sm:space-y-4">
       {/* 3D Road */}
       <ChickenScene
         totalLanes={totalLanes}
@@ -249,6 +251,7 @@ export default function Chicken() {
             </div>
           );
         })}
+      </div>
       </div>
 
       {/* Controls */}
@@ -317,6 +320,7 @@ export default function Chicken() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

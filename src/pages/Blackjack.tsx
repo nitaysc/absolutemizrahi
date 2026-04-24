@@ -244,6 +244,7 @@ export default function Blackjack() {
         </div>
       </header>
 
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_320px] sm:gap-4">
       {/* Table */}
       <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-emerald-950/60 via-card/80 to-emerald-900/40 p-3 backdrop-blur-xl sm:rounded-3xl sm:p-5">
         {/* Dealer */}
@@ -369,6 +370,7 @@ export default function Blackjack() {
             {state.status === "dealer" ? "Dealer playing…" : `Round over · next round in ${secondsLeft}s`}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

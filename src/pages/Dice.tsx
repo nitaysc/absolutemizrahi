@@ -80,6 +80,7 @@ export default function Dice() {
     <div className="space-y-3 sm:space-y-4">
       <Header title="DICE" subtitle={`Roll ${dir} ${target} to win`} history={history} />
 
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_320px] sm:gap-4">
       {/* Game panel */}
       <div className="relative overflow-hidden rounded-2xl border border-border bg-card/70 p-3 backdrop-blur-xl sm:rounded-3xl sm:p-5">
         {/* Result number */}
@@ -218,6 +219,7 @@ export default function Dice() {
             <AutoBetPanel bet={bet} setBet={setBet} onBet={rollOnce} />
           )}
         </div>
+      </div>
       </div>
     </div>
   );
