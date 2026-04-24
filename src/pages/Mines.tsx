@@ -112,8 +112,9 @@ export default function Mines() {
     const r = data?.[0];
     if (r) setLocalCoins(Number(r.new_balance));
     if (r) {
+      const profit = Math.max(Number(r.payout ?? 0) - bet, 0);
       toast.success(
-        `+${formatCoins(Number(r.payout ?? 0))} (${Number(r.multiplier).toFixed(2)}×)`,
+        `+${formatCoins(profit)} (${Number(r.multiplier).toFixed(2)}×)`,
       );
       // Reveal the bombs the player avoided so they can see what they dodged.
       const bombs = (r.bombs as number[]) ?? [];
