@@ -7,6 +7,7 @@ import { formatCoins } from "@/lib/format";
 import { Dice5, Coins, Trophy, User, LogOut, Home, Bomb, Rocket } from "lucide-react";
 import { cn } from "@/lib/utils";
 import mizrahi from "@/assets/absolute-mizrahi.gif";
+import { LiveStatsDrawer } from "./LiveStatsDrawer";
 
 const navItems = [
   { to: "/", label: "Lobby", icon: Home, end: true },
@@ -75,6 +76,9 @@ export function Layout() {
       <main className="mx-auto max-w-5xl px-4 pb-28 pt-6">
         <Outlet />
       </main>
+
+      {/* Floating live-stats tab (drag to open / close) */}
+      <LiveStatsDrawer />
 
       {/* Bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border/50 bg-background/85 backdrop-blur-xl safe-bottom">
