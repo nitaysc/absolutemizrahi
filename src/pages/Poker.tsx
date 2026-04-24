@@ -357,6 +357,8 @@ export default function Poker() {
         </div>
       </header>
 
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]">
+      <div className="space-y-4 min-w-0">
       {/* Table */}
       <div className="relative mx-auto aspect-[16/10] w-full max-w-4xl overflow-hidden rounded-[40%/30%] border-[10px] border-amber-900/80 bg-gradient-to-br from-emerald-800 via-emerald-900 to-emerald-950 shadow-[inset_0_0_60px_rgba(0,0,0,0.6),0_20px_40px_rgba(0,0,0,0.5)]">
         {/* Winner announcement banner */}
@@ -492,7 +494,7 @@ export default function Poker() {
 
       {/* Your hand + Action log */}
       {(mySeat || log.length > 0) && (
-        <div className="grid gap-3 lg:grid-cols-[auto_1fr]">
+        <div className="grid gap-3 md:grid-cols-[auto_1fr]">
           {mySeat && Array.isArray(mySeat.hole) && (mySeat.hole as Card[]).length > 0 && typeof (mySeat.hole as Card[])[0] === "object" && (
             <div className="flex items-center gap-3 rounded-2xl border border-amber-300/40 bg-gradient-to-br from-amber-500/10 to-amber-700/5 p-3 shadow-[0_0_24px_rgba(252,211,77,0.15)]">
               <div className="flex flex-col">
@@ -541,9 +543,10 @@ export default function Poker() {
           </div>
         </div>
       )}
+      </div>
 
-      {/* Buy-in / Action panel */}
-      <div className="rounded-2xl border border-border bg-card/70 p-4 backdrop-blur-xl">
+      {/* Buy-in / Action panel — pinned to the side on desktop */}
+      <div className="rounded-2xl border border-border bg-card/70 p-4 backdrop-blur-xl lg:sticky lg:top-4 lg:self-start">
         {!mySeat ? (
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex-1 min-w-[180px]">
@@ -634,6 +637,7 @@ export default function Poker() {
             )}
           </div>
         )}
+      </div>
       </div>
     </div>
   );
