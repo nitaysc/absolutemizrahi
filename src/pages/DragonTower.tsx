@@ -226,7 +226,8 @@ export default function DragonTower() {
                     {Array.from({ length: cfg.tiles }).map((_, t) => {
                       const isPicked = pickedTile === t;
                       const isEgg = revealedEggs?.includes(t);
-                      const showSafe = (isPast && isPicked) || (isPast && !isEgg);
+                      const isRevealed = revealedEggs !== undefined;
+                      const showSafe = isRevealed && !isEgg;
                       const exploding =
                         exploded?.floor === floor && exploded?.tile === t && isEgg;
                       const baseDisabled =
@@ -238,9 +239,13 @@ export default function DragonTower() {
                           disabled={baseDisabled}
                           className={`relative h-9 rounded-lg border transition active:scale-95 ${
                             isEgg
-                              ? "border-destructive bg-destructive/20"
+                              ? isPicked
+                                ? "border-destructive bg-destructive/30 ring-2 ring-destructive"
+                                : "border-destructive/60 bg-destructive/10"
                               : showSafe
-                                ? "border-emerald-500 bg-emerald-500/20"
+                                ? isPicked
+                                  ? "border-emerald-500 bg-emerald-500/30 ring-2 ring-emerald-400"
+                                  : "border-emerald-500/40 bg-emerald-500/10"
                                 : isCurrent
                                   ? "border-primary/50 bg-secondary hover:bg-accent cursor-pointer"
                                   : isFuture
@@ -249,7 +254,7 @@ export default function DragonTower() {
                           }`}
                         >
                           <AnimatePresence>
-                            {(isEgg || (isPast && isPicked)) && (
+                            {(isEgg || showSafe) && (
                               <motion.span
                                 key={isEgg ? "egg" : "safe"}
                                 initial={{ scale: 0, rotate: -180 }}
@@ -265,9 +270,21 @@ export default function DragonTower() {
                                 className="absolute inset-0 flex items-center justify-center"
                               >
                                 {isEgg ? (
-                                  <Egg className="h-5 w-5 text-destructive drop-shadow-[0_0_10px_hsl(var(--destructive)/0.7)]" />
+                                  <Egg
+                                    className={`h-5 w-5 text-destructive ${
+                                      isPicked
+                                        ? "drop-shadow-[0_0_10px_hsl(var(--destructive)/0.7)]"
+                                        : "opacity-70"
+                                    }`}
+                                  />
                                 ) : (
-                                  <Footprints className="h-4 w-4 text-emerald-400 drop-shadow-[0_0_10px_hsl(var(--success)/0.7)]" />
+                                  <Footprints
+                                    className={`h-4 w-4 text-emerald-400 ${
+                                      isPicked
+                                        ? "drop-shadow-[0_0_10px_hsl(var(--success)/0.7)]"
+                                        : "opacity-60"
+                                    }`}
+                                  />
                                 )}
                               </motion.span>
                             )}
