@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
+import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel";
 import { formatCoins } from "@/lib/format";
 
 const MULTIPLIER = 1.98;
@@ -14,6 +15,7 @@ type Side = "heads" | "tails";
 export default function Coinflip() {
   useTrackGame("coinflip");
   const { profile, setLocalCoins } = useUserProfile();
+  const [mode, setMode] = useState<"manual" | "auto">("manual");
   const [bet, setBet] = useState(10);
   const [pick, setPick] = useState<Side>("heads");
   const [flipping, setFlipping] = useState(false);
@@ -22,10 +24,10 @@ export default function Coinflip() {
   const [history, setHistory] = useState<Side[]>([]);
   const rotation = useRef(0);
 
-  async function flip() {
-    if (!profile) return;
-    if (bet < 1) return toast.error("Bet at least 1 coin");
-    if (bet > profile.coins) return toast.error("Not enough coins");
+  async function flip(): Promise<AutoBetRoundResult | null> {
+    if (!profile) return null;
+    if (bet < 1) { toast.error("Bet at least 1 coin"); return null; }
+    if (bet > profile.coins) { toast.error("Not enough coins"); return null; }
 
     setFlipping(true);
     setWon(null);
@@ -54,16 +56,16 @@ export default function Coinflip() {
     setFlipping(false);
     if (error) {
       toast.error(error.message);
-      return;
+      return null;
     }
     if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
     setResult(outcome);
     setWon(w);
     setHistory((h) => [outcome, ...h].slice(0, 12));
-    if (w) {
-      const profit = Math.max(Number(data?.[0]?.payout ?? 0) - bet, 0);
-      toast.success(`+${formatCoins(profit)} coins!`);
-    }
+    const payout = Number(data?.[0]?.payout ?? 0);
+    const profit = w ? Math.max(payout - bet, 0) : -bet;
+    if (w) toast.success(`+${formatCoins(profit)} coins!`);
+    return { won: w, profit };
   }
 
   return (
@@ -135,6 +137,19 @@ export default function Coinflip() {
       </div>
 
       <div className="rounded-3xl border border-border bg-card/70 p-5 backdrop-blur-xl">
+        <div className="mb-3 grid grid-cols-2 gap-1 rounded-full bg-background/60 p-1">
+          {(["manual","auto"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={`rounded-full py-1.5 text-xs font-bold uppercase tracking-widest transition ${
+                mode === m ? "bg-card text-foreground shadow" : "text-muted-foreground"
+              }`}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
         <BetControls bet={bet} setBet={setBet} disabled={flipping} />
         <div className="mt-2 text-xs text-muted-foreground">
           Win pays{" "}
@@ -143,13 +158,19 @@ export default function Coinflip() {
           </span>{" "}
           ({MULTIPLIER}×)
         </div>
-        <Button
-          onClick={flip}
-          disabled={flipping}
-          className="mt-4 h-14 w-full text-lg font-black tracking-wider shadow-[0_0_24px_hsl(var(--primary)/0.4)]"
-        >
-          {flipping ? "FLIPPING..." : "FLIP COIN"}
-        </Button>
+        {mode === "manual" ? (
+          <Button
+            onClick={() => flip()}
+            disabled={flipping}
+            className="mt-4 h-14 w-full text-lg font-black tracking-wider shadow-[0_0_24px_hsl(var(--primary)/0.4)]"
+          >
+            {flipping ? "FLIPPING..." : "FLIP COIN"}
+          </Button>
+        ) : (
+          <div className="mt-4">
+            <AutoBetPanel bet={bet} setBet={setBet} onBet={flip} intervalMs={400} />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
+import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel";
 import { formatCoins } from "@/lib/format";
 import { Triangle } from "lucide-react";
 import { playGem, playBomb, playTileClick } from "@/lib/sfx";
@@ -65,6 +66,7 @@ export default function Plinko() {
   const [recent, setRecent] = useState<{ mult: number; won: boolean }[]>([]);
   const [hitBucket, setHitBucket] = useState<{ i: number; t: number } | null>(null);
   const [, force] = useState(0);
+  const [mode, setMode] = useState<"manual" | "auto">("manual");
 
   const PAYOUTS = PAYOUTS_BY_RISK[risk];
 
@@ -258,10 +260,10 @@ export default function Plinko() {
     };
   }, [pegX, pegY, bucketX, laneX, floorY]);
 
-  async function drop() {
-    if (!profile) return;
-    if (bet < 1) return toast.error("Bet at least 1 coin");
-    if (bet > profile.coins) return toast.error("Not enough coins");
+  async function drop(): Promise<AutoBetRoundResult | null> {
+    if (!profile) return null;
+    if (bet < 1) { toast.error("Bet at least 1 coin"); return null; }
+    if (bet > profile.coins) { toast.error("Not enough coins"); return null; }
 
     playTileClick();
 
@@ -287,7 +289,7 @@ export default function Plinko() {
       _multiplier: multiplier,
       _details: { bucket, path, rows: ROWS },
     });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return null; }
     if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
 
     const id = ++idRef.current;
@@ -309,6 +311,9 @@ export default function Plinko() {
     };
     ballsRef.current = [...ballsRef.current, newBall];
     force((n) => n + 1);
+    const won = multiplier >= 1;
+    const payout = Math.floor(bet * multiplier);
+    return { won, profit: payout - bet };
   }
 
   // Build peg grid once
@@ -355,6 +360,19 @@ export default function Plinko() {
       <div className="grid grid-cols-1 gap-3 md:grid-cols-[260px_1fr]">
         {/* Controls */}
         <div className="order-2 space-y-3 rounded-2xl border border-border bg-card/70 p-3 backdrop-blur-xl md:order-1">
+          <div className="grid grid-cols-2 gap-1 rounded-full bg-background/60 p-1">
+            {(["manual","auto"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                className={`rounded-full py-1.5 text-[11px] font-bold uppercase tracking-widest transition ${
+                  mode === m ? "bg-card text-foreground shadow" : "text-muted-foreground"
+                }`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
           <BetControls bet={bet} setBet={setBet} disabled={false} />
           <div>
             <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -380,13 +398,17 @@ export default function Plinko() {
               ))}
             </div>
           </div>
-          <Button
-            onClick={drop}
-            disabled={!profile}
-            className="h-11 w-full text-sm font-black tracking-wider shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
-          >
-            DROP BALL ({formatCoins(bet)})
-          </Button>
+          {mode === "manual" ? (
+            <Button
+              onClick={() => drop()}
+              disabled={!profile}
+              className="h-11 w-full text-sm font-black tracking-wider shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
+            >
+              DROP BALL ({formatCoins(bet)})
+            </Button>
+          ) : (
+            <AutoBetPanel bet={bet} setBet={setBet} onBet={drop} intervalMs={350} />
+          )}
           <div className="rounded-xl bg-background/60 p-2.5 text-[10px] text-muted-foreground">
             16 rows · 17 buckets · Up to{" "}
             <span className="font-black text-foreground">{PAYOUTS[0]}×</span>
