@@ -5,6 +5,7 @@ import {
   createContext,
   useContext,
   ReactNode,
+  useRef,
 } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +37,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  // Watermark: latest profile.updated_at we've applied. Used to ignore
+  // stale realtime events that arrive AFTER a newer RPC response, which was
+  // causing the balance pill to show a wrong negative delta.
+  const watermark = useRef<number>(0);
 
   const fetchProfile = useCallback(async () => {
     if (!user) return;
@@ -49,6 +54,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     if (error) {
       console.error('Error fetching profile:', error);
     } else if (data) {
+      const ts = data.updated_at ? new Date(data.updated_at).getTime() : Date.now();
+      watermark.current = Math.max(watermark.current, ts);
       setProfile({
         id: data.id,
         display_name: data.display_name,
@@ -84,6 +91,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         },
         (payload) => {
           const d = payload.new as Record<string, unknown>;
+          const ts = d.updated_at ? new Date(String(d.updated_at)).getTime() : Date.now();
+          // Ignore stale events (older than what we've already applied).
+          if (ts < watermark.current) return;
+          watermark.current = ts;
           setProfile((prev) =>
             prev
               ? {
@@ -122,6 +133,9 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const setLocalCoins = useCallback((coins: number) => {
+    // Bump the watermark so a stale realtime event (with the *previous*
+    // balance) cannot overwrite this fresh, authoritative value from an RPC.
+    watermark.current = Date.now();
     setProfile((prev) => (prev ? { ...prev, coins } : prev));
   }, []);
 
