@@ -273,6 +273,10 @@ export default function Plinko() {
       path.push(right);
       bucket += right;
     }
+    const rightsByRow = path.reduce<number[]>((acc, dir) => {
+      acc.push((acc.at(-1) ?? 0) + dir);
+      return acc;
+    }, []);
     const multiplier = PAYOUTS[bucket];
 
     const { data, error } = await supabase.rpc("place_bet", {
@@ -289,6 +293,7 @@ export default function Plinko() {
     const newBall: Ball = {
       id,
       path,
+      rightsByRow,
       bucket,
       multiplier,
       bet,
@@ -441,10 +446,7 @@ export default function Plinko() {
             {/* Bucket row — aligned to SVG columns via padding */}
             <div
               className="mt-1 flex w-full gap-[2px]"
-              style={{
-                paddingLeft: `${(SIDE_PAD / BOARD_W) * 100}%`,
-                paddingRight: `${(SIDE_PAD / BOARD_W) * 100}%`,
-              }}
+              style={{ paddingLeft: 0, paddingRight: 0 }}
             >
               {PAYOUTS.map((m, i) => (
                 <BucketCell
