@@ -91,13 +91,13 @@ export default function Limbo() {
   useEffect(() => () => { stopAuto.current = true; }, []);
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+    <div className="space-y-3 sm:space-y-4">
+      <header className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="flex items-center gap-2 text-3xl font-black tracking-tight">
-            <Rocket className="h-7 w-7 text-primary" /> LIMBO
+          <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">
+            <Rocket className="h-6 w-6 text-primary sm:h-7 sm:w-7" /> LIMBO
           </h1>
-          <p className="text-sm text-muted-foreground">Pick a target. Hit it or higher to win.</p>
+          <p className="text-xs text-muted-foreground sm:text-sm">Pick a target. Hit it or higher to win.</p>
         </div>
         {history.length > 0 && (
           <ul className="flex gap-1.5">
@@ -117,7 +117,7 @@ export default function Limbo() {
         )}
       </header>
 
-      <div className="relative flex min-h-[260px] flex-col items-center justify-center overflow-hidden rounded-3xl border border-border bg-card/70 p-8 backdrop-blur-xl">
+      <div className="relative flex min-h-[140px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-border bg-card/70 p-4 backdrop-blur-xl sm:min-h-[200px] sm:rounded-3xl sm:p-6">
         <AnimatePresence mode="wait">
           <motion.div
             key={last ?? "idle"}
@@ -125,7 +125,7 @@ export default function Limbo() {
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.4, opacity: 0, y: -30 }}
             transition={{ type: "spring", stiffness: 220, damping: 16 }}
-            className={`text-7xl font-black tabular-nums sm:text-8xl ${
+            className={`text-5xl font-black tabular-nums sm:text-7xl ${
               last === null
                 ? "text-foreground/40"
                 : lastWon
@@ -138,16 +138,16 @@ export default function Limbo() {
         </AnimatePresence>
         {lastWon !== null && !rolling && (
           <div
-            className={`mt-3 text-sm font-bold uppercase tracking-widest ${lastWon ? "text-[hsl(var(--success))]" : "text-destructive"}`}
+            className={`mt-2 text-xs font-bold uppercase tracking-widest sm:text-sm ${lastWon ? "text-[hsl(var(--success))]" : "text-destructive"}`}
           >
             {lastWon ? "WIN" : "BUST"}
           </div>
         )}
       </div>
 
-      <div className="rounded-3xl border border-border bg-card/70 p-5 backdrop-blur-xl">
+      <div className="rounded-2xl border border-border bg-card/70 p-3 backdrop-blur-xl sm:rounded-3xl sm:p-4">
         <ModeTabs mode={mode} onChange={setMode} />
-        <div className="mt-4 space-y-4">
+        <div className="mt-3 space-y-3">
           <BetControls bet={bet} setBet={setBet} disabled={autoRunning} />
 
           <div className="grid grid-cols-2 gap-2">
@@ -162,14 +162,14 @@ export default function Limbo() {
                 max={1000}
                 decimal
                 disabled={autoRunning}
-                className="mt-2 text-lg font-black tabular-nums"
+                className="mt-1 text-base font-black tabular-nums"
               />
             </div>
             <div>
               <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 Win chance
               </label>
-              <div className="mt-2 rounded-md border border-input bg-background/60 px-3 py-2 text-lg font-black tabular-nums">
+              <div className="mt-1 rounded-md border border-input bg-background/60 px-3 py-1.5 text-base font-black tabular-nums">
                 {winChance}%
               </div>
             </div>
@@ -193,7 +193,7 @@ export default function Limbo() {
                 min={1}
                 max={10000}
                 disabled={autoRunning}
-                className="mt-2"
+                className="mt-1"
               />
             </div>
           )}
@@ -202,17 +202,17 @@ export default function Limbo() {
             <Button
               onClick={rollOnce}
               disabled={rolling}
-              className="h-14 w-full text-lg font-black tracking-wider shadow-[0_0_24px_hsl(var(--primary)/0.4)]"
+              className="h-11 w-full text-base font-black tracking-wider shadow-[0_0_24px_hsl(var(--primary)/0.4)] sm:h-12"
             >
-              <Zap className="mr-2 h-5 w-5" />
+              <Zap className="mr-2 h-4 w-4" />
               {rolling ? "LAUNCHING..." : "BET"}
             </Button>
           ) : (
             <Button
               onClick={runAuto}
-              className={`h-14 w-full text-lg font-black tracking-wider ${autoRunning ? "bg-destructive hover:bg-destructive" : ""}`}
+              className={`h-11 w-full text-base font-black tracking-wider sm:h-12 ${autoRunning ? "bg-destructive hover:bg-destructive" : ""}`}
             >
-              <Repeat className="mr-2 h-5 w-5" />
+              <Repeat className="mr-2 h-4 w-4" />
               {autoRunning ? `STOP (${autoLeft})` : `START AUTO (${autoBets})`}
             </Button>
           )}
