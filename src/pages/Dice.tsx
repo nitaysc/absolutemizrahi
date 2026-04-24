@@ -5,8 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { BetControls } from "@/components/BetControls";
+import { NumberField } from "@/components/NumberField";
 import { formatCoins } from "@/lib/format";
 import { Repeat, Zap } from "lucide-react";
 
@@ -54,9 +54,6 @@ export default function Dice() {
     const result = +(Math.random() * 100).toFixed(2);
     const won = dir === "under" ? result < target : result > target;
 
-    // Optimistic balance: remove bet
-    setLocalCoins(profile.coins - bet);
-
     const { data, error } = await supabase.rpc("place_bet", {
       _game: "dice",
       _bet_amount: bet,
@@ -67,8 +64,6 @@ export default function Dice() {
     setRolling(false);
 
     if (error) {
-      // revert optimistic deduction
-      setLocalCoins(profile.coins);
       toast.error(error.message);
       return false;
     }
@@ -238,13 +233,13 @@ export default function Dice() {
               <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 Number of bets
               </label>
-              <Input
-                type="number"
-                min={1}
+              <NumberField
                 value={autoBets}
-                onChange={(e) => setAutoBets(Math.max(1, Math.floor(Number(e.target.value) || 0)))}
+                onChange={setAutoBets}
+                min={1}
+                max={10000}
                 disabled={autoRunning}
-                className="mt-2 text-lg font-bold tabular-nums"
+                className="mt-2"
               />
             </div>
           )}
@@ -305,7 +300,6 @@ function Stat({
   value,
   editable,
   onChange,
-  suffix,
 }: {
   label: string;
   value: string;
@@ -313,6 +307,13 @@ function Stat({
   onChange?: (n: number) => void;
   suffix?: boolean;
 }) {
+  // Local string buffer for editable variant so users can clear/type freely.
+  const [text, setText] = useState(value);
+  useEffect(() => {
+    if (editable && text !== value) setText(value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, editable]);
+
   return (
     <div className="rounded-xl bg-card/60 p-2">
       <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -320,9 +321,24 @@ function Stat({
       </div>
       {editable ? (
         <input
-          type="number"
-          value={value}
-          onChange={(e) => onChange?.(Number(e.target.value))}
+          type="text"
+          inputMode="numeric"
+          value={text}
+          onChange={(e) => {
+            const v = e.target.value.replace(/[^0-9]/g, "");
+            setText(v);
+            const n = Number(v);
+            if (v !== "" && Number.isFinite(n)) onChange?.(n);
+          }}
+          onBlur={() => {
+            const n = Math.floor(Number(text));
+            if (!Number.isFinite(n) || n < 2) {
+              onChange?.(2);
+              setText("2");
+            } else {
+              setText(String(n));
+            }
+          }}
           className="mt-1 w-full bg-transparent text-center text-base font-black outline-none"
         />
       ) : (

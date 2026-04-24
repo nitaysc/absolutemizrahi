@@ -4,8 +4,8 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { BetControls } from "@/components/BetControls";
+import { NumberField } from "@/components/NumberField";
 import { formatCoins } from "@/lib/format";
 import { Rocket, Repeat, Zap } from "lucide-react";
 
@@ -45,7 +45,6 @@ export default function Limbo() {
     const result = +(HOUSE_EDGE / u).toFixed(2);
     const won = result >= target;
 
-    setLocalCoins(profile.coins - bet);
     await new Promise((r) => setTimeout(r, 700));
 
     const { data, error } = await supabase.rpc("place_bet", {
@@ -57,7 +56,6 @@ export default function Limbo() {
     });
     setRolling(false);
     if (error) {
-      setLocalCoins(profile.coins);
       toast.error(error.message);
       return;
     }
@@ -152,13 +150,13 @@ export default function Limbo() {
               <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 Target multiplier
               </label>
-              <Input
-                type="number"
-                step="0.01"
-                min={1.01}
+              <NumberField
                 value={target}
+                onChange={setTarget}
+                min={1.01}
+                max={1000}
+                decimal
                 disabled={autoRunning}
-                onChange={(e) => setTarget(Math.max(1.01, Number(e.target.value) || 1.01))}
                 className="mt-2 text-lg font-black tabular-nums"
               />
             </div>
@@ -184,13 +182,13 @@ export default function Limbo() {
               <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 Number of bets
               </label>
-              <Input
-                type="number"
-                min={1}
+              <NumberField
                 value={autoBets}
-                onChange={(e) => setAutoBets(Math.max(1, Math.floor(Number(e.target.value) || 0)))}
+                onChange={setAutoBets}
+                min={1}
+                max={10000}
                 disabled={autoRunning}
-                className="mt-2 text-lg font-bold tabular-nums"
+                className="mt-2"
               />
             </div>
           )}

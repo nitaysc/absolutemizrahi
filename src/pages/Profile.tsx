@@ -20,9 +20,11 @@ interface Bet {
 
 export default function Profile() {
   const { user } = useAuth();
-  const { profile, refetch } = useUserProfile();
+  const { profile, refetch, setLocalCoins } = useUserProfile();
   const [name, setName] = useState("");
   const [bets, setBets] = useState<Bet[]>([]);
+  const [code, setCode] = useState("");
+  const [redeeming, setRedeeming] = useState(false);
 
   useEffect(() => {
     if (profile?.username) setName(profile.username);
@@ -63,6 +65,21 @@ export default function Profile() {
     refetch();
   }
 
+  async function redeem() {
+    const c = code.trim();
+    if (!c) return toast.error("Enter a code");
+    setRedeeming(true);
+    const { data, error } = await supabase.rpc("redeem_code", { _code: c });
+    setRedeeming(false);
+    if (error) return toast.error(error.message);
+    const r = data?.[0];
+    if (r) {
+      setLocalCoins(Number(r.new_balance));
+      toast.success(`+${formatCoins(Number(r.awarded))} coins!`);
+    }
+    setCode("");
+  }
+
   const profit = (profile?.total_won ?? 0) - (profile?.total_wagered ?? 0);
 
   return (
@@ -77,6 +94,34 @@ export default function Profile() {
         <div className="mt-2 flex gap-2">
           <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={20} />
           <Button onClick={saveName}>Save</Button>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 to-transparent p-5">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-black uppercase tracking-widest text-primary">
+              🎁 Redeem code
+            </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Got a code? Drop it in for free Mizrahi Coins.
+            </p>
+          </div>
+        </div>
+        <div className="mt-3 flex gap-2">
+          <Input
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="ENTER CODE"
+            disabled={redeeming}
+            className="uppercase tracking-widest"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") redeem();
+            }}
+          />
+          <Button onClick={redeem} disabled={redeeming || !code.trim()}>
+            {redeeming ? "..." : "Redeem"}
+          </Button>
         </div>
       </section>
 

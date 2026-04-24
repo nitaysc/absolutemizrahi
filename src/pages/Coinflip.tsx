@@ -39,9 +39,6 @@ export default function Coinflip() {
     const delta = (targetMod - currentMod + 360) % 360;
     rotation.current = rotation.current + delta + 360 * 5; // 5 full spins
 
-    // optimistic deduction
-    setLocalCoins(profile.coins - bet);
-
     // Wait for animation to finish before settling so the user *sees* the result land
     await new Promise((r) => setTimeout(r, 1300));
 
@@ -54,7 +51,6 @@ export default function Coinflip() {
     });
     setFlipping(false);
     if (error) {
-      setLocalCoins(profile.coins);
       toast.error(error.message);
       return;
     }
