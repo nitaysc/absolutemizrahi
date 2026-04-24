@@ -30,7 +30,7 @@ type BetRow = {
   created_at: string;
 };
 
-const GAMES = ["all", "dice", "limbo", "coinflip", "mines", "blackjack", "crash"];
+const GAMES = ["all", "dice", "limbo", "coinflip", "mines", "blackjack", "crash", "chicken"];
 const POS_KEY = "liveStats:pos:v1";
 const OPEN_KEY = "liveStats:open:v1";
 const W = 290;

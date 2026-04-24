@@ -9,6 +9,7 @@ import { BetControls } from "@/components/BetControls";
 import { NumberField } from "@/components/NumberField";
 import { formatCoins } from "@/lib/format";
 import { Bomb, Gem } from "lucide-react";
+import { playGem, playBomb, playTileClick, playCashout } from "@/lib/sfx";
 
 type Tile = "hidden" | "gem" | "bomb";
 
@@ -78,6 +79,7 @@ export default function Mines() {
 
   async function reveal(i: number) {
     if (!active || tiles[i] !== "hidden" || busy) return;
+    playTileClick();
     setBusy(true);
     const { data, error } = await supabase.rpc("mines_reveal", { _tile: i });
     setBusy(false);
@@ -85,20 +87,28 @@ export default function Mines() {
     const r = data?.[0];
     if (!r) return;
     if (r.hit_bomb) {
-      const next: Tile[] = [...tiles];
-      next[i] = "bomb";
-      // Reveal all bombs for drama
-      const bombs = (r.bombs as number[]) ?? [];
-      bombs.forEach((b) => (next[b] = "bomb"));
-      setTiles(next);
+      playBomb();
+      // Use functional update so we don't drop a click that landed mid-request.
+      setTiles((prev) => {
+        const next: Tile[] = [...prev];
+        next[i] = "bomb";
+        const bombs = (r.bombs as number[]) ?? [];
+        bombs.forEach((b) => (next[b] = "bomb"));
+        return next;
+      });
       setActive(false);
       setMultiplier(0);
       toast.error(`Boom! -${formatCoins(bet)}`);
       return;
     }
-    const next: Tile[] = [...tiles];
-    next[i] = "gem";
-    setTiles(next);
+    playGem();
+    // Functional update guarantees the clicked tile shows even if React
+    // batched another state change between the click and the response.
+    setTiles((prev) => {
+      const next: Tile[] = [...prev];
+      next[i] = "gem";
+      return next;
+    });
     setRevealedCount((c) => c + 1);
     setMultiplier(Number(r.multiplier));
   }
@@ -112,6 +122,7 @@ export default function Mines() {
     const r = data?.[0];
     if (r) setLocalCoins(Number(r.new_balance));
     if (r) {
+      playCashout();
       const profit = Math.max(Number(r.payout ?? 0) - bet, 0);
       toast.success(
         `+${formatCoins(profit)} (${Number(r.multiplier).toFixed(2)}×)`,
