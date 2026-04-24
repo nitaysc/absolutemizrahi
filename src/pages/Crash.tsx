@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTrackGame } from "@/hooks/usePresence";
@@ -34,8 +34,9 @@ const WAITING_MS = 7000;
 
 function liveMultiplier(startAt: string | null): number {
   if (!startAt) return 1;
-  const elapsed = (Date.now() - new Date(startAt).getTime()) / 1000;
-  return Math.max(1, Math.exp(elapsed * 0.06));
+  const elapsed = Math.max(0, (Date.now() - new Date(startAt).getTime()) / 1000);
+  // Starts exactly at 1.00 (e^0 = 1) and grows from there.
+  return Math.exp(elapsed * 0.06);
 }
 
 export default function Crash() {
