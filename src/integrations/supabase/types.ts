@@ -229,6 +229,7 @@ export type Database = {
           id: string
           last_daily_bonus: string | null
           mines_round: Json | null
+          pump_round: Json | null
           total_wagered: number
           total_won: number
           updated_at: string | null
@@ -243,6 +244,7 @@ export type Database = {
           id: string
           last_daily_bonus?: string | null
           mines_round?: Json | null
+          pump_round?: Json | null
           total_wagered?: number
           total_won?: number
           updated_at?: string | null
@@ -257,6 +259,7 @@ export type Database = {
           id?: string
           last_daily_bonus?: string | null
           mines_round?: Json | null
+          pump_round?: Json | null
           total_wagered?: number
           total_won?: number
           updated_at?: string | null
@@ -447,6 +450,30 @@ export type Database = {
           bet_id: string
           new_balance: number
           payout: number
+        }[]
+      }
+      pump_cashout: {
+        Args: never
+        Returns: {
+          multiplier: number
+          new_balance: number
+          payout: number
+          pop_at: number
+        }[]
+      }
+      pump_pump: {
+        Args: never
+        Returns: {
+          multiplier: number
+          pop_at: number
+          popped: boolean
+          pumps: number
+        }[]
+      }
+      pump_start: {
+        Args: { _bet_amount: number; _difficulty: string }
+        Returns: {
+          new_balance: number
         }[]
       }
       redeem_code: {
