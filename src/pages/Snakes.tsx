@@ -9,7 +9,7 @@ import { BetControls } from "@/components/BetControls";
 import { formatCoins } from "@/lib/format";
 import { Dices, Play, Sparkles } from "lucide-react";
 
-type Difficulty = "easy" | "medium" | "hard" | "expert";
+type Difficulty = "easy" | "medium" | "hard" | "expert" | "master";
 
 /**
  * Ring board: 5×5 grid; only the 16 perimeter tiles are playable.
@@ -22,15 +22,21 @@ type Difficulty = "easy" | "medium" | "hard" | "expert";
  */
 const RING = 16;
 
+/**
+ * Per-difficulty config:
+ *  - snakes: exact number of snake tiles guaranteed on the ring (excluding the start tile)
+ *  - maxMult: the highest possible cumulative multiplier (placed on the final tile)
+ *  - highCount: how many "top" tiles get the maxMult value (the rest interpolate up to it)
+ */
 const DIFF_CFG: Record<
   Difficulty,
-  { snakeChance: (i: number) => number; multBase: number; label: string }
+  { snakes: number; maxMult: number; highCount: number; label: string }
 > = {
-  // Tame multipliers, snake odds scale with distance and difficulty.
-  easy:   { snakeChance: (i) => 0.06 + i * 0.008, multBase: 1.03, label: "Easy" },
-  medium: { snakeChance: (i) => 0.12 + i * 0.010, multBase: 1.05, label: "Medium" },
-  hard:   { snakeChance: (i) => 0.20 + i * 0.012, multBase: 1.07, label: "Hard" },
-  expert: { snakeChance: (i) => 0.30 + i * 0.014, multBase: 1.09, label: "Expert" },
+  easy:   { snakes: 1, maxMult: 2.0,   highCount: 2, label: "Easy" },
+  medium: { snakes: 3, maxMult: 4.0,   highCount: 1, label: "Medium" },
+  hard:   { snakes: 5, maxMult: 7.5,   highCount: 1, label: "Hard" },
+  expert: { snakes: 7, maxMult: 10.0,  highCount: 1, label: "Expert" },
+  master: { snakes: 9, maxMult: 17.64, highCount: 1, label: "Master" },
 };
 
 type Tile =
@@ -40,19 +46,47 @@ type Tile =
 function buildRing(diff: Difficulty): Tile[] {
   const cfg = DIFF_CFG[diff];
   const tiles: Tile[] = new Array(RING);
-  // No jackpots — only multiplier tiles or snakes.
-  for (let i = 1; i < RING; i++) {
-    const snakeP = Math.min(0.6, cfg.snakeChance(i));
-    if (Math.random() < snakeP) {
-      tiles[i] = { kind: "snake" };
-    } else {
-      const base = Math.pow(cfg.multBase, i);
-      const jitter = 0.94 + Math.random() * 0.12;
-      tiles[i] = { kind: "mult", mult: +(base * jitter).toFixed(2) };
-    }
+  tiles[0] = { kind: "mult", mult: 1 }; // start
+
+  // Indices available for placement (1..RING-1)
+  const playable: number[] = [];
+  for (let i = 1; i < RING; i++) playable.push(i);
+
+  // Pick exactly N snake positions at random.
+  const snakePool = [...playable];
+  for (let i = snakePool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [snakePool[i], snakePool[j]] = [snakePool[j], snakePool[i]];
   }
-  // i = 0 is start (no payout, no snake); use a sentinel mult of 1.
-  tiles[0] = { kind: "mult", mult: 1 };
+  const snakeSet = new Set(snakePool.slice(0, Math.min(cfg.snakes, playable.length)));
+
+  // Multiplier tiles: ascending from ~1.05× up to maxMult, with the top `highCount`
+  // tiles all sharing the maxMult value (per-step incremental, NOT cumulative).
+  const multIdxs = playable.filter((i) => !snakeSet.has(i));
+  const n = multIdxs.length;
+  // Per-step multipliers (each tile applies once when landed) — keep them small so
+  // the cumulative product stays close to maxMult by the end.
+  // Solve: product over n tiles ≈ maxMult  =>  per-step ≈ maxMult^(1/n)
+  const perStep = Math.pow(cfg.maxMult, 1 / Math.max(1, n));
+  multIdxs.forEach((idx, k) => {
+    // Slightly ramp: earlier tiles a touch lower, later a touch higher.
+    const ramp = 0.92 + (k / Math.max(1, n - 1)) * 0.16;
+    const v = +(perStep * ramp).toFixed(2);
+    tiles[idx] = { kind: "mult", mult: Math.max(1.01, v) };
+  });
+
+  // Force highCount tiles at the END to land exactly on maxMult cumulative — easy
+  // mode: the two highest-value tiles each show maxMult× as the "headline" value.
+  const topIdxs = multIdxs.slice(-cfg.highCount);
+  topIdxs.forEach((idx) => {
+    tiles[idx] = { kind: "mult", mult: cfg.maxMult };
+  });
+
+  // Apply snakes
+  snakeSet.forEach((idx) => {
+    tiles[idx] = { kind: "snake" };
+  });
+
   return tiles;
 }
 
@@ -318,13 +352,13 @@ export default function Snakes() {
             <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
               Difficulty
             </label>
-            <div className="mt-1 grid grid-cols-4 gap-1 rounded-full bg-background/60 p-1">
-              {(["easy", "medium", "hard", "expert"] as Difficulty[]).map((d) => (
+            <div className="mt-1 grid grid-cols-5 gap-1 rounded-full bg-background/60 p-1">
+              {(["easy", "medium", "hard", "expert", "master"] as Difficulty[]).map((d) => (
                 <button
                   key={d}
                   onClick={() => !active && setDiff(d)}
                   disabled={active}
-                  className={`rounded-full py-1.5 text-[11px] font-bold uppercase tracking-widest transition ${
+                  className={`rounded-full py-1.5 text-[10px] font-bold uppercase tracking-widest transition ${
                     diff === d ? "bg-card text-foreground shadow" : "text-muted-foreground"
                   } disabled:opacity-50`}
                 >
@@ -382,7 +416,7 @@ function RingTile({
 }) {
   // Keycap-style tile: rounded, soft inner shadow, slight top highlight.
   const base =
-    "relative flex aspect-square items-center justify-center rounded-xl text-sm font-black tabular-nums sm:rounded-2xl sm:text-base";
+    "relative flex aspect-square items-center justify-center rounded-xl text-sm font-black tabular-nums ring-1 ring-border/80 sm:rounded-2xl sm:text-base";
   const surface =
     "bg-gradient-to-b from-[hsl(220_25%_22%)] to-[hsl(220_30%_15%)] text-foreground shadow-[inset_0_-3px_0_hsl(220_40%_8%),inset_0_1px_0_hsl(220_25%_30%)]";
   const dim = "text-muted-foreground/70";
