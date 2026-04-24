@@ -38,7 +38,9 @@ function liveMultiplier(startAt: string | null): number {
   if (!startAt) return 1;
   const elapsed = Math.max(0, (Date.now() - new Date(startAt).getTime()) / 1000);
   // Starts exactly at 1.00 (e^0 = 1) and grows from there.
-  return Math.exp(elapsed * 0.06);
+  // Slowed from 0.06 → 0.045 to feel more like real Crash sites
+  // (rounds last longer, 2×–5× hits feel common).
+  return Math.exp(elapsed * 0.045);
 }
 
 export default function Crash() {
