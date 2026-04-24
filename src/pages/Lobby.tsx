@@ -5,9 +5,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
-import { Dice5, Coins, Gift, TrendingUp, Bomb, Rocket, Zap, Spade, Bird, Triangle, Wind, Flame, Club } from "lucide-react";
+import { Gift, TrendingUp } from "lucide-react";
 import { formatCoins } from "@/lib/format";
 import mizrahi from "@/assets/absolute-mizrahi.gif";
+import diceImg from "@/assets/games/dice.jpg";
+import crashImg from "@/assets/games/crash.jpg";
+import limboImg from "@/assets/games/limbo.jpg";
+import minesImg from "@/assets/games/mines.jpg";
+import coinflipImg from "@/assets/games/coinflip.jpg";
+import blackjackImg from "@/assets/games/blackjack.jpg";
+import chickenImg from "@/assets/games/chicken.jpg";
+import plinkoImg from "@/assets/games/plinko.jpg";
+import pumpImg from "@/assets/games/pump.jpg";
+import dragontowerImg from "@/assets/games/dragontower.jpg";
+import pokerImg from "@/assets/games/poker.jpg";
 
 export default function Lobby() {
   const { profile, refetch } = useUserProfile();
@@ -28,94 +39,17 @@ export default function Lobby() {
   }
 
   const games = [
-    {
-      to: "/dice",
-      key: "dice",
-      title: "DICE",
-      icon: Dice5,
-      gradient: "from-violet-500 via-fuchsia-500 to-purple-700",
-      iconColor: "text-white",
-    },
-    {
-      to: "/crash",
-      key: "crash",
-      title: "CRASH",
-      icon: Zap,
-      gradient: "from-rose-500 via-red-500 to-orange-600",
-      iconColor: "text-white",
-    },
-    {
-      to: "/limbo",
-      key: "limbo",
-      title: "LIMBO",
-      icon: Rocket,
-      gradient: "from-orange-400 via-amber-500 to-yellow-500",
-      iconColor: "text-white",
-    },
-    {
-      to: "/mines",
-      key: "mines",
-      title: "MINES",
-      icon: Bomb,
-      gradient: "from-sky-400 via-blue-500 to-indigo-600",
-      iconColor: "text-white",
-    },
-    {
-      to: "/coinflip",
-      key: "coinflip",
-      title: "COINFLIP",
-      icon: Coins,
-      gradient: "from-emerald-400 via-green-500 to-teal-600",
-      iconColor: "text-white",
-    },
-    {
-      to: "/blackjack",
-      key: "blackjack",
-      title: "BLACKJACK",
-      icon: Spade,
-      gradient: "from-slate-700 via-zinc-800 to-black",
-      iconColor: "text-white",
-    },
-    {
-      to: "/chicken",
-      key: "chicken",
-      title: "CHICKEN",
-      icon: Bird,
-      gradient: "from-yellow-400 via-orange-500 to-red-600",
-      iconColor: "text-white",
-    },
-    {
-      to: "/plinko",
-      key: "plinko",
-      title: "PLINKO",
-      icon: Triangle,
-      gradient: "from-pink-500 via-fuchsia-500 to-purple-700",
-      iconColor: "text-white",
-    },
-    {
-      to: "/pump",
-      key: "pump",
-      title: "PUMP",
-      icon: Wind,
-      gradient: "from-cyan-400 via-teal-500 to-emerald-600",
-      iconColor: "text-white",
-    },
-    {
-      to: "/dragontower",
-      key: "dragontower",
-      title: "DRAGON",
-      icon: Flame,
-      gradient: "from-red-600 via-orange-600 to-yellow-500",
-      iconColor: "text-white",
-    },
-    {
-      to: "/poker",
-      key: "poker",
-      title: "POKER",
-      icon: Club,
-      gradient: "from-emerald-700 via-green-800 to-emerald-950",
-      iconColor: "text-white",
-    },
+    { to: "/dice", key: "dice", title: "DICE", img: diceImg },
+    { to: "/crash", key: "crash", title: "CRASH", img: crashImg },
+    { to: "/limbo", key: "limbo", title: "LIMBO", img: limboImg },
+    { to: "/mines", key: "mines", title: "MINES", img: minesImg },
+    { to: "/coinflip", key: "coinflip", title: "COINFLIP", img: coinflipImg },
+    { to: "/blackjack", key: "blackjack", title: "BLACKJACK", img: blackjackImg },
+    { to: "/chicken", key: "chicken", title: "CHICKEN", img: chickenImg },
+    { to: "/plinko", key: "plinko", title: "PLINKO", img: plinkoImg },
+    { to: "/pump", key: "pump", title: "PUMP", img: pumpImg },
+    { to: "/dragontower", key: "dragontower", title: "DRAGON", img: dragontowerImg },
+    { to: "/poker", key: "poker", title: "POKER", img: pokerImg },
   ];
 
   return (
@@ -172,25 +106,15 @@ export default function Lobby() {
             const count = playing[g.key] ?? 0;
             return (
               <Link key={g.to} to={g.to} className="group block">
-                <div
-                  className={`relative aspect-[3/4] overflow-hidden rounded-2xl bg-gradient-to-br ${g.gradient} shadow-lg transition-transform duration-200 group-hover:-translate-y-1 group-hover:shadow-[0_10px_30px_-5px_hsl(var(--primary)/0.5)]`}
-                >
-                  {/* glossy highlight */}
-                  <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/25 to-transparent" />
-                  {/* big icon */}
-                  <g.icon
-                    className={`absolute left-1/2 top-[28%] h-20 w-20 -translate-x-1/2 ${g.iconColor} drop-shadow-[0_6px_12px_rgba(0,0,0,0.35)] transition-transform duration-300 group-hover:scale-110`}
-                    strokeWidth={1.75}
+                <div className="relative aspect-[3/4] overflow-hidden rounded-2xl shadow-lg transition-transform duration-200 group-hover:-translate-y-1 group-hover:shadow-[0_10px_30px_-5px_hsl(var(--primary)/0.5)]">
+                  <img
+                    src={g.img}
+                    alt={`${g.title} - Mizrahi Originals`}
+                    loading="lazy"
+                    width={768}
+                    height={1024}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
-                  {/* title block */}
-                  <div className="absolute inset-x-0 bottom-0 p-3 text-center">
-                    <h3 className="text-2xl font-black uppercase tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] sm:text-3xl">
-                      {g.title}
-                    </h3>
-                    <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.2em] text-white/80">
-                      Mizrahi Originals
-                    </p>
-                  </div>
                 </div>
                 <div className="mt-2 flex items-center gap-1.5 px-1 text-xs">
                   <span className="relative flex h-2 w-2">
