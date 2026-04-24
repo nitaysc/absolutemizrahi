@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useTrackGame } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { Bomb, Gem } from "lucide-react";
 type Tile = "hidden" | "gem" | "bomb";
 
 export default function Mines() {
+  useTrackGame("mines");
   const { profile, setLocalCoins } = useUserProfile();
   const [bet, setBet] = useState(10);
   const [mines, setMines] = useState(3);

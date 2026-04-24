@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useTrackGame } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { Rocket, Repeat, Zap } from "lucide-react";
 const HOUSE_EDGE = 0.99;
 
 export default function Limbo() {
+  useTrackGame("limbo");
   const { profile, setLocalCoins } = useUserProfile();
   const [mode, setMode] = useState<"manual" | "auto">("manual");
   const [bet, setBet] = useState(10);
