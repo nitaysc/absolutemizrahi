@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTrackGame } from "@/hooks/usePresence";
@@ -34,8 +34,9 @@ const WAITING_MS = 7000;
 
 function liveMultiplier(startAt: string | null): number {
   if (!startAt) return 1;
-  const elapsed = (Date.now() - new Date(startAt).getTime()) / 1000;
-  return Math.max(1, Math.exp(elapsed * 0.06));
+  const elapsed = Math.max(0, (Date.now() - new Date(startAt).getTime()) / 1000);
+  // Starts exactly at 1.00 (e^0 = 1) and grows from there.
+  return Math.exp(elapsed * 0.06);
 }
 
 export default function Crash() {
@@ -96,17 +97,23 @@ export default function Crash() {
     };
   }, [round?.id]);
 
-  // Drive the visible multiplier when running
+  // Drive the visible multiplier while running. Clamp to crash_at so the number
+  // never visibly exceeds the real bust point.
   useEffect(() => {
-    if (round?.status !== "running" || !round.start_at) return;
+    if (round?.status !== "running" || !round.start_at) {
+      if (round?.status === "waiting") setMult(1);
+      return;
+    }
     let raf = 0;
+    const cap = round.crash_at ?? Infinity;
     const tick = () => {
-      setMult(liveMultiplier(round.start_at));
+      const m = liveMultiplier(round.start_at);
+      setMult(Math.min(m, cap));
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [round?.status, round?.start_at]);
+  }, [round?.status, round?.start_at, round?.crash_at]);
 
   // When waiting -> auto-start after countdown elapses
   useEffect(() => {
@@ -204,7 +211,12 @@ export default function Crash() {
   }
 
   const status = round?.status ?? "waiting";
-  const displayMult = status === "crashed" ? Number(round?.crash_at ?? 1) : mult;
+  const displayMult =
+    status === "crashed"
+      ? Number(round?.crash_at ?? 1)
+      : status === "waiting"
+        ? 1
+        : mult;
 
   return (
     <div className="space-y-6">
@@ -238,24 +250,25 @@ export default function Crash() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_320px]">
         {/* Stage */}
         <div className="relative flex min-h-[320px] flex-col items-center justify-center overflow-hidden rounded-3xl border border-border bg-card/70 p-8 backdrop-blur-xl">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={status + round?.id}
-              initial={{ scale: 0.6, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.6, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 220, damping: 16 }}
-              className={`text-7xl font-black tabular-nums sm:text-8xl ${
-                status === "crashed"
-                  ? "text-destructive drop-shadow-[0_0_24px_hsl(var(--destructive)/0.6)]"
-                  : status === "running"
-                    ? "text-[hsl(var(--success))] drop-shadow-[0_0_24px_hsl(var(--success)/0.5)]"
-                    : "text-foreground/60"
-              }`}
-            >
-              {displayMult.toFixed(2)}×
-            </motion.div>
-          </AnimatePresence>
+          <motion.div
+            key={status === "crashed" ? `crashed-${round?.id}` : `live-${round?.id}`}
+            initial={status === "crashed" ? { scale: 1.15 } : { scale: 0.85, opacity: 0.6 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={
+              status === "crashed"
+                ? { type: "spring", stiffness: 600, damping: 18, duration: 0.15 }
+                : { type: "spring", stiffness: 260, damping: 20 }
+            }
+            className={`text-7xl font-black tabular-nums sm:text-8xl ${
+              status === "crashed"
+                ? "text-destructive drop-shadow-[0_0_24px_hsl(var(--destructive)/0.6)]"
+                : status === "running"
+                  ? "text-[hsl(var(--success))] drop-shadow-[0_0_24px_hsl(var(--success)/0.5)]"
+                  : "text-foreground/60"
+            }`}
+          >
+            {displayMult.toFixed(2)}×
+          </motion.div>
           <div className="mt-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">
             {status === "waiting" && "Place your bets…"}
             {status === "running" && "FLYING"}
