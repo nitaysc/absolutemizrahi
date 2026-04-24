@@ -14,121 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
-      profiles: {
+      bets: {
         Row: {
-          created_at: string | null
-          current_rank: string | null
-          current_streak: number | null
-          display_name: string | null
-          email: string | null
+          bet_amount: number
+          created_at: string
+          details: Json | null
+          game: string
           id: string
-          last_workout_date: string | null
-          longest_streak: number | null
-          onboarding_complete: boolean | null
-          total_xp: number | null
-          updated_at: string | null
+          multiplier: number
+          payout: number
+          user_id: string
+          won: boolean
         }
         Insert: {
-          created_at?: string | null
-          current_rank?: string | null
-          current_streak?: number | null
-          display_name?: string | null
-          email?: string | null
-          id: string
-          last_workout_date?: string | null
-          longest_streak?: number | null
-          onboarding_complete?: boolean | null
-          total_xp?: number | null
-          updated_at?: string | null
+          bet_amount: number
+          created_at?: string
+          details?: Json | null
+          game: string
+          id?: string
+          multiplier?: number
+          payout?: number
+          user_id: string
+          won: boolean
         }
         Update: {
-          created_at?: string | null
-          current_rank?: string | null
-          current_streak?: number | null
-          display_name?: string | null
-          email?: string | null
+          bet_amount?: number
+          created_at?: string
+          details?: Json | null
+          game?: string
           id?: string
-          last_workout_date?: string | null
-          longest_streak?: number | null
-          onboarding_complete?: boolean | null
-          total_xp?: number | null
-          updated_at?: string | null
+          multiplier?: number
+          payout?: number
+          user_id?: string
+          won?: boolean
         }
         Relationships: []
       }
-      streaks: {
+      profiles: {
         Row: {
-          current_streak: number | null
+          coins: number
+          created_at: string | null
+          display_name: string | null
+          email: string | null
           id: string
-          last_completed_date: string | null
-          longest_streak: number | null
+          last_daily_bonus: string | null
+          total_wagered: number
+          total_won: number
           updated_at: string | null
-          user_id: string
+          username: string | null
         }
         Insert: {
-          current_streak?: number | null
-          id?: string
-          last_completed_date?: string | null
-          longest_streak?: number | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          current_streak?: number | null
-          id?: string
-          last_completed_date?: string | null
-          longest_streak?: number | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "streaks_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      workout_logs: {
-        Row: {
-          created_at: string
+          coins?: number
+          created_at?: string | null
+          display_name?: string | null
+          email?: string | null
           id: string
-          user_id: string
-          workout_date: string
-          xp_earned: number
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          user_id: string
-          workout_date?: string
-          xp_earned?: number
+          last_daily_bonus?: string | null
+          total_wagered?: number
+          total_won?: number
+          updated_at?: string | null
+          username?: string | null
         }
         Update: {
-          created_at?: string
+          coins?: number
+          created_at?: string | null
+          display_name?: string | null
+          email?: string | null
           id?: string
-          user_id?: string
-          workout_date?: string
-          xp_earned?: number
+          last_daily_bonus?: string | null
+          total_wagered?: number
+          total_won?: number
+          updated_at?: string | null
+          username?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "workout_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      get_rank_from_xp: { Args: { xp: number }; Returns: string }
+      claim_daily_bonus: {
+        Args: never
+        Returns: {
+          awarded: number
+          new_balance: number
+        }[]
+      }
+      place_bet: {
+        Args: {
+          _bet_amount: number
+          _details?: Json
+          _game: string
+          _multiplier: number
+          _won: boolean
+        }
+        Returns: {
+          bet_id: string
+          new_balance: number
+          payout: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

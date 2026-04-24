@@ -6,13 +6,12 @@ import { toast } from "sonner";
 export interface UserProfile {
   id: string;
   display_name: string | null;
+  username: string | null;
   email: string | null;
-  total_xp: number;
-  current_streak: number;
-  longest_streak: number;
-  last_workout_date: string | null;
-  current_rank: string;
-  onboarding_complete: boolean | null;
+  coins: number;
+  total_wagered: number;
+  total_won: number;
+  last_daily_bonus: string | null;
 }
 
 export function useUserProfile() {
@@ -46,13 +45,12 @@ export function useUserProfile() {
       setProfile({
         id: data.id,
         display_name: data.display_name,
+        username: data.username,
         email: data.email,
-        total_xp: data.total_xp ?? 0,
-        current_streak: data.current_streak ?? 0,
-        longest_streak: data.longest_streak ?? 0,
-        last_workout_date: data.last_workout_date,
-        current_rank: data.current_rank ?? 'wood',
-        onboarding_complete: data.onboarding_complete,
+        coins: Number(data.coins ?? 0),
+        total_wagered: Number(data.total_wagered ?? 0),
+        total_won: Number(data.total_won ?? 0),
+        last_daily_bonus: data.last_daily_bonus,
       });
     }
     setLoading(false);
@@ -63,7 +61,7 @@ export function useUserProfile() {
     
     const { error } = await supabase
       .from('profiles')
-      .update(updates)
+      .update(updates as any)
       .eq('id', user.id);
 
     if (error) {
