@@ -115,29 +115,30 @@ export default function Plinko() {
         // Resolve collision with the next row's target peg.
         if (b.rowIdx < ROWS) {
           const r = b.rowIdx;
-          // The "anchor" peg is the left peg of the deflection pair.
-          // Cumulative left-col before this row = sum of path[0..r-1].
-          // Ball will deflect off peg at (r, anchorCol) going `right` direction.
-          let anchorCol = 0;
-          for (let k = 0; k < r; k++) anchorCol += b.path[k];
-          const right = b.path[r];
-          // Target peg the ball strikes:
-          const pegCol = anchorCol + (right ? 1 : 0); // strike peg from its left or right side? simpler: use center peg row
-          // Use a simpler model: peg at (r, anchorCol + 1 - (1-right)) = the closer one
-          // Just check crossing of the peg row plane.
           const py = pegY(r);
           if (b.y + BALL_RADIUS >= py) {
-            // Snap, light it, kick.
+            // Determine which peg the ball strikes based on the predetermined path.
+            // Before row r, the ball sits in gap `gapCol` of row r (row r has r+3 pegs → r+2 gaps, indices 0..r+1).
+            // gapCol = sum of path[0..r-1] (each "right" step shifts the gap index by +1).
+            let gapCol = 0;
+            for (let k = 0; k < r; k++) gapCol += b.path[k];
+            const right = b.path[r];
+            // The ball deflects off ONE of the two pegs flanking the gap:
+            // going right → bounces off the LEFT peg (col = gapCol)
+            // going left  → bounces off the RIGHT peg (col = gapCol + 1)
+            const pegCol = right ? gapCol : gapCol + 1;
             const px = pegX(r, pegCol);
-            // Position ball just at top of peg
-            b.y = py - BALL_RADIUS - PEG_RADIUS + 2;
-            b.vy = -Math.abs(b.vy) * BOUNCE_DAMP;
-            // Horizontal kick toward direction
-            b.vx = (right ? 1 : -1) * HORIZ_KICK + (b.x - px) * 1.2;
 
-            // Light the peg
+            // SNAP the ball's X to just touching the side of that peg so it visually
+            // stays inside the peg triangle and clearly bounces off the dot.
+            const sideOffset = PEG_RADIUS + BALL_RADIUS;
+            b.x = px + (right ? sideOffset : -sideOffset);
+            b.y = py - 0.5; // touch peg from the side, not above
+            b.vy = Math.max(60, b.vy * BOUNCE_DAMP); // keep falling, slight slow
+            b.vx = (right ? 1 : -1) * HORIZ_KICK;
+
             litPegsRef.current.set(`${r}-${pegCol}`, performance.now());
-            if (r % 3 === 0) playTileClick();
+            if (r % 2 === 0) playTileClick();
 
             b.rowIdx += 1;
           }
