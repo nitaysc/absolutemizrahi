@@ -75,11 +75,7 @@ function CameraRig({ step }: { step: number }) {
   return null;
 }
 
-function Scene({ totalLanes, step, lanes, multipliers, dead, active }: Props) {
-  return null as never;
-}
-
-function SceneImpl({
+function Scene({
   totalLanes,
   step,
   lanes,
