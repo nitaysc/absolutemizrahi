@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
 import { formatCoins } from "@/lib/format";
-import { Dices, Play, Sparkles, Trophy } from "lucide-react";
+import { Dices, Play, Sparkles } from "lucide-react";
 
 type Difficulty = "easy" | "medium" | "hard" | "expert";
 
