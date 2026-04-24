@@ -20,6 +20,12 @@ interface Props {
   multipliers: number[];
   dead: boolean;
   active: boolean;
+  /** Lane index of the car that hit the chicken (only set on death). */
+  deathLane?: number | null;
+  /** True after a successful cashout — used to flag the would-have-died lane. */
+  cashedOut?: boolean;
+  /** Index of the next death lane after cashout (for "you would have died here" marker). */
+  nextDeathLane?: number | null;
 }
 
 const LANE_DEPTH = 3.2;
@@ -69,7 +75,17 @@ function CameraRig({ step }: { step: number }) {
   return null;
 }
 
-function Scene({ totalLanes, step, lanes, multipliers, dead, active }: Props) {
+function Scene({
+  totalLanes,
+  step,
+  lanes,
+  multipliers,
+  dead,
+  active,
+  deathLane,
+  cashedOut,
+  nextDeathLane,
+}: Props) {
   return (
     <group>
       {/* Sidewalk start */}
@@ -85,6 +101,8 @@ function Scene({ totalLanes, step, lanes, multipliers, dead, active }: Props) {
           state={lanes[i] ?? "hidden"}
           multiplier={multipliers[i] ?? 1}
           highlight={active && !dead && i === step}
+          isDeathHit={dead && deathLane === i}
+          wouldHaveDied={!!cashedOut && nextDeathLane === i}
         />
       ))}
 
@@ -146,11 +164,15 @@ function Lane({
   state,
   multiplier,
   highlight,
+  isDeathHit,
+  wouldHaveDied,
 }: {
   z: number;
   state: LaneState;
   multiplier: number;
   highlight: boolean;
+  isDeathHit?: boolean;
+  wouldHaveDied?: boolean;
 }) {
   const stripeRef = useRef<THREE.Mesh>(null);
   useFrame((_, dt) => {
@@ -228,8 +250,11 @@ function Lane({
         </group>
       </Float>
 
-      {/* Death car */}
-      {state === "death" && <CrashedCar />}
+      {/* Death car: incoming car animates in then becomes a wreck */}
+      {state === "death" && <IncomingCar animateIn={!!isDeathHit} />}
+
+      {/* "You would have died here" marker shown after a successful cashout. */}
+      {wouldHaveDied && state !== "death" && <WouldHaveDiedMarker />}
 
       {/* Multiplier text overlay using HTML inside Canvas isn't available here;
           we encode value in the scale of a small bar so players still see relative magnitude. */}
@@ -281,15 +306,140 @@ function CrashedCar() {
   );
 }
 
+/**
+ * Incoming car. When `animateIn` is true (the lane that just killed the chicken),
+ * it slams in from the left, shakes briefly on impact, then settles as a wreck.
+ * For revealed-but-not-hit death lanes (cashout reveal), it just sits in place.
+ */
+function IncomingCar({ animateIn }: { animateIn: boolean }) {
+  const ref = useRef<THREE.Group>(null);
+  const t = useRef(0);
+  useFrame((_, dt) => {
+    if (!ref.current) return;
+    if (!animateIn) {
+      ref.current.position.x = 0;
+      ref.current.rotation.z = 0.1;
+      return;
+    }
+    t.current += dt;
+    const phase = t.current;
+    if (phase < 0.35) {
+      // Slam in from off-screen left
+      const k = phase / 0.35;
+      ref.current.position.x = -10 + k * 10;
+      ref.current.rotation.z = 0;
+    } else if (phase < 0.6) {
+      // Impact shake
+      const k = (phase - 0.35) / 0.25;
+      ref.current.position.x = Math.sin(k * Math.PI * 8) * 0.15;
+      ref.current.rotation.z = Math.sin(k * Math.PI * 6) * 0.18;
+    } else {
+      // Settle as wreck
+      ref.current.position.x = 0;
+      ref.current.rotation.z = 0.12;
+    }
+  });
+  return (
+    <group ref={ref} position={[-10, 0.7, 0]}>
+      <mesh castShadow>
+        <boxGeometry args={[1.6, 0.7, 0.9]} />
+        <meshStandardMaterial color="#dc2626" metalness={0.5} roughness={0.4} />
+      </mesh>
+      <mesh position={[0, 0.5, 0]} castShadow>
+        <boxGeometry args={[1.0, 0.45, 0.85]} />
+        <meshStandardMaterial color="#7f1d1d" metalness={0.4} roughness={0.5} />
+      </mesh>
+      {[
+        [-0.6, -0.35, 0.5],
+        [0.6, -0.35, 0.5],
+        [-0.6, -0.35, -0.5],
+        [0.6, -0.35, -0.5],
+      ].map((p, i) => (
+        <mesh key={i} position={p as [number, number, number]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.18, 0.18, 0.18, 16]} />
+          <meshStandardMaterial color="#0a0a0a" />
+        </mesh>
+      ))}
+      {/* Headlights */}
+      <mesh position={[-0.7, 0.05, 0.45]}>
+        <sphereGeometry args={[0.1, 8, 8]} />
+        <meshStandardMaterial color="#fef9c3" emissive="#fef9c3" emissiveIntensity={1.5} />
+      </mesh>
+      <mesh position={[-0.7, 0.05, -0.45]}>
+        <sphereGeometry args={[0.1, 8, 8]} />
+        <meshStandardMaterial color="#fef9c3" emissive="#fef9c3" emissiveIntensity={1.5} />
+      </mesh>
+      <pointLight color="#ef4444" intensity={0.8} distance={3} position={[0, 0.5, 0]} />
+    </group>
+  );
+}
+
+/** Pulsing red skull-ish marker shown on the lane the player would have died on. */
+function WouldHaveDiedMarker() {
+  const ref = useRef<THREE.Mesh>(null);
+  useFrame(() => {
+    if (!ref.current) return;
+    const s = 1 + 0.15 * Math.sin(performance.now() * 0.006);
+    ref.current.scale.set(s, s, s);
+  });
+  return (
+    <group position={[0, 1.2, 0]}>
+      <mesh ref={ref}>
+        <octahedronGeometry args={[0.45, 0]} />
+        <meshStandardMaterial
+          color="#7f1d1d"
+          emissive="#ef4444"
+          emissiveIntensity={1.2}
+          transparent
+          opacity={0.9}
+        />
+      </mesh>
+      <pointLight color="#ef4444" intensity={1} distance={3} />
+    </group>
+  );
+}
+
 function Chicken({ z, dead }: { z: number; dead: boolean }) {
   const ref = useRef<THREE.Group>(null);
   const targetZ = useRef(z);
   targetZ.current = z;
   const hop = useRef(0);
+  const deathT = useRef(0);
+  const wasDead = useRef(false);
 
   useFrame((_, dt) => {
     if (!ref.current) return;
+    if (dead) {
+      // Reset on first dead frame.
+      if (!wasDead.current) {
+        deathT.current = 0;
+        wasDead.current = true;
+      }
+      deathT.current += dt;
+      const t = deathT.current;
+      // Launched sideways and up, spinning, then thuds down.
+      const launch = Math.min(t / 0.8, 1);
+      const fall = Math.max(0, t - 0.8);
+      // Arc upward then drop with gravity.
+      const yArc = Math.sin(launch * Math.PI) * 1.6;
+      const yFloor = 0.25;
+      const y = Math.max(yFloor, 0.6 + yArc - fall * fall * 4);
+      ref.current.position.y = y;
+      // Tossed off-axis (slightly off lane).
+      ref.current.position.x = Math.min(2.2, t * 1.8);
+      // Z stays where the hit happened.
+      ref.current.position.z += (targetZ.current - ref.current.position.z) * 0.2;
+      // Spin during launch, then settle on its side.
+      const spin = t < 1.0 ? t * 18 : 18 + (t - 1.0) * 2;
+      ref.current.rotation.x = spin;
+      ref.current.rotation.z = Math.min(Math.PI / 2, t * 4);
+      ref.current.rotation.y = 0;
+      return;
+    }
+
+    wasDead.current = false;
     // Smooth hop forward to current lane.
+    ref.current.position.x += (0 - ref.current.position.x) * 0.2;
     const cur = ref.current.position.z;
     const dz = targetZ.current - cur;
     ref.current.position.z += dz * 0.15;
@@ -298,9 +448,10 @@ function Chicken({ z, dead }: { z: number; dead: boolean }) {
     } else {
       hop.current = 0;
     }
-    ref.current.position.y = dead ? 0.3 : 0.6 + Math.sin(hop.current) * 0.4;
-    ref.current.rotation.y = dead ? Math.PI / 2 : 0;
-    ref.current.rotation.z = dead ? Math.PI / 2 : 0;
+    ref.current.position.y = 0.6 + Math.sin(hop.current) * 0.4;
+    ref.current.rotation.x = 0;
+    ref.current.rotation.y = 0;
+    ref.current.rotation.z = 0;
   });
 
   return (
