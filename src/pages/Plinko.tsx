@@ -32,24 +32,24 @@ const BOARD_W = SIDE_PAD * 2 + (BUCKETS - 1) * COL;
 const BOARD_H = TOP_PAD + (ROWS + 1) * ROW_H + 8;
 
 // Physics — slower, floaty Stake-like feel
-const GRAVITY = 240;        // svg units / s^2
-const BOUNCE_DAMP = 0.45;   // vertical restitution at peg
-const HORIZ_KICK = 55;      // horizontal velocity given by peg deflection
+const GRAVITY = 320;          // svg units / s^2
+const RESTITUTION = 0.42;     // bounciness off pegs
+const FRICTION = 0.985;       // per-frame horizontal damping (applied via dt)
 const PEG_RADIUS = 2.4;
-const BALL_RADIUS = 4.6;
+const BALL_RADIUS = 4.2;
+const SUB_STEPS = 4;          // physics sub-steps per frame for stable contacts
 
 type Ball = {
   id: number;
-  path: number[];        // pre-decided row decisions
+  path: number[];        // predetermined row decisions (server-truth)
   bucket: number;
   multiplier: number;
   bet: number;
-  // physics state
   x: number;
   y: number;
   vx: number;
   vy: number;
-  rowIdx: number;        // next row to resolve
+  nextRow: number;       // next row to bias toward (matches predetermined path)
   done: boolean;
   hue: number;
 };
@@ -101,78 +101,103 @@ export default function Plinko() {
   useEffect(() => {
     function step(ts: number) {
       if (lastTsRef.current == null) lastTsRef.current = ts;
-      const dt = Math.min(0.032, (ts - lastTsRef.current) / 1000);
+      const dt = Math.min(0.025, (ts - lastTsRef.current) / 1000);
       lastTsRef.current = ts;
 
       const balls = ballsRef.current;
       let needRender = false;
 
+      const sdt = dt / SUB_STEPS;
+      const contactR = PEG_RADIUS + BALL_RADIUS;
+      const contactR2 = contactR * contactR;
+
       for (const b of balls) {
         if (b.done) continue;
         needRender = true;
 
-        // Integrate
-        b.vy += GRAVITY * dt;
-        b.x += b.vx * dt;
-        b.y += b.vy * dt;
-        // Light horizontal damping for natural feel
-        b.vx *= Math.pow(0.94, dt * 60);
+        // Sub-stepped semi-implicit Euler with circle-circle collisions
+        // against the actual peg disks. This produces a real "tap and
+        // deflect" instead of teleporting between rows.
+        for (let s = 0; s < SUB_STEPS; s++) {
+          b.vy += GRAVITY * sdt;
+          b.vx *= Math.pow(FRICTION, sdt * 60);
+          b.x += b.vx * sdt;
+          b.y += b.vy * sdt;
 
-        // Resolve collision with the next row's target peg.
-        if (b.rowIdx < ROWS) {
-          const r = b.rowIdx;
-          const py = pegY(r);
-          if (b.y + BALL_RADIUS >= py) {
-            // Determine which peg the ball strikes based on the predetermined path.
-            // Before row r, the ball sits in gap `gapCol` of row r (row r has r+3 pegs → r+2 gaps, indices 0..r+1).
-            // gapCol = sum of path[0..r-1] (each "right" step shifts the gap index by +1).
-            let gapCol = 0;
-            for (let k = 0; k < r; k++) gapCol += b.path[k];
-            const right = b.path[r];
-            // The ball deflects off ONE of the two pegs flanking the gap:
-            // going right → bounces off the LEFT peg (col = gapCol)
-            // going left  → bounces off the RIGHT peg (col = gapCol + 1)
-            const pegCol = right ? gapCol : gapCol + 1;
-            const px = pegX(r, pegCol);
+          // Only check pegs in the row band the ball is currently near
+          // (huge speedup vs. checking all 152 pegs).
+          const approxRow = Math.floor((b.y - TOP_PAD) / ROW_H) - 1;
+          for (let r = Math.max(0, approxRow); r <= Math.min(ROWS - 1, approxRow + 2); r++) {
+            const py = pegY(r);
+            const count = r + 3;
+            for (let c = 0; c < count; c++) {
+              const px = pegX(r, c);
+              const dx = b.x - px;
+              const dy = b.y - py;
+              const d2 = dx * dx + dy * dy;
+              if (d2 < contactR2 && d2 > 0.0001) {
+                const d = Math.sqrt(d2);
+                // Push ball out along the contact normal
+                const nx = dx / d;
+                const ny = dy / d;
+                const overlap = contactR - d;
+                b.x += nx * overlap;
+                b.y += ny * overlap;
 
-            // SNAP the ball's X to just touching the side of that peg so it visually
-            // stays inside the peg triangle and clearly bounces off the dot.
-            const sideOffset = PEG_RADIUS + BALL_RADIUS;
-            b.x = px + (right ? sideOffset : -sideOffset);
-            b.y = py - 0.5; // touch peg from the side, not above
-            b.vy = Math.max(30, b.vy * BOUNCE_DAMP); // keep falling, slight slow
-            b.vx = (right ? 1 : -1) * HORIZ_KICK;
+                // Reflect velocity across the normal, then dampen
+                const vDotN = b.vx * nx + b.vy * ny;
+                if (vDotN < 0) {
+                  b.vx = (b.vx - 2 * vDotN * nx) * RESTITUTION;
+                  b.vy = (b.vy - 2 * vDotN * ny) * RESTITUTION;
 
-            litPegsRef.current.set(`${r}-${pegCol}`, performance.now());
-            if (r % 2 === 0) playTileClick();
+                  // Gentle bias toward the predetermined path so the ball
+                  // still ends up in the right bucket — applied as a small
+                  // sideways nudge, NOT a teleport.
+                  if (r === b.nextRow) {
+                    const wantRight = b.path[r] === 1;
+                    b.vx += (wantRight ? 1 : -1) * 22;
+                    b.nextRow = r + 1;
+                  }
 
-            b.rowIdx += 1;
+                  litPegsRef.current.set(`${r}-${c}`, performance.now());
+                  if ((r + c) % 3 === 0) playTileClick();
+                }
+              }
+            }
           }
-        } else {
-          // After all rows: drift to bucket center then settle.
+
+          // Side walls so the ball never escapes the triangle
+          if (b.x < SIDE_PAD + BALL_RADIUS) {
+            b.x = SIDE_PAD + BALL_RADIUS;
+            b.vx = Math.abs(b.vx) * 0.6;
+          } else if (b.x > BOARD_W - SIDE_PAD - BALL_RADIUS) {
+            b.x = BOARD_W - SIDE_PAD - BALL_RADIUS;
+            b.vx = -Math.abs(b.vx) * 0.6;
+          }
+        }
+
+        // After clearing all rows, gently steer to the predetermined bucket
+        // so the visual landing matches the server-recorded outcome.
+        if (b.y > pegY(ROWS - 1) + ROW_H * 0.5) {
           const targetX = bucketX(b.bucket);
-          const dx = targetX - b.x;
-          // Soft pull horizontally so it lands cleanly.
-          b.vx += dx * 4 * dt;
-          b.vx *= Math.pow(0.85, dt * 60);
+          b.vx += (targetX - b.x) * 5 * dt;
+          b.vx *= Math.pow(0.82, dt * 60);
+        }
 
-          if (b.y >= floorY) {
-            // Land!
-            b.done = true;
-            setHitBucket({ i: b.bucket, t: Date.now() });
-            if (b.multiplier >= 5) playGem();
-            else if (b.multiplier < 1) playBomb();
-            else playTileClick();
-            setRecent((rec) =>
-              [{ mult: b.multiplier, won: b.multiplier >= 1 }, ...rec].slice(0, 8)
-            );
-            // Schedule removal so it visually pops out cleanly.
-            const removeId = b.id;
-            window.setTimeout(() => {
-              ballsRef.current = ballsRef.current.filter((x) => x.id !== removeId);
-              force((n) => n + 1);
-            }, 40);
-          }
+        if (b.y >= floorY) {
+          b.done = true;
+          setHitBucket({ i: b.bucket, t: Date.now() });
+          if (b.multiplier >= 5) playGem();
+          else if (b.multiplier < 1) playBomb();
+          else playTileClick();
+          setRecent((rec) =>
+            [{ mult: b.multiplier, won: b.multiplier >= 1 }, ...rec].slice(0, 8)
+          );
+          const removeId = b.id;
+          window.setTimeout(() => {
+            ballsRef.current = ballsRef.current.filter((x) => x.id !== removeId);
+            force((n) => n + 1);
+          }, 40);
         }
       }
 
@@ -232,7 +257,7 @@ export default function Plinko() {
       y: TOP_PAD - 6,
       vx: (Math.random() - 0.5) * 18,
       vy: 12,
-      rowIdx: 0,
+      nextRow: 0,
       done: false,
       hue: Math.floor(Math.random() * 360),
     };
