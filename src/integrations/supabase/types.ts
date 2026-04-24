@@ -92,6 +92,30 @@ export type Database = {
         }
         Relationships: []
       }
+      redeemed_codes: {
+        Row: {
+          amount: number
+          code: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          code: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          code?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -146,6 +170,13 @@ export type Database = {
           bet_id: string
           new_balance: number
           payout: number
+        }[]
+      }
+      redeem_code: {
+        Args: { _code: string }
+        Returns: {
+          awarded: number
+          new_balance: number
         }[]
       }
     }
