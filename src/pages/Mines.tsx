@@ -12,7 +12,7 @@ import { Bomb, Gem } from "lucide-react";
 type Tile = "hidden" | "gem" | "bomb";
 
 export default function Mines() {
-  const { profile, setLocalCoins, refetch } = useUserProfile();
+  const { profile, setLocalCoins } = useUserProfile();
   const [bet, setBet] = useState(10);
   const [mines, setMines] = useState(3);
   const [active, setActive] = useState(false);
