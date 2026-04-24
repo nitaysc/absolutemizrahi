@@ -26,9 +26,9 @@ const LANE_DEPTH = 3.2;
 
 export function ChickenScene(props: Props) {
   return (
-    <div className="relative h-[300px] w-full overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-zinc-900 via-zinc-950 to-black sm:h-[380px] sm:rounded-3xl">
+    <div className="relative h-[200px] w-full overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-zinc-900 via-zinc-950 to-black sm:h-[240px] sm:rounded-3xl">
       <Canvas shadows dpr={[1, 1.8]}>
-        <PerspectiveCamera makeDefault fov={45} position={[6, 7.5, -7]} />
+        <PerspectiveCamera makeDefault fov={50} position={[5, 5.5, -5]} />
         <CameraRig step={props.step} />
         <ambientLight intensity={0.45} />
         <directionalLight
@@ -57,10 +57,14 @@ export function ChickenScene(props: Props) {
 
 function CameraRig({ step }: { step: number }) {
   // Camera trails the chicken so the active lane stays centered.
+  // Sit ~5 units behind the chicken's current lane and look slightly ahead.
   useFrame(({ camera }) => {
-    const targetZ = step * LANE_DEPTH - 4;
-    camera.position.z += (-targetZ - camera.position.z - 7) * 0.08;
-    camera.lookAt(0, 0.6, step * LANE_DEPTH);
+    const chickenZ = step * LANE_DEPTH;
+    const targetCamZ = chickenZ - 5;
+    camera.position.z += (targetCamZ - camera.position.z) * 0.1;
+    camera.position.x += (5 - camera.position.x) * 0.1;
+    camera.position.y += (5.5 - camera.position.y) * 0.1;
+    camera.lookAt(0, 0.6, chickenZ + LANE_DEPTH);
   });
   return null;
 }
