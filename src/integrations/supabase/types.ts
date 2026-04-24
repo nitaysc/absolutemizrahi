@@ -145,6 +145,33 @@ export type Database = {
         }
         Relationships: []
       }
+      coin_transfers: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          note: string | null
+          recipient_id: string
+          sender_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          recipient_id: string
+          sender_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          recipient_id?: string
+          sender_id?: string
+        }
+        Relationships: []
+      }
       crash_bets: {
         Row: {
           auto_cashout: number | null
@@ -446,6 +473,14 @@ export type Database = {
         Returns: {
           awarded: number
           new_balance: number
+        }[]
+      }
+      send_coins: {
+        Args: { _amount: number; _note?: string; _recipient_username: string }
+        Returns: {
+          amount: number
+          new_balance: number
+          recipient_username: string
         }[]
       }
     }
