@@ -19,6 +19,7 @@ import DragonTower from "./pages/DragonTower";
 import Poker from "./pages/Poker";
 import PokerLobby from "./pages/PokerLobby";
 import Snakes from "./pages/Snakes";
+import Wordle from "./pages/Wordle";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -63,6 +64,7 @@ const App = () => (
             <Route path="/poker" element={<PokerLobby />} />
             <Route path="/poker/:tableId" element={<Poker />} />
             <Route path="/snakes" element={<Snakes />} />
+            <Route path="/wordle" element={<Wordle />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/profile" element={<Profile />} />
           </Route>
