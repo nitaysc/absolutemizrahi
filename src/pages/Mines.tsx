@@ -91,9 +91,14 @@ export default function Mines() {
       // Use functional update so we don't drop a click that landed mid-request.
       setTiles((prev) => {
         const next: Tile[] = [...prev];
-        next[i] = "bomb";
         const bombs = (r.bombs as number[]) ?? [];
-        bombs.forEach((b) => (next[b] = "bomb"));
+        // Reveal the entire board: every bomb shown as bomb, everything
+        // else (including the tile just clicked) as a gem the player missed.
+        for (let idx = 0; idx < 25; idx++) {
+          if (bombs.includes(idx)) next[idx] = "bomb";
+          else if (next[idx] === "hidden") next[idx] = "gem";
+        }
+        next[i] = "bomb"; // ensure the actually clicked tile shows bomb
         return next;
       });
       setActive(false);
@@ -127,13 +132,18 @@ export default function Mines() {
       toast.success(
         `+${formatCoins(profit)} (${Number(r.multiplier).toFixed(2)}×)`,
       );
-      // Reveal the bombs the player avoided so they can see what they dodged.
+      // Reveal the full board: bombs the player dodged AND the gems they
+      // could've grabbed if they kept going.
       const bombs = (r.bombs as number[]) ?? [];
       setTiles((prev) => {
         const next: Tile[] = [...prev];
-        bombs.forEach((b) => {
-          if (next[b] === "hidden") next[b] = "bomb";
-        });
+        for (let idx = 0; idx < 25; idx++) {
+          if (bombs.includes(idx)) {
+            if (next[idx] === "hidden") next[idx] = "bomb";
+          } else if (next[idx] === "hidden") {
+            next[idx] = "gem";
+          }
+        }
         return next;
       });
       setActive(false);

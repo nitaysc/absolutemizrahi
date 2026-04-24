@@ -428,6 +428,7 @@ export type Database = {
       dragontower_pick: {
         Args: { _tile: number }
         Returns: {
+          all_floors: Json
           eggs: Json
           ended: boolean
           hit_egg: boolean
