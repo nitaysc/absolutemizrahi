@@ -5,8 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { BetControls } from "@/components/BetControls";
+import { NumberField } from "@/components/NumberField";
 import { formatCoins } from "@/lib/format";
 import { Repeat, Zap } from "lucide-react";
 
@@ -54,9 +54,6 @@ export default function Dice() {
     const result = +(Math.random() * 100).toFixed(2);
     const won = dir === "under" ? result < target : result > target;
 
-    // Optimistic balance: remove bet
-    setLocalCoins(profile.coins - bet);
-
     const { data, error } = await supabase.rpc("place_bet", {
       _game: "dice",
       _bet_amount: bet,
@@ -67,8 +64,6 @@ export default function Dice() {
     setRolling(false);
 
     if (error) {
-      // revert optimistic deduction
-      setLocalCoins(profile.coins);
       toast.error(error.message);
       return false;
     }
@@ -238,13 +233,13 @@ export default function Dice() {
               <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 Number of bets
               </label>
-              <Input
-                type="number"
-                min={1}
+              <NumberField
                 value={autoBets}
-                onChange={(e) => setAutoBets(Math.max(1, Math.floor(Number(e.target.value) || 0)))}
+                onChange={setAutoBets}
+                min={1}
+                max={10000}
                 disabled={autoRunning}
-                className="mt-2 text-lg font-bold tabular-nums"
+                className="mt-2"
               />
             </div>
           )}
