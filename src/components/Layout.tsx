@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { MizrahiCoin } from "./MizrahiCoin";
 import { formatCoins } from "@/lib/format";
-import { Dice5, Coins, Trophy, User, LogOut, Home, Bomb, Rocket } from "lucide-react";
+import { Trophy, User, LogOut, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import mizrahi from "@/assets/absolute-mizrahi.gif";
 import { LiveStatsWindow } from "./LiveStatsWindow";
@@ -12,10 +12,6 @@ import { PlayerAvatar } from "./PlayerAvatar";
 
 const navItems = [
   { to: "/", label: "Lobby", icon: Home, end: true },
-  { to: "/dice", label: "Dice", icon: Dice5 },
-  { to: "/limbo", label: "Limbo", icon: Rocket },
-  { to: "/mines", label: "Mines", icon: Bomb },
-  { to: "/coinflip", label: "Coinflip", icon: Coins },
   { to: "/leaderboard", label: "Top", icon: Trophy },
   { to: "/profile", label: "Me", icon: User },
 ];
