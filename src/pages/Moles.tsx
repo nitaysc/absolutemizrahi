@@ -61,14 +61,10 @@ export default function Moles() {
     setTiles(Array(HOLES).fill("hidden"));
     setRevealedCount(0);
     setActive(true);
-    // Reserve the bet immediately by debiting locally; final settle on cashout/bust.
-    setLocalCoins(profile.coins - bet);
   }
 
   async function settle(won: boolean, mult: number) {
     setBusy(true);
-    // Re-credit the locally-debited bet, then run the real RPC for the true balance.
-    if (profile) setLocalCoins(profile.coins);
     const { data, error } = await supabase.rpc("place_bet", {
       _game: "moles",
       _bet_amount: bet,

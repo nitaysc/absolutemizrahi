@@ -103,7 +103,7 @@ export default function Lobby() {
       {/* Games */}
       <section>
         <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground">
-          <TrendingUp className="h-4 w-4" /> Games
+          <TrendingUp className="h-4 w-4" /> Mizrahi Originals
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
           {games.map((g) => {
