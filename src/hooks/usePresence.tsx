@@ -13,6 +13,8 @@ type Counts = Record<string, number>;
 type Ctx = {
   counts: Counts;
   total: number;
+  /** Per-user-id → current game (or null = lobby). Empty if user is offline. */
+  byUser: Record<string, string | null>;
   /** Tell the presence channel which game this tab is currently on (or `null` for lobby). */
   setGame: (game: string | null) => void;
 };
@@ -23,6 +25,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [counts, setCounts] = useState<Counts>({});
   const [total, setTotal] = useState(0);
+  const [byUser, setByUser] = useState<Record<string, string | null>>({});
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const currentGame = useRef<string | null>(null);
 
@@ -37,15 +40,18 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState() as Record<string, Array<{ game?: string | null }>>;
         const next: Counts = {};
+        const map: Record<string, string | null> = {};
         let totalUsers = 0;
         for (const userId of Object.keys(state)) {
           totalUsers += 1;
           const meta = state[userId]?.[0];
-          const g = meta?.game;
+          const g = meta?.game ?? null;
+          map[userId] = g;
           if (g) next[g] = (next[g] ?? 0) + 1;
         }
         setCounts(next);
         setTotal(totalUsers);
+        setByUser(map);
       })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
@@ -65,7 +71,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <PresenceContext.Provider value={{ counts, total, setGame }}>
+    <PresenceContext.Provider value={{ counts, total, byUser, setGame }}>
       {children}
     </PresenceContext.Provider>
   );

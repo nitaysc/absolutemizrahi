@@ -222,6 +222,33 @@ export type Database = {
         }
         Relationships: []
       }
+      friendships: {
+        Row: {
+          addressee: string
+          created_at: string
+          id: string
+          requester: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          addressee: string
+          created_at?: string
+          id?: string
+          requester: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          addressee?: string
+          created_at?: string
+          id?: string
+          requester?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       poker_seats: {
         Row: {
           avatar: string
@@ -577,6 +604,43 @@ export type Database = {
           tiles: number
         }[]
       }
+      friend_accept: { Args: { _other: string }; Returns: Json }
+      friend_decline: { Args: { _other: string }; Returns: Json }
+      friend_remove: { Args: { _other: string }; Returns: Json }
+      friend_request: { Args: { _target: string }; Returns: Json }
+      get_player_profile: {
+        Args: { _username: string }
+        Returns: {
+          avatar: string
+          coins: number
+          created_at: string
+          friendship_status: string
+          id: string
+          recent_bets: Json
+          total_wagered: number
+          total_won: number
+          username: string
+        }[]
+      }
+      list_friend_requests: {
+        Args: never
+        Returns: {
+          avatar: string
+          created_at: string
+          id: string
+          requester: string
+          username: string
+        }[]
+      }
+      list_friends: {
+        Args: never
+        Returns: {
+          avatar: string
+          coins: number
+          id: string
+          username: string
+        }[]
+      }
       mines_abandon: {
         Args: never
         Returns: {
@@ -673,6 +737,17 @@ export type Database = {
         Returns: {
           awarded: number
           new_balance: number
+        }[]
+      }
+      search_players: {
+        Args: { _q: string }
+        Returns: {
+          avatar: string
+          coins: number
+          id: string
+          total_wagered: number
+          total_won: number
+          username: string
         }[]
       }
       wordle_win: {

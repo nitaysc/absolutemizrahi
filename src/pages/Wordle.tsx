@@ -60,7 +60,7 @@ const ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
 
 export default function Wordle() {
   useTrackGame("wordle");
-  const { profile, setLocalCoins } = useUserProfile();
+  const { profile, setLocalCoins, refetch } = useUserProfile();
   const [answer, setAnswer] = useState<string>(() => pickWord());
   const [guesses, setGuesses] = useState<string[]>([]);
   const [current, setCurrent] = useState("");
@@ -125,25 +125,38 @@ export default function Wordle() {
       setDone("win");
       setStreak((s) => s + 1);
       setBusy(true);
-      const { data, error } = await supabase.rpc("wordle_win", {
-        _word: answer,
-        _attempts: nextGuesses.length,
-      });
-      setBusy(false);
-      if (error) {
-        toast.error(error.message);
-      } else {
-        const awarded = Number(data?.[0]?.awarded ?? 500);
-        const bal = Number(data?.[0]?.new_balance ?? profile?.coins ?? 0);
-        setLocalCoins(bal);
-        toast.success(`+${formatCoins(awarded)} coins! Solved in ${nextGuesses.length}/${MAX_ROWS}`);
+      try {
+        const { data, error } = await supabase.rpc("wordle_win", {
+          _word: answer,
+          _attempts: nextGuesses.length,
+        });
+        if (error) {
+          console.error("[wordle_win] rpc error", error);
+          toast.error(`Couldn't credit win: ${error.message}`);
+          await refetch();
+        } else {
+          const row = Array.isArray(data) ? data[0] : data;
+          const awarded = Number(row?.awarded ?? 500);
+          const bal = Number(row?.new_balance);
+          if (Number.isFinite(bal)) setLocalCoins(bal);
+          else await refetch();
+          toast.success(
+            `+${formatCoins(awarded)} coins! Solved in ${nextGuesses.length}/${MAX_ROWS}`,
+          );
+        }
+      } catch (e) {
+        console.error("[wordle_win] threw", e);
+        toast.error(e instanceof Error ? e.message : "Couldn't credit win");
+        await refetch();
+      } finally {
+        setBusy(false);
       }
     } else if (nextGuesses.length >= MAX_ROWS) {
       setDone("lose");
       setStreak(0);
       toast.error(`Out of guesses — the word was ${answer.toUpperCase()}`);
     }
-  }, [answer, busy, current, done, guesses, profile?.coins, setLocalCoins]);
+  }, [answer, busy, current, done, guesses, refetch, setLocalCoins]);
 
   const press = useCallback(
     (key: string) => {
