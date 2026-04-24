@@ -81,8 +81,10 @@ export default function PlayerProfile() {
   async function act(rpc: "friend_request" | "friend_accept" | "friend_decline" | "friend_remove") {
     if (!data) return;
     setBusy(true);
-    const argName = rpc === "friend_request" ? "_target" : "_other";
-    const { error } = await supabase.rpc(rpc, { [argName]: data.id });
+    const { error } =
+      rpc === "friend_request"
+        ? await supabase.rpc(rpc, { _target: data.id })
+        : await supabase.rpc(rpc, { _other: data.id });
     setBusy(false);
     if (error) return toast.error(error.message);
     if (rpc === "friend_request") toast.success("Friend request sent");
