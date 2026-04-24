@@ -404,10 +404,42 @@ function Chicken({ z, dead }: { z: number; dead: boolean }) {
   const targetZ = useRef(z);
   targetZ.current = z;
   const hop = useRef(0);
+  const deathT = useRef(0);
+  const wasDead = useRef(false);
 
   useFrame((_, dt) => {
     if (!ref.current) return;
+    if (dead) {
+      // Reset on first dead frame.
+      if (!wasDead.current) {
+        deathT.current = 0;
+        wasDead.current = true;
+      }
+      deathT.current += dt;
+      const t = deathT.current;
+      // Launched sideways and up, spinning, then thuds down.
+      const launch = Math.min(t / 0.8, 1);
+      const fall = Math.max(0, t - 0.8);
+      // Arc upward then drop with gravity.
+      const yArc = Math.sin(launch * Math.PI) * 1.6;
+      const yFloor = 0.25;
+      const y = Math.max(yFloor, 0.6 + yArc - fall * fall * 4);
+      ref.current.position.y = y;
+      // Tossed off-axis (slightly off lane).
+      ref.current.position.x = Math.min(2.2, t * 1.8);
+      // Z stays where the hit happened.
+      ref.current.position.z += (targetZ.current - ref.current.position.z) * 0.2;
+      // Spin during launch, then settle on its side.
+      const spin = t < 1.0 ? t * 18 : 18 + (t - 1.0) * 2;
+      ref.current.rotation.x = spin;
+      ref.current.rotation.z = Math.min(Math.PI / 2, t * 4);
+      ref.current.rotation.y = 0;
+      return;
+    }
+
+    wasDead.current = false;
     // Smooth hop forward to current lane.
+    ref.current.position.x += (0 - ref.current.position.x) * 0.2;
     const cur = ref.current.position.z;
     const dz = targetZ.current - cur;
     ref.current.position.z += dz * 0.15;
@@ -416,9 +448,10 @@ function Chicken({ z, dead }: { z: number; dead: boolean }) {
     } else {
       hop.current = 0;
     }
-    ref.current.position.y = dead ? 0.3 : 0.6 + Math.sin(hop.current) * 0.4;
-    ref.current.rotation.y = dead ? Math.PI / 2 : 0;
-    ref.current.rotation.z = dead ? Math.PI / 2 : 0;
+    ref.current.position.y = 0.6 + Math.sin(hop.current) * 0.4;
+    ref.current.rotation.x = 0;
+    ref.current.rotation.y = 0;
+    ref.current.rotation.z = 0;
   });
 
   return (
