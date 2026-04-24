@@ -27,10 +27,10 @@ import { playGem, playBomb, playTileClick, playCashout } from "@/lib/sfx";
 type Difficulty = "easy" | "medium" | "hard" | "insane";
 
 const STEP: Record<Difficulty, number> = {
-  easy: 1.022,
-  medium: 1.08,
-  hard: 1.20,
-  insane: 1.45,
+  easy: 1.035,
+  medium: 1.13,
+  hard: 1.32,
+  insane: 1.70,
 };
 const POP_PCT: Record<Difficulty, number> = {
   easy: 1,
@@ -41,7 +41,7 @@ const POP_PCT: Record<Difficulty, number> = {
 
 function multForPump(diff: Difficulty, pumps: number) {
   if (pumps <= 0) return 1;
-  return +(Math.pow(STEP[diff], pumps) * 0.98).toFixed(4);
+  return +(Math.pow(STEP[diff], pumps) * 0.99).toFixed(4);
 }
 
 export default function Pump() {
