@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTrackGame } from "@/hooks/usePresence";
@@ -7,9 +7,9 @@ import { toast } from "sonner";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
-import { NumberField } from "@/components/NumberField";
+import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel";
 import { formatCoins } from "@/lib/format";
-import { Repeat, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
 
 const HOUSE_EDGE = 0.99;
 
@@ -27,29 +27,23 @@ export default function Dice() {
   const [lastRoll, setLastRoll] = useState<number | null>(null);
   const [history, setHistory] = useState<{ roll: number; won: boolean }[]>([]);
 
-  // Auto state
-  const [autoBets, setAutoBets] = useState(10);
-  const [autoRunning, setAutoRunning] = useState(false);
-  const [autoLeft, setAutoLeft] = useState(0);
-  const stopAuto = useRef(false);
-
   const winChance = dir === "under" ? target : 100 - target;
   const multiplier = winChance > 0 ? +(HOUSE_EDGE * (100 / winChance)).toFixed(4) : 0;
   const profit = Math.floor(bet * multiplier) - bet;
 
-  async function rollOnce(): Promise<boolean> {
+  async function rollOnce(): Promise<AutoBetRoundResult | null> {
     if (!profile) return false;
     if (bet < 1) {
       toast.error("Bet at least 1 coin");
-      return false;
+      return null;
     }
     if (bet > profile.coins) {
       toast.error("Not enough coins");
-      return false;
+      return null;
     }
     if (winChance < 1 || winChance > 95) {
       toast.error("Invalid target");
-      return false;
+      return null;
     }
 
     setRolling(true);
@@ -67,34 +61,14 @@ export default function Dice() {
 
     if (error) {
       toast.error(error.message);
-      return false;
+      return null;
     }
     if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
     setLastRoll(result);
     setHistory((h) => [{ roll: result, won }, ...h].slice(0, 10));
-    return won;
+    const payout = Number(data?.[0]?.payout ?? 0);
+    return { won, profit: won ? Math.max(payout - bet, 0) : -bet };
   }
-
-  async function runAuto() {
-    if (autoRunning) {
-      stopAuto.current = true;
-      return;
-    }
-    if (autoBets < 1) return toast.error("Set bet count");
-    stopAuto.current = false;
-    setAutoRunning(true);
-    setAutoLeft(autoBets);
-    for (let i = 0; i < autoBets; i++) {
-      if (stopAuto.current) break;
-      const ok = await rollOnce();
-      setAutoLeft(autoBets - i - 1);
-      if (ok === undefined) break;
-      await new Promise((r) => setTimeout(r, 250));
-    }
-    setAutoRunning(false);
-  }
-
-  useEffect(() => () => { stopAuto.current = true; }, []);
 
   // Slider bar: red on the losing side, green on winning side
   const greenStart = dir === "under" ? 0 : target;
@@ -224,27 +198,11 @@ export default function Dice() {
         <ModeTabs mode={mode} onChange={setMode} />
 
         <div className="mt-3 space-y-3">
-          <BetControls bet={bet} setBet={setBet} disabled={autoRunning} />
+          <BetControls bet={bet} setBet={setBet} disabled={rolling} />
           <div className="grid grid-cols-2 gap-2 text-center text-xs">
             <MiniStat label="Profit on win" value={`+${formatCoins(profit)}`} good />
             <MiniStat label="Loss on lose" value={`-${formatCoins(bet)}`} bad />
           </div>
-
-          {mode === "auto" && (
-            <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                Number of bets
-              </label>
-              <NumberField
-                value={autoBets}
-                onChange={setAutoBets}
-                min={1}
-                max={10000}
-                disabled={autoRunning}
-                className="mt-2"
-              />
-            </div>
-          )}
 
           {mode === "manual" ? (
             <Button
@@ -256,13 +214,7 @@ export default function Dice() {
               {rolling ? "ROLLING..." : "ROLL DICE"}
             </Button>
           ) : (
-            <Button
-              onClick={runAuto}
-              className={`h-11 w-full text-base font-black tracking-wider sm:h-12 ${autoRunning ? "bg-destructive hover:bg-destructive" : ""}`}
-            >
-              <Repeat className="mr-2 h-4 w-4" />
-              {autoRunning ? `STOP (${autoLeft} left)` : `START AUTO (${autoBets})`}
-            </Button>
+            <AutoBetPanel bet={bet} setBet={setBet} onBet={rollOnce} />
           )}
         </div>
       </div>
