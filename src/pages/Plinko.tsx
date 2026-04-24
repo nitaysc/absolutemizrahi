@@ -33,8 +33,9 @@ const BOARD_H = TOP_PAD + (ROWS + 1) * ROW_H + 8;
 
 // Physics — slower, floaty Stake-like feel
 const GRAVITY = 320;          // svg units / s^2
-const RESTITUTION = 0.42;     // bounciness off pegs
-const FRICTION = 0.985;       // per-frame horizontal damping (applied via dt)
+const RESTITUTION = 0.42;     // bounce on the normal axis
+const TANGENTIAL_KEEP = 0.98; // preserve sideways glide across peg surface
+const AIR_DRAG = 0.992;       // global damping (applied via dt)
 const PEG_RADIUS = 2.4;
 const BALL_RADIUS = 4.2;
 const SUB_STEPS = 4;          // physics sub-steps per frame for stable contacts
@@ -42,6 +43,7 @@ const SUB_STEPS = 4;          // physics sub-steps per frame for stable contacts
 type Ball = {
   id: number;
   path: number[];        // predetermined row decisions (server-truth)
+  rightsByRow: number[]; // cumulative rights after each row, for lane guidance
   bucket: number;
   multiplier: number;
   bet: number;
@@ -91,9 +93,12 @@ export default function Plinko() {
   const pegY = useCallback((r: number) => TOP_PAD + (r + 1) * ROW_H, []);
 
   // Bucket center X (bucket i, i=0..16). Final landing column == sum of rights.
-  // Bucket cells are rendered as 17 equal flex divs spanning the SVG width.
   const bucketX = useCallback(
-    (i: number) => SIDE_PAD + i * COL + COL / 2,
+    (i: number) => COL / 2 + i * COL,
+    []
+  );
+  const laneX = useCallback(
+    (row: number, rights: number) => BOARD_W / 2 + (rights - (row + 1) / 2) * COL,
     []
   );
   const floorY = TOP_PAD + (ROWS + 1) * ROW_H;
