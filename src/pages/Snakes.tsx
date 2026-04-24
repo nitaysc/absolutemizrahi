@@ -164,8 +164,17 @@ export default function Snakes() {
     const r = d1 + d2;
 
     const startPos = pos;
-    const landed = Math.min(RING - 1, startPos + r);
-    for (let i = startPos + 1; i <= landed; i++) {
+    // Wrap around the ring so the player can keep rolling past the final tile.
+    // Skip index 0 (start) when wrapping.
+    const steps: number[] = [];
+    let cur = startPos;
+    for (let s = 0; s < r; s++) {
+      cur = (cur + 1) % RING;
+      if (cur === 0) cur = 1; // skip start tile on wrap
+      steps.push(cur);
+    }
+    const landed = steps[steps.length - 1];
+    for (const i of steps) {
       setPos(i);
       await new Promise((res) => setTimeout(res, 160));
     }
@@ -186,12 +195,6 @@ export default function Snakes() {
     const newMult = +(mult * tile.mult).toFixed(2);
     setMult(newMult);
 
-    // Auto-cashout on the final ring tile.
-    if (landed >= RING - 1) {
-      await settle(true, newMult, landed);
-      setRolling(false);
-      return;
-    }
     setBusy(false);
     setRolling(false);
   }
