@@ -225,6 +225,7 @@ export type Database = {
           coins: number
           created_at: string | null
           display_name: string | null
+          dragontower_round: Json | null
           email: string | null
           id: string
           last_daily_bonus: string | null
@@ -240,6 +241,7 @@ export type Database = {
           coins?: number
           created_at?: string | null
           display_name?: string | null
+          dragontower_round?: Json | null
           email?: string | null
           id: string
           last_daily_bonus?: string | null
@@ -255,6 +257,7 @@ export type Database = {
           coins?: number
           created_at?: string | null
           display_name?: string | null
+          dragontower_round?: Json | null
           email?: string | null
           id?: string
           last_daily_bonus?: string | null
@@ -405,6 +408,47 @@ export type Database = {
         Returns: {
           round_id: string
           start_at: string
+        }[]
+      }
+      dragontower_abandon: {
+        Args: never
+        Returns: {
+          new_balance: number
+        }[]
+      }
+      dragontower_cashout: {
+        Args: never
+        Returns: {
+          floors: Json
+          multiplier: number
+          new_balance: number
+          payout: number
+        }[]
+      }
+      dragontower_pick: {
+        Args: { _tile: number }
+        Returns: {
+          eggs: Json
+          ended: boolean
+          hit_egg: boolean
+          multiplier: number
+          new_balance: number
+          payout: number
+          progress: number
+        }[]
+      }
+      dragontower_start: {
+        Args: { _bet_amount: number; _difficulty: string }
+        Returns: {
+          new_balance: number
+        }[]
+      }
+      dt_config: {
+        Args: { _diff: string }
+        Returns: {
+          eggs: number
+          step: number
+          tiles: number
         }[]
       }
       mines_abandon: {
