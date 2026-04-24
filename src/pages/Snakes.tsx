@@ -352,13 +352,13 @@ export default function Snakes() {
             <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
               Difficulty
             </label>
-            <div className="mt-1 grid grid-cols-4 gap-1 rounded-full bg-background/60 p-1">
-              {(["easy", "medium", "hard", "expert"] as Difficulty[]).map((d) => (
+            <div className="mt-1 grid grid-cols-5 gap-1 rounded-full bg-background/60 p-1">
+              {(["easy", "medium", "hard", "expert", "master"] as Difficulty[]).map((d) => (
                 <button
                   key={d}
                   onClick={() => !active && setDiff(d)}
                   disabled={active}
-                  className={`rounded-full py-1.5 text-[11px] font-bold uppercase tracking-widest transition ${
+                  className={`rounded-full py-1.5 text-[10px] font-bold uppercase tracking-widest transition ${
                     diff === d ? "bg-card text-foreground shadow" : "text-muted-foreground"
                   } disabled:opacity-50`}
                 >
