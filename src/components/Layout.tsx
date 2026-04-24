@@ -60,6 +60,11 @@ export function Layout() {
           </button>
 
           <div className="flex items-center gap-2">
+            <UserPill
+              avatar={profile?.avatar ?? "🎰"}
+              username={profile?.username ?? "player"}
+              onClick={() => navigate("/profile")}
+            />
             <BalancePill coins={profile?.coins ?? 0} />
             <button
               onClick={() => signOut()}
@@ -105,6 +110,31 @@ export function Layout() {
         </ul>
       </nav>
     </div>
+  );
+}
+
+function UserPill({
+  avatar,
+  username,
+  onClick,
+}: {
+  avatar: string;
+  username: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-2 rounded-full border border-border bg-card/80 py-1 pl-1 pr-3 transition hover:bg-card"
+      aria-label="Open profile"
+    >
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-background text-base">
+        {avatar}
+      </span>
+      <span className="hidden max-w-[120px] truncate text-sm font-bold sm:inline">
+        {username}
+      </span>
+    </button>
   );
 }
 
