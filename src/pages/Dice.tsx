@@ -300,7 +300,6 @@ function Stat({
   value,
   editable,
   onChange,
-  suffix,
 }: {
   label: string;
   value: string;
@@ -308,6 +307,13 @@ function Stat({
   onChange?: (n: number) => void;
   suffix?: boolean;
 }) {
+  // Local string buffer for editable variant so users can clear/type freely.
+  const [text, setText] = useState(value);
+  useEffect(() => {
+    if (editable && text !== value) setText(value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, editable]);
+
   return (
     <div className="rounded-xl bg-card/60 p-2">
       <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -315,9 +321,24 @@ function Stat({
       </div>
       {editable ? (
         <input
-          type="number"
-          value={value}
-          onChange={(e) => onChange?.(Number(e.target.value))}
+          type="text"
+          inputMode="numeric"
+          value={text}
+          onChange={(e) => {
+            const v = e.target.value.replace(/[^0-9]/g, "");
+            setText(v);
+            const n = Number(v);
+            if (v !== "" && Number.isFinite(n)) onChange?.(n);
+          }}
+          onBlur={() => {
+            const n = Math.floor(Number(text));
+            if (!Number.isFinite(n) || n < 2) {
+              onChange?.(2);
+              setText("2");
+            } else {
+              setText(String(n));
+            }
+          }}
           className="mt-1 w-full bg-transparent text-center text-base font-black outline-none"
         />
       ) : (
