@@ -102,11 +102,11 @@ export default function Dice() {
   const greenPct = greenEnd - greenStart;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-4">
       <Header title="DICE" subtitle={`Roll ${dir} ${target} to win`} history={history} />
 
       {/* Game panel */}
-      <div className="relative overflow-hidden rounded-3xl border border-border bg-card/70 p-6 backdrop-blur-xl sm:p-8">
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-card/70 p-3 backdrop-blur-xl sm:rounded-3xl sm:p-5">
         {/* Result number */}
         <AnimatePresence mode="wait">
           <motion.div
@@ -118,7 +118,7 @@ export default function Dice() {
             className="flex flex-col items-center"
           >
             <div
-              className={`text-6xl font-black tabular-nums sm:text-7xl ${
+              className={`text-4xl font-black tabular-nums sm:text-6xl ${
                 lastRoll === null
                   ? "text-foreground/40"
                   : isWin(lastRoll, target, dir)
@@ -132,8 +132,8 @@ export default function Dice() {
         </AnimatePresence>
 
         {/* Stake-style slider */}
-        <div className="mt-8">
-          <div className="relative h-3 rounded-full bg-secondary">
+        <div className="mt-4 sm:mt-6">
+          <div className="relative h-2.5 rounded-full bg-secondary">
             {/* red full */}
             <div className="absolute inset-0 rounded-full bg-destructive/70" />
             {/* green winning region */}
@@ -160,7 +160,7 @@ export default function Dice() {
                   className="absolute top-1/2 z-10 -translate-x-1/2 -translate-y-1/2"
                   style={{ left: `${lastRoll}%` }}
                 >
-                  <div className="flex h-9 w-12 items-center justify-center rounded-md bg-foreground text-[11px] font-black text-background shadow-lg">
+                  <div className="flex h-7 w-10 items-center justify-center rounded-md bg-foreground text-[10px] font-black text-background shadow-lg">
                     {lastRoll.toFixed(2)}
                   </div>
                 </motion.div>
@@ -176,7 +176,7 @@ export default function Dice() {
               className="absolute inset-0 opacity-0"
             />
           </div>
-          <div className="mt-3 flex justify-between text-xs font-bold text-muted-foreground">
+          <div className="mt-2 flex justify-between text-[10px] font-bold text-muted-foreground">
             <span>0</span>
             <span>25</span>
             <span>50</span>
@@ -185,7 +185,7 @@ export default function Dice() {
           </div>
 
           {/* Manual target input */}
-          <div className="mt-4 flex items-center justify-center gap-2">
+          <div className="mt-3 flex items-center justify-center gap-2">
             <Slider
               value={[target]}
               onValueChange={(v) => setTarget(v[0])}
@@ -197,7 +197,7 @@ export default function Dice() {
           </div>
         </div>
 
-        <div className="mt-5 flex justify-center gap-2">
+        <div className="mt-3 flex justify-center gap-2">
           <Toggle active={dir === "under"} onClick={() => setDir("under")}>
             Roll Under
           </Toggle>
@@ -207,7 +207,7 @@ export default function Dice() {
         </div>
 
         {/* Stat row (Stake-style multiplier / target / chance) */}
-        <div className="mt-6 grid grid-cols-3 gap-2 rounded-2xl bg-background/60 p-3">
+        <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-background/60 p-2">
           <Stat label="Multiplier" value={`${multiplier.toFixed(2)}×`} />
           <Stat
             label={dir === "under" ? "Roll Under" : "Roll Over"}
@@ -220,10 +220,10 @@ export default function Dice() {
       </div>
 
       {/* Bet panel */}
-      <div className="rounded-3xl border border-border bg-card/70 p-5 backdrop-blur-xl">
+      <div className="rounded-2xl border border-border bg-card/70 p-3 backdrop-blur-xl sm:rounded-3xl sm:p-4">
         <ModeTabs mode={mode} onChange={setMode} />
 
-        <div className="mt-4 space-y-4">
+        <div className="mt-3 space-y-3">
           <BetControls bet={bet} setBet={setBet} disabled={autoRunning} />
           <div className="grid grid-cols-2 gap-2 text-center text-xs">
             <MiniStat label="Profit on win" value={`+${formatCoins(profit)}`} good />
@@ -250,17 +250,17 @@ export default function Dice() {
             <Button
               onClick={() => rollOnce()}
               disabled={rolling}
-              className="h-14 w-full text-lg font-black tracking-wider shadow-[0_0_24px_hsl(var(--primary)/0.4)]"
+              className="h-11 w-full text-base font-black tracking-wider shadow-[0_0_24px_hsl(var(--primary)/0.4)] sm:h-12"
             >
-              <Zap className="mr-2 h-5 w-5" />
+              <Zap className="mr-2 h-4 w-4" />
               {rolling ? "ROLLING..." : "ROLL DICE"}
             </Button>
           ) : (
             <Button
               onClick={runAuto}
-              className={`h-14 w-full text-lg font-black tracking-wider ${autoRunning ? "bg-destructive hover:bg-destructive" : ""}`}
+              className={`h-11 w-full text-base font-black tracking-wider sm:h-12 ${autoRunning ? "bg-destructive hover:bg-destructive" : ""}`}
             >
-              <Repeat className="mr-2 h-5 w-5" />
+              <Repeat className="mr-2 h-4 w-4" />
               {autoRunning ? `STOP (${autoLeft} left)` : `START AUTO (${autoBets})`}
             </Button>
           )}
@@ -403,10 +403,10 @@ function Header({
   history: { roll: number; won: boolean }[];
 }) {
   return (
-    <header className="flex flex-wrap items-end justify-between gap-3">
+    <header className="flex flex-wrap items-end justify-between gap-2">
       <div>
-        <h1 className="text-3xl font-black tracking-tight">{title}</h1>
-        <p className="text-sm text-muted-foreground">{subtitle}</p>
+        <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{title}</h1>
+        <p className="text-xs text-muted-foreground sm:text-sm">{subtitle}</p>
       </div>
       {history.length > 0 && (
         <ul className="flex gap-1.5">
