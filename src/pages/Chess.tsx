@@ -375,7 +375,7 @@ export default function ChessGame() {
           }}
           onPromotionPieceSelect={(piece, sourceSquare, targetSquare) => {
             const promotion = piece?.[1]?.toLowerCase() ?? "q";
-            return makeMove(sourceSquare ?? null, targetSquare ?? null, promotion);
+            return sourceSquare ? makeMove(sourceSquare, targetSquare ?? null, promotion) : false;
           }}
           isDraggablePiece={({ piece }) =>
             game.status === "active" && game.turn === myColor && piece.startsWith(myColor ?? "")
