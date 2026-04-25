@@ -42,13 +42,13 @@ export default function ChessLobby() {
   const [eloIdx, setEloIdx] = useState(3); // 1600
   const [aiColor, setAiColor] = useState<"w" | "b" | "random">("w");
   const [aiTC, setAiTC] = useState<TC>("5+3");
-  const [aiBet, setAiBet] = useState(100);
+  const [aiBet, setAiBet] = useState(0);
   const [creatingAI, setCreatingAI] = useState(false);
 
   // PvP form state
   const [pvpColor, setPvpColor] = useState<"w" | "b" | "random">("random");
   const [pvpTC, setPvpTC] = useState<TC>("5+3");
-  const [pvpBet, setPvpBet] = useState(100);
+  const [pvpBet, setPvpBet] = useState(0);
   const [pvpBusy, setPvpBusy] = useState(false);
 
   const [waiting, setWaiting] = useState<WaitingGame[]>([]);
