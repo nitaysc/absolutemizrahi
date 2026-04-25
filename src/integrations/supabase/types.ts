@@ -148,6 +148,140 @@ export type Database = {
         }
         Relationships: []
       }
+      chess_games: {
+        Row: {
+          ai_color: string | null
+          ai_elo: number | null
+          bet: number
+          black_avatar: string | null
+          black_id: string | null
+          black_time_ms: number
+          black_username: string | null
+          created_at: string
+          draw_offered_by: string | null
+          fen: string
+          finished_at: string | null
+          id: string
+          increment_ms: number
+          initial_ms: number
+          last_move_at: string | null
+          mode: string
+          pgn: string
+          result: string | null
+          result_reason: string | null
+          status: string
+          time_control: string
+          turn: string
+          updated_at: string
+          white_avatar: string | null
+          white_id: string | null
+          white_time_ms: number
+          white_username: string | null
+        }
+        Insert: {
+          ai_color?: string | null
+          ai_elo?: number | null
+          bet?: number
+          black_avatar?: string | null
+          black_id?: string | null
+          black_time_ms?: number
+          black_username?: string | null
+          created_at?: string
+          draw_offered_by?: string | null
+          fen?: string
+          finished_at?: string | null
+          id?: string
+          increment_ms?: number
+          initial_ms?: number
+          last_move_at?: string | null
+          mode: string
+          pgn?: string
+          result?: string | null
+          result_reason?: string | null
+          status?: string
+          time_control?: string
+          turn?: string
+          updated_at?: string
+          white_avatar?: string | null
+          white_id?: string | null
+          white_time_ms?: number
+          white_username?: string | null
+        }
+        Update: {
+          ai_color?: string | null
+          ai_elo?: number | null
+          bet?: number
+          black_avatar?: string | null
+          black_id?: string | null
+          black_time_ms?: number
+          black_username?: string | null
+          created_at?: string
+          draw_offered_by?: string | null
+          fen?: string
+          finished_at?: string | null
+          id?: string
+          increment_ms?: number
+          initial_ms?: number
+          last_move_at?: string | null
+          mode?: string
+          pgn?: string
+          result?: string | null
+          result_reason?: string | null
+          status?: string
+          time_control?: string
+          turn?: string
+          updated_at?: string
+          white_avatar?: string | null
+          white_id?: string | null
+          white_time_ms?: number
+          white_username?: string | null
+        }
+        Relationships: []
+      }
+      chess_moves: {
+        Row: {
+          by_user: string | null
+          created_at: string
+          fen_after: string
+          game_id: string
+          id: string
+          ply: number
+          san: string
+          time_left_ms: number
+          uci: string
+        }
+        Insert: {
+          by_user?: string | null
+          created_at?: string
+          fen_after: string
+          game_id: string
+          id?: string
+          ply: number
+          san: string
+          time_left_ms?: number
+          uci: string
+        }
+        Update: {
+          by_user?: string | null
+          created_at?: string
+          fen_after?: string
+          game_id?: string
+          id?: string
+          ply?: number
+          san?: string
+          time_left_ms?: number
+          uci?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chess_moves_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "chess_games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crash_bets: {
         Row: {
           auto_cashout: number | null
@@ -512,6 +646,77 @@ export type Database = {
         }[]
       }
       bj_table_state: { Args: { _table_id: string }; Returns: Json }
+      chess_accept_draw: { Args: { _game_id: string }; Returns: undefined }
+      chess_ai_move: {
+        Args: {
+          _fen_after: string
+          _game_id: string
+          _next_turn: string
+          _reason?: string
+          _result?: string
+          _san: string
+          _uci: string
+        }
+        Returns: undefined
+      }
+      chess_ai_multiplier: { Args: { _elo: number }; Returns: number }
+      chess_claim_timeout: { Args: { _game_id: string }; Returns: undefined }
+      chess_create_ai: {
+        Args: {
+          _bet: number
+          _color: string
+          _elo: number
+          _time_control: string
+        }
+        Returns: {
+          game_id: string
+          new_balance: number
+        }[]
+      }
+      chess_create_pvp: {
+        Args: { _bet: number; _color_pref: string; _time_control: string }
+        Returns: {
+          game_id: string
+          new_balance: number
+        }[]
+      }
+      chess_join_pvp: {
+        Args: { _game_id: string }
+        Returns: {
+          game_id: string
+          new_balance: number
+        }[]
+      }
+      chess_make_move: {
+        Args: {
+          _fen_after: string
+          _game_id: string
+          _next_turn: string
+          _reason?: string
+          _result?: string
+          _san: string
+          _time_left_ms: number
+          _uci: string
+        }
+        Returns: undefined
+      }
+      chess_offer_draw: { Args: { _game_id: string }; Returns: undefined }
+      chess_quick_match: {
+        Args: { _bet: number; _time_control: string }
+        Returns: {
+          game_id: string
+          new_balance: number
+        }[]
+      }
+      chess_resign: { Args: { _game_id: string }; Returns: undefined }
+      chess_settle: {
+        Args: { _game_id: string; _reason: string; _result: string }
+        Returns: undefined
+      }
+      chess_tc_parse: {
+        Args: { _tc: string }
+        Returns: Record<string, unknown>
+      }
       claim_daily_bonus: {
         Args: never
         Returns: {
