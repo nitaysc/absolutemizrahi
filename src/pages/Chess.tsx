@@ -349,18 +349,15 @@ export default function ChessGame() {
 
       <div className="overflow-hidden rounded-xl">
         <Chessboard
-          options={{
-            id: "chess-" + game.id,
-            position: fen,
-            boardOrientation: orientation,
-            onPieceDrop: ({ sourceSquare, targetSquare }) => {
-              // fire-and-forget; library wants synchronous boolean
-              void onDrop({ sourceSquare, targetSquare });
-              return true;
-            },
-            allowDragging: game.status === "active" && game.turn === myColor,
-            animationDurationInMs: 200,
+          id={"chess-" + game.id}
+          position={fen}
+          boardOrientation={orientation === "white" ? "white" : "black"}
+          onPieceDrop={(sourceSquare, targetSquare) => {
+            void onDrop({ sourceSquare, targetSquare });
+            return true;
           }}
+          arePiecesDraggable={game.status === "active" && game.turn === myColor}
+          animationDuration={200}
         />
       </div>
 
