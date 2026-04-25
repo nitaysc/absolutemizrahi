@@ -75,6 +75,7 @@ export default function ChessGame() {
   const engineRef = useRef<StockfishEngine | null>(null);
   const aiThinkingRef = useRef(false);
   const settledRef = useRef(false);
+  const [engineReady, setEngineReady] = useState(false);
 
   // Tick clock every 200ms
   useEffect(() => {
@@ -139,6 +140,7 @@ export default function ChessGame() {
     let cancelled = false;
     (async () => {
       try {
+        setEngineReady(false);
         const eng = new StockfishEngine();
         await eng.init();
         if (cancelled) {
@@ -147,6 +149,7 @@ export default function ChessGame() {
         }
         await eng.setElo(game.ai_elo ?? 1600);
         engineRef.current = eng;
+        setEngineReady(true);
       } catch (e) {
         console.error(e);
         toast.error("Failed to load Stockfish");
@@ -156,6 +159,7 @@ export default function ChessGame() {
       cancelled = true;
       engineRef.current?.quit();
       engineRef.current = null;
+      setEngineReady(false);
     };
   }, [game?.mode, game?.ai_elo]);
 
@@ -173,7 +177,7 @@ export default function ChessGame() {
     if (!game || game.mode !== "ai" || game.status !== "active") return;
     if (game.turn !== game.ai_color) return;
     if (aiThinkingRef.current) return;
-    if (!engineRef.current) return;
+    if (!engineReady || !engineRef.current) return;
     const eng = engineRef.current;
     const elo = game.ai_elo ?? 1600;
     aiThinkingRef.current = true;
@@ -205,7 +209,7 @@ export default function ChessGame() {
         aiThinkingRef.current = false;
       }
     })();
-  }, [game?.fen, game?.turn, game?.status, game?.mode, game?.ai_color, game?.id, game?.ai_elo]);
+  }, [engineReady, game?.fen, game?.turn, game?.status, game?.mode, game?.ai_color, game?.id, game?.ai_elo]);
 
   // Claim opponent timeout
   useEffect(() => {
