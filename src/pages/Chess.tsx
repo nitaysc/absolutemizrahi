@@ -371,10 +371,17 @@ export default function ChessGame() {
           position={fen}
           boardOrientation={orientation === "white" ? "white" : "black"}
           onPieceDrop={(sourceSquare, targetSquare) => {
-            void onDrop({ sourceSquare, targetSquare });
-            return true;
+            return makeMove(sourceSquare, targetSquare);
           }}
+          onPromotionPieceSelect={(piece, sourceSquare, targetSquare) => {
+            const promotion = piece?.[1]?.toLowerCase() ?? "q";
+            return makeMove(sourceSquare ?? null, targetSquare ?? null, promotion);
+          }}
+          isDraggablePiece={({ piece }) =>
+            game.status === "active" && game.turn === myColor && piece.startsWith(myColor ?? "")
+          }
           arePiecesDraggable={game.status === "active" && game.turn === myColor}
+          arePremovesAllowed={false}
           animationDuration={200}
         />
       </div>
