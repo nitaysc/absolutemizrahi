@@ -237,24 +237,35 @@ export default function ChessGame() {
     return { w: game.white_time_ms, b: Math.max(0, game.black_time_ms - elapsed) };
   }
 
-  async function onDrop({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }): Promise<boolean> {
+  function makeMove(sourceSquare: string, targetSquare: string | null, promotion = "q"): boolean {
     if (!game || !myColor || game.status !== "active") return false;
     if (game.turn !== myColor) return false;
     if (!targetSquare) return false;
-    let mv: Move | null = null;
+
+    const local = new Chess(game.fen);
+    const movingPiece = local.get(sourceSquare as never);
+    const targetPiece = local.get(targetSquare as never);
+    if (!movingPiece || movingPiece.color !== myColor) return false;
+    if (targetPiece?.color === myColor) return false;
+
+    let mv: Move | null;
     try {
-      mv = chess.move({ from: sourceSquare, to: targetSquare, promotion: "q" });
+      mv = local.move({ from: sourceSquare, to: targetSquare, promotion: promotion as never });
     } catch {
       return false;
     }
     if (!mv) return false;
-    const after = chess.fen();
+
+    const before = game.fen;
+    const after = local.fen();
+    chess.load(after);
     setFen(after);
     force((x) => x + 1);
-    const next = chess.turn();
-    const det = detectResult(chess);
+    const next = local.turn();
+    const det = detectResult(local);
     const uci = mv.from + mv.to + (mv.promotion ?? "");
-    const { error } = await supabase.rpc("chess_make_move", {
+
+    supabase.rpc("chess_make_move", {
       _game_id: game.id,
       _san: mv.san,
       _uci: uci,
@@ -263,15 +274,18 @@ export default function ChessGame() {
       _next_turn: next,
       _result: det?.result ?? null,
       _reason: det?.reason ?? null,
-    });
-    if (error) {
-      // rollback
-      chess.undo();
-      setFen(chess.fen());
-      force((x) => x + 1);
+    }).then(({ error }) => {
+      if (!error) return;
+      try {
+        chess.load(before);
+        setFen(before);
+        force((x) => x + 1);
+      } catch {
+        // ignore rollback parse errors
+      }
       toast.error(error.message);
-      return false;
-    }
+    });
+
     return true;
   }
 
