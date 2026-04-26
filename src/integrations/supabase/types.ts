@@ -955,6 +955,14 @@ export type Database = {
           username: string
         }[]
       }
+      transfer_coins: {
+        Args: { _amount: number; _recipient_username: string }
+        Returns: {
+          amount: number
+          new_balance: number
+          recipient_username: string
+        }[]
+      }
       wordle_win: {
         Args: { _attempts: number; _word: string }
         Returns: {

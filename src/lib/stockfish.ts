@@ -57,13 +57,26 @@ export class StockfishEngine {
     if (!this.ready) await this.init();
     this.cmd("setoption name UCI_LimitStrength value true");
     this.cmd(`setoption name UCI_Elo value ${Math.max(1320, Math.min(3190, elo))}`);
-    // Stockfish 10's UCI_Elo lower bound is ~1350; for very low Elo also reduce skill level
-    if (elo < 1500) {
-      const skill = Math.max(0, Math.min(20, Math.floor((elo - 200) / 75)));
-      this.cmd(`setoption name Skill Level value ${skill}`);
-    } else {
-      this.cmd("setoption name Skill Level value 20");
-    }
+    // Stockfish 10's UCI_Elo lower bound is ~1320, so for any "low Elo" tier
+    // we have to manually nerf it via Skill Level + a Contempt bias and rely
+    // on very short movetime in moveTimeForElo() below to add blunder-noise.
+    // Mapping (rough strength after nerf):
+    //   400  -> Skill 0   (random-ish, blunders constantly)
+    //   800  -> Skill 2   (very weak club beginner)
+    //   1200 -> Skill 5
+    //   1600 -> Skill 10
+    //   2000 -> Skill 14
+    //   2400 -> Skill 18
+    //   2800 -> Skill 20
+    let skill: number;
+    if (elo <= 400)       skill = 0;
+    else if (elo <= 800)  skill = 2;
+    else if (elo <= 1200) skill = 5;
+    else if (elo <= 1600) skill = 10;
+    else if (elo <= 2000) skill = 14;
+    else if (elo <= 2400) skill = 18;
+    else                  skill = 20;
+    this.cmd(`setoption name Skill Level value ${skill}`);
   }
 
   async bestMove(fen: string, moveTimeMs: number): Promise<string> {
@@ -93,10 +106,13 @@ export class StockfishEngine {
 }
 
 export const moveTimeForElo = (elo: number): number => {
-  if (elo <= 400) return 100;
-  if (elo <= 800) return 200;
-  if (elo <= 1200) return 400;
-  if (elo <= 1600) return 700;
+  // Lower think-time at low Elo = much weaker play (combined with low Skill
+  // Level, the engine genuinely blunders instead of finding the best move
+  // every time).
+  if (elo <= 400)  return 30;
+  if (elo <= 800)  return 80;
+  if (elo <= 1200) return 250;
+  if (elo <= 1600) return 600;
   if (elo <= 2000) return 1200;
   if (elo <= 2400) return 2000;
   return 3000;
