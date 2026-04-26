@@ -13,7 +13,54 @@ type Team = {
   abbrev: string;
   score: number;
   logo?: string;
+  logoCandidates?: string[];
 };
+
+const ESPN_LOGO_KEY_BY_TRICODE: Record<string, string> = {
+  ATL: "atl",
+  BKN: "bkn",
+  BOS: "bos",
+  CHA: "cha",
+  CHI: "chi",
+  CLE: "cle",
+  DAL: "dal",
+  DEN: "den",
+  DET: "det",
+  GSW: "gs",
+  HOU: "hou",
+  IND: "ind",
+  LAC: "lac",
+  LAL: "lal",
+  MEM: "mem",
+  MIA: "mia",
+  MIL: "mil",
+  MIN: "min",
+  NOP: "no",
+  NYK: "ny",
+  OKC: "okc",
+  ORL: "orl",
+  PHI: "phi",
+  PHX: "phx",
+  POR: "por",
+  SAC: "sac",
+  SAS: "sa",
+  TOR: "tor",
+  UTA: "utah",
+  WAS: "wsh",
+};
+
+function getNbaLogoCandidates(teamId: string, tricode: string) {
+  const normalizedId = String(teamId ?? "").trim();
+  const normalizedTri = String(tricode ?? "").trim().toUpperCase();
+  const espnKey = ESPN_LOGO_KEY_BY_TRICODE[normalizedTri] ?? normalizedTri.toLowerCase();
+
+  return [
+    normalizedId ? `https://cdn.nba.com/logos/nba/${normalizedId}/primary/L/logo.svg` : "",
+    normalizedId ? `https://cdn.nba.com/logos/nba/${normalizedId}/global/L/logo.svg` : "",
+    espnKey ? `https://a.espncdn.com/i/teamlogos/nba/500/${espnKey}.png` : "",
+    espnKey ? `https://a.espncdn.com/i/teamlogos/nba/500-dark/${espnKey}.png` : "",
+  ].filter(Boolean);
+}
 
 type Matchup = {
   id: string;
@@ -99,6 +146,14 @@ function parseNbaGames(data: any): Matchup[] {
       if (!away || !home) return null;
 
       const gameStatus = safeNum(game?.gameStatus);
+      const awayLogoCandidates = getNbaLogoCandidates(
+        String(away?.teamId ?? ""),
+        String(away?.teamTricode ?? ""),
+      );
+      const homeLogoCandidates = getNbaLogoCandidates(
+        String(home?.teamId ?? ""),
+        String(home?.teamTricode ?? ""),
+      );
       return {
         id: String(game?.gameId ?? `${away?.teamId}-${home?.teamId}`),
         name: `${away?.teamName ?? "Away"} vs ${home?.teamName ?? "Home"}`,
@@ -113,20 +168,16 @@ function parseNbaGames(data: any): Matchup[] {
             name: String(away?.teamName ?? "Away"),
             abbrev: String(away?.teamTricode ?? "AWY"),
             score: safeNum(away?.score),
-            logo:
-              away?.teamId
-                ? `https://cdn.nba.com/logos/nba/${away.teamId}/global/L/logo.svg`
-                : undefined,
+            logoCandidates: awayLogoCandidates,
+            logo: awayLogoCandidates[0],
           },
           {
             id: String(home?.teamId ?? "home"),
             name: String(home?.teamName ?? "Home"),
             abbrev: String(home?.teamTricode ?? "HME"),
             score: safeNum(home?.score),
-            logo:
-              home?.teamId
-                ? `https://cdn.nba.com/logos/nba/${home.teamId}/global/L/logo.svg`
-                : undefined,
+            logoCandidates: homeLogoCandidates,
+            logo: homeLogoCandidates[0],
           },
         ] as [Team, Team],
       };
@@ -160,6 +211,7 @@ export default function Prediction() {
   const [settledOpenBetIds, setSettledOpenBetIds] = useState<Set<string>>(new Set());
   const [placingId, setPlacingId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [logoIndexByKey, setLogoIndexByKey] = useState<Record<string, number>>({});
 
   async function loadGames(isRefresh = false) {
     if (isRefresh) setRefreshing(true);
@@ -467,7 +519,12 @@ export default function Prediction() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {[a, b].map((t) => (
+                  {[a, b].map((t) => {
+                    const logoKey = `${game.id}:${t.id}`;
+                    const logoIndex = logoIndexByKey[logoKey] ?? 0;
+                    const selectedLogo = t.logoCandidates?.[logoIndex] ?? t.logo;
+
+                    return (
                     <button
                       key={t.id}
                       onClick={() => setSelectedTeam((prev) => ({ ...prev, [game.id]: t.id }))}
@@ -479,12 +536,18 @@ export default function Prediction() {
                       } ${locked ? "cursor-not-allowed opacity-60" : ""}`}
                     >
                       <div className="flex items-center gap-3">
-                        {t.logo ? (
+                        {selectedLogo ? (
                           <img
-                            src={t.logo}
+                            src={selectedLogo}
                             alt={`${t.name} logo`}
                             className="h-10 w-10 rounded-full border border-border bg-white p-1 object-contain"
                             loading="lazy"
+                            onError={() =>
+                              setLogoIndexByKey((prev) => ({
+                                ...prev,
+                                [logoKey]: logoIndex + 1,
+                              }))
+                            }
                           />
                         ) : (
                           <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background text-xs font-black">
@@ -500,7 +563,8 @@ export default function Prediction() {
                         </div>
                       </div>
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </article>
             );
