@@ -476,10 +476,10 @@ export default function Plinko() {
             </svg>
 
             {/* Bucket row — aligned to SVG columns via padding */}
-            <div
-              className="mt-1 flex w-full gap-[2px]"
-              style={{ paddingLeft: 0, paddingRight: 0 }}
-            >
+            {/* Bucket row — exactly tiles the SVG column grid (17 equal
+                slots, no gap) so the visual cell directly under the ball
+                matches the multiplier the server actually paid out. */}
+            <div className="mt-1 grid w-full" style={{ gridTemplateColumns: `repeat(${BUCKETS}, minmax(0, 1fr))` }}>
               {PAYOUTS.map((m, i) => (
                 <BucketCell
                   key={i}
