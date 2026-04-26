@@ -236,7 +236,6 @@ export default function Plinko() {
                   if (b.vy < 100) b.vy = 100;
 
                   litPegsRef.current.set(`${r}-${c}`, performance.now());
-                  if ((r + c) % 3 === 0) playTileClick();
                 }
               }
             }
