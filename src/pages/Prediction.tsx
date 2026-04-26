@@ -18,12 +18,99 @@ type Matchup = {
   name: string;
   startTime: string;
   completed: boolean;
+  isLive: boolean;
   status: string;
+  source: "espn" | "nba";
   teams: [Team, Team];
 };
 
-const PAYOUT_MULTIPLIER = 2;
-const SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard";
+const PAYOUT_MULTIPLIER_FINAL = 2;
+const PAYOUT_MULTIPLIER_LIVE = 1.5;
+const ESPN_SCOREBOARD_URL =
+  "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard";
+const NBA_SCOREBOARD_URL =
+  "https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json";
+
+function safeNum(value: unknown) {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function parseEspnGames(data: any): Matchup[] {
+  return (data?.events ?? [])
+    .map((event: any) => {
+      const comp = event?.competitions?.[0];
+      const competitors = comp?.competitors ?? [];
+      if (competitors.length !== 2) return null;
+
+      const statusType = comp?.status?.type;
+      const teamA = competitors[0];
+      const teamB = competitors[1];
+
+      return {
+        id: String(event.id ?? `${teamA?.id}-${teamB?.id}`),
+        name: String(
+          event.name ??
+            `${teamA?.team?.displayName ?? "Team A"} vs ${teamB?.team?.displayName ?? "Team B"}`,
+        ),
+        startTime: String(event.date ?? new Date().toISOString()),
+        completed: Boolean(statusType?.completed),
+        isLive: Boolean(statusType?.state === "in"),
+        status: String(statusType?.shortDetail ?? statusType?.description ?? "Scheduled"),
+        source: "espn" as const,
+        teams: [
+          {
+            id: String(teamA?.team?.id ?? teamA?.id ?? "team-a"),
+            name: String(teamA?.team?.displayName ?? teamA?.team?.name ?? "Team A"),
+            abbrev: String(teamA?.team?.abbreviation ?? "A"),
+            score: safeNum(teamA?.score),
+          },
+          {
+            id: String(teamB?.team?.id ?? teamB?.id ?? "team-b"),
+            name: String(teamB?.team?.displayName ?? teamB?.team?.name ?? "Team B"),
+            abbrev: String(teamB?.team?.abbreviation ?? "B"),
+            score: safeNum(teamB?.score),
+          },
+        ] as [Team, Team],
+      };
+    })
+    .filter(Boolean);
+}
+
+function parseNbaGames(data: any): Matchup[] {
+  return (data?.scoreboard?.games ?? [])
+    .map((game: any) => {
+      const away = game?.awayTeam;
+      const home = game?.homeTeam;
+      if (!away || !home) return null;
+
+      const gameStatus = safeNum(game?.gameStatus);
+      return {
+        id: String(game?.gameId ?? `${away?.teamId}-${home?.teamId}`),
+        name: `${away?.teamName ?? "Away"} vs ${home?.teamName ?? "Home"}`,
+        startTime: String(game?.gameEt ?? new Date().toISOString()),
+        completed: gameStatus === 3,
+        isLive: gameStatus === 2,
+        status: String(game?.gameStatusText ?? "Scheduled"),
+        source: "nba" as const,
+        teams: [
+          {
+            id: String(away?.teamId ?? "away"),
+            name: String(away?.teamName ?? "Away"),
+            abbrev: String(away?.teamTricode ?? "AWY"),
+            score: safeNum(away?.score),
+          },
+          {
+            id: String(home?.teamId ?? "home"),
+            name: String(home?.teamName ?? "Home"),
+            abbrev: String(home?.teamTricode ?? "HME"),
+            score: safeNum(home?.score),
+          },
+        ] as [Team, Team],
+      };
+    })
+    .filter(Boolean);
+}
 
 export default function Prediction() {
   useTrackGame("prediction");
@@ -32,6 +119,7 @@ export default function Prediction() {
   const [games, setGames] = useState<Matchup[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [feed, setFeed] = useState<"espn" | "nba" | null>(null);
   const [bet, setBet] = useState(25);
   const [selectedTeam, setSelectedTeam] = useState<Record<string, string>>({});
   const [placingId, setPlacingId] = useState<string | null>(null);
@@ -41,42 +129,23 @@ export default function Prediction() {
     else setLoading(true);
 
     try {
-      const res = await fetch(SCOREBOARD_URL);
-      if (!res.ok) throw new Error("Could not load ESPN games");
-      const data = await res.json();
+      let parsed: Matchup[] = [];
 
-      const parsed: Matchup[] = (data.events ?? [])
-        .map((event: any) => {
-          const comp = event.competitions?.[0];
-          const competitors = comp?.competitors ?? [];
-          if (competitors.length !== 2) return null;
+      try {
+        const res = await fetch(ESPN_SCOREBOARD_URL);
+        if (!res.ok) throw new Error("ESPN unavailable");
+        parsed = parseEspnGames(await res.json());
+        if (parsed.length > 0) setFeed("espn");
+      } catch {
+        parsed = [];
+      }
 
-          const teamA = competitors[0];
-          const teamB = competitors[1];
-
-          return {
-            id: String(event.id),
-            name: String(event.name ?? "NBA Game"),
-            startTime: String(event.date),
-            completed: Boolean(comp?.status?.type?.completed),
-            status: String(comp?.status?.type?.description ?? "Scheduled"),
-            teams: [
-              {
-                id: String(teamA.team?.id ?? teamA.id),
-                name: String(teamA.team?.displayName ?? teamA.team?.name ?? "Team A"),
-                abbrev: String(teamA.team?.abbreviation ?? "A"),
-                score: Number(teamA.score ?? 0),
-              },
-              {
-                id: String(teamB.team?.id ?? teamB.id),
-                name: String(teamB.team?.displayName ?? teamB.team?.name ?? "Team B"),
-                abbrev: String(teamB.team?.abbreviation ?? "B"),
-                score: Number(teamB.score ?? 0),
-              },
-            ] as [Team, Team],
-          };
-        })
-        .filter(Boolean);
+      if (parsed.length === 0) {
+        const nbaRes = await fetch(NBA_SCOREBOARD_URL);
+        if (!nbaRes.ok) throw new Error("Could not load NBA games right now");
+        parsed = parseNbaGames(await nbaRes.json());
+        setFeed("nba");
+      }
 
       setGames(parsed);
     } catch (err) {
@@ -90,9 +159,11 @@ export default function Prediction() {
 
   useEffect(() => {
     loadGames();
+    const interval = window.setInterval(() => loadGames(true), 30000);
+    return () => window.clearInterval(interval);
   }, []);
 
-  const completedGames = useMemo(() => games.filter((g) => g.completed), [games]);
+  const availableGames = useMemo(() => games.filter((g) => g.completed || g.isLive), [games]);
 
   async function placePrediction(game: Matchup) {
     if (!profile) return;
@@ -101,8 +172,8 @@ export default function Prediction() {
       toast.error("Pick a team first");
       return;
     }
-    if (!game.completed) {
-      toast.error("Game must be final to settle this bet");
+    if (!game.completed && !game.isLive) {
+      toast.error("This market is not open yet");
       return;
     }
     if (bet < 1) {
@@ -116,26 +187,30 @@ export default function Prediction() {
 
     const [teamA, teamB] = game.teams;
     if (teamA.score === teamB.score) {
-      toast.error("This game is tied / unresolved, try another one");
+      toast.error("Game score is tied right now, wait for a lead or final");
       return;
     }
 
     const winner = teamA.score > teamB.score ? teamA : teamB;
     const won = winner.id === pickedTeamId;
+    const isLiveSettlement = game.isLive && !game.completed;
+    const multiplier = isLiveSettlement ? PAYOUT_MULTIPLIER_LIVE : PAYOUT_MULTIPLIER_FINAL;
 
     setPlacingId(game.id);
     const { data, error } = await supabase.rpc("place_bet", {
       _game: "prediction",
       _bet_amount: bet,
       _won: won,
-      _multiplier: PAYOUT_MULTIPLIER,
+      _multiplier: multiplier,
       _details: {
-        market: "nba-moneyline",
+        market: isLiveSettlement ? "nba-live-leader" : "nba-final-winner",
+        source: game.source,
         event_id: game.id,
         event_name: game.name,
         status: game.status,
         picked_team_id: pickedTeamId,
-        winning_team_id: winner.id,
+        settled_team_id: winner.id,
+        settled_on: isLiveSettlement ? "live" : "final",
         scores: {
           [teamA.id]: teamA.score,
           [teamB.id]: teamB.score,
@@ -152,7 +227,7 @@ export default function Prediction() {
     if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
 
     if (won) {
-      toast.success(`Winner! +${formatCoins(bet)} profit (${PAYOUT_MULTIPLIER}x payout)`);
+      toast.success(`Winner! +${formatCoins(Math.round(bet * (multiplier - 1)))} profit (${multiplier}x)`);
     } else {
       toast.error(`Lost ${formatCoins(bet)} coins`);
     }
@@ -164,12 +239,14 @@ export default function Prediction() {
         <div>
           <h1 className="text-3xl font-black tracking-tight">NBA PREDICTION</h1>
           <p className="text-sm text-muted-foreground">
-            Polymarket style: pick a winner on final NBA games. Win pays {PAYOUT_MULTIPLIER}x,
-            loss pays 0x.
+            Bet on live leaders or final winners. Live settles instantly at 1.5x, finals settle at 2x.
+          </p>
+          <p className="text-xs text-muted-foreground/80">
+            Feed: {feed === null ? "loading..." : feed.toUpperCase()} (auto-refresh every 30s)
           </p>
         </div>
         <Button variant="outline" onClick={() => loadGames(true)} disabled={refreshing || loading}>
-          {refreshing ? "Refreshing..." : "Refresh ESPN"}
+          {refreshing ? "Refreshing..." : "Refresh Games"}
         </Button>
       </header>
 
@@ -203,15 +280,17 @@ export default function Prediction() {
         <div className="rounded-3xl border border-border bg-card/70 p-8 text-center text-muted-foreground">
           Loading games...
         </div>
-      ) : completedGames.length === 0 ? (
+      ) : availableGames.length === 0 ? (
         <div className="rounded-3xl border border-border bg-card/70 p-8 text-center text-muted-foreground">
-          No final NBA games in ESPN feed right now. Press refresh later.
+          No live/final NBA games available right now. Press refresh later.
         </div>
       ) : (
         <div className="space-y-3">
-          {completedGames.map((game) => {
+          {availableGames.map((game) => {
             const pickedId = selectedTeam[game.id];
             const [a, b] = game.teams;
+            const liveSettle = game.isLive && !game.completed;
+            const multiplier = liveSettle ? PAYOUT_MULTIPLIER_LIVE : PAYOUT_MULTIPLIER_FINAL;
             return (
               <article key={game.id} className="rounded-3xl border border-border bg-card/70 p-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -225,8 +304,12 @@ export default function Prediction() {
                     onClick={() => placePrediction(game)}
                     disabled={placingId === game.id || !pickedId}
                   >
-                    {placingId === game.id ? "Placing..." : `Bet ${formatCoins(bet)} for ${PAYOUT_MULTIPLIER}x`}
+                    {placingId === game.id ? "Placing..." : `Bet ${formatCoins(bet)} for ${multiplier}x`}
                   </Button>
+                </div>
+
+                <div className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                  {liveSettle ? "LIVE market" : "FINAL market"}
                 </div>
 
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -244,7 +327,7 @@ export default function Prediction() {
                         {t.abbrev}
                       </p>
                       <p className="text-base font-black">{t.name}</p>
-                      <p className="text-sm text-muted-foreground">Final score: {t.score}</p>
+                      <p className="text-sm text-muted-foreground">Score: {t.score}</p>
                     </button>
                   ))}
                 </div>
