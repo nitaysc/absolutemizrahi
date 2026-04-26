@@ -27,6 +27,7 @@ import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
 import Friends from "./pages/Friends";
 import PlayerProfile from "./pages/PlayerProfile";
+import Prediction from "./pages/Prediction";
 import NotFound from "./pages/NotFound";
 
 function Protected({ children }: { children: React.ReactNode }) {
@@ -77,6 +78,7 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="/friends" element={<Friends />} />
             <Route path="/u/:username" element={<PlayerProfile />} />
+            <Route path="/prediction" element={<Prediction />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
