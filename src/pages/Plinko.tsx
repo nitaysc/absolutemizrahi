@@ -49,8 +49,9 @@ type Ball = {
   path: number[];        // predetermined row decisions (server-truth)
   rightsByRow: number[]; // cumulative rights after each row, for lane guidance
   bucket: number;
-  multiplier: number;
+  payoutTable: number[];
   bet: number;
+  settled: boolean;
   x: number;
   y: number;
   vx: number;
@@ -78,6 +79,8 @@ export default function Plinko() {
   const rafRef = useRef<number | null>(null);
   const lastTsRef = useRef<number | null>(null);
   const litPegsRef = useRef<Map<string, number>>(new Map());
+  const serverBalanceRef = useRef(0);
+  const reservedStakeRef = useRef(0);
 
   function bucketTone(mult: number) {
     if (mult >= 41) return "bg-rose-500 text-white border-rose-300";
@@ -107,6 +110,36 @@ export default function Plinko() {
     []
   );
   const floorY = TOP_PAD + (ROWS + 1) * ROW_H;
+
+  useEffect(() => {
+    serverBalanceRef.current = profile?.coins ?? 0;
+  }, [profile?.coins]);
+
+  const settleBall = useCallback(async (b: Ball, landedBucket: number) => {
+    const multiplier = b.payoutTable[landedBucket] ?? 0;
+    const won = multiplier >= 1;
+    const { data, error } = await supabase.rpc("place_bet", {
+      _game: "plinko",
+      _bet_amount: b.bet,
+      _won: won,
+      _multiplier: multiplier,
+      _details: { bucket: landedBucket, path: b.path, rows: ROWS },
+    });
+
+    reservedStakeRef.current = Math.max(0, reservedStakeRef.current - b.bet);
+
+    if (error) {
+      toast.error(error.message);
+      setLocalCoins(Math.max(0, serverBalanceRef.current - reservedStakeRef.current));
+      return;
+    }
+
+    if (data?.[0]) {
+      serverBalanceRef.current = Number(data[0].new_balance);
+    }
+
+    setLocalCoins(Math.max(0, serverBalanceRef.current - reservedStakeRef.current));
+  }, [setLocalCoins]);
 
   // RAF physics loop
   useEffect(() => {
@@ -231,17 +264,21 @@ export default function Plinko() {
         }
 
         if (b.y >= floorY) {
-          // Hard-snap X to the recorded bucket on landing so the visual
-          // bucket highlight always matches the multiplier paid out.
-          b.x = bucketX(b.bucket);
+          const landedBucket = Math.max(0, Math.min(BUCKETS - 1, Math.round((b.x - SIDE_PAD) / COL)));
+          b.x = bucketX(landedBucket);
           b.done = true;
-          setHitBucket({ i: b.bucket, t: Date.now() });
-          if (b.multiplier >= 5) playGem();
-          else if (b.multiplier < 1) playBomb();
+          const landedMultiplier = b.payoutTable[landedBucket] ?? 0;
+          setHitBucket({ i: landedBucket, t: Date.now() });
+          if (landedMultiplier >= 5) playGem();
+          else if (landedMultiplier < 1) playBomb();
           else playTileClick();
           setRecent((rec) =>
-            [{ mult: b.multiplier, won: b.multiplier >= 1 }, ...rec].slice(0, 8)
+            [{ mult: landedMultiplier, won: landedMultiplier >= 1 }, ...rec].slice(0, 8)
           );
+          if (!b.settled) {
+            b.settled = true;
+            void settleBall(b, landedBucket);
+          }
           const removeId = b.id;
           window.setTimeout(() => {
             ballsRef.current = ballsRef.current.filter((x) => x.id !== removeId);
@@ -266,14 +303,12 @@ export default function Plinko() {
       rafRef.current = null;
       lastTsRef.current = null;
     };
-  }, [pegX, pegY, bucketX, laneX, floorY]);
+  }, [pegX, pegY, bucketX, laneX, floorY, settleBall]);
 
   async function drop(betOverride?: number): Promise<AutoBetRoundResult | null> {
     if (!profile) return null;
     const stake = betOverride ?? bet;
     if (stake < 1) { toast.error("Bet at least 1 coin"); return null; }
-    if (stake > profile.coins) { toast.error("Not enough coins"); return null; }
-
     playTileClick();
 
     // Random path (cosmetic — server records actual)
@@ -289,17 +324,11 @@ export default function Plinko() {
       acc.push(prev + dir);
       return acc;
     }, []);
-    const multiplier = PAYOUTS[bucket];
+    const availableCoins = serverBalanceRef.current - reservedStakeRef.current;
+    if (stake > availableCoins) { toast.error("Not enough coins"); return null; }
 
-    const { data, error } = await supabase.rpc("place_bet", {
-      _game: "plinko",
-      _bet_amount: stake,
-      _won: multiplier >= 1,
-      _multiplier: multiplier,
-      _details: { bucket, path, rows: ROWS },
-    });
-    if (error) { toast.error(error.message); return null; }
-    if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
+    reservedStakeRef.current += stake;
+    setLocalCoins(Math.max(0, serverBalanceRef.current - reservedStakeRef.current));
 
     const id = ++idRef.current;
     const newBall: Ball = {
@@ -307,8 +336,9 @@ export default function Plinko() {
       path,
       rightsByRow,
       bucket,
-      multiplier,
+      payoutTable: [...PAYOUTS],
       bet: stake,
+      settled: false,
       x: BOARD_W / 2 + (Math.random() - 0.5) * 4,
       y: TOP_PAD - 6,
       vx: (Math.random() - 0.5) * 18,
@@ -320,9 +350,9 @@ export default function Plinko() {
     };
     ballsRef.current = [...ballsRef.current, newBall];
     force((n) => n + 1);
-    const won = multiplier >= 1;
-    const payout = Math.floor(stake * multiplier);
-    return { won, profit: payout - stake };
+    const previewMultiplier = PAYOUTS[bucket];
+    const previewPayout = Math.floor(stake * previewMultiplier);
+    return { won: previewMultiplier >= 1, profit: previewPayout - stake };
   }
 
   // Build peg grid once
