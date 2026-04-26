@@ -9,7 +9,7 @@ import { BetControls } from "@/components/BetControls";
 import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel";
 import { formatCoins } from "@/lib/format";
 import { Triangle } from "lucide-react";
-import { playGem, playBomb, playTileClick } from "@/lib/sfx";
+import { playPlinkoBigWin, playPlinkoDrop, playPlinkoLand, playPlinkoLose } from "@/lib/sfx";
 
 /**
  * Plinko — Stake-style with real continuous gravity simulation.
@@ -264,9 +264,9 @@ export default function Plinko() {
           b.done = true;
           const landedMultiplier = b.payoutTable[landedBucket] ?? 0;
           setHitBucket({ i: landedBucket, t: Date.now() });
-          if (landedMultiplier >= 5) playGem();
-          else if (landedMultiplier < 1) playBomb();
-          else playTileClick();
+          if (landedMultiplier >= 5) playPlinkoBigWin();
+          else if (landedMultiplier < 1) playPlinkoLose();
+          else playPlinkoLand();
           setRecent((rec) =>
             [{ mult: landedMultiplier, won: landedMultiplier >= 1 }, ...rec].slice(0, 8)
           );
@@ -304,7 +304,7 @@ export default function Plinko() {
     if (!profile) return null;
     const stake = betOverride ?? bet;
     if (stake < 1) { toast.error("Bet at least 1 coin"); return null; }
-    playTileClick();
+    playPlinkoDrop();
 
     // Random path (cosmetic — server records actual)
     const path: number[] = [];
