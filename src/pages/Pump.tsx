@@ -300,11 +300,15 @@ export default function Pump() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(Object.keys(STEP) as Difficulty[]).map((d) => (
-                  <SelectItem key={d} value={d}>
-                    {d.charAt(0).toUpperCase() + d.slice(1)} — {POP_PCT[d]}% pop / pump · ×{STEP[d]}
-                  </SelectItem>
-                ))}
+                {(Object.keys(STEP) as Difficulty[]).map((d) => {
+                  const c = POP_CURVE[d];
+                  return (
+                    <SelectItem key={d} value={d}>
+                      {d.charAt(0).toUpperCase() + d.slice(1)} — start {(c.base * 100).toFixed(0)}% +
+                      {(c.grow * 100).toFixed(2)}%/pump · ×{STEP[d]}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
