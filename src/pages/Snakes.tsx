@@ -387,7 +387,7 @@ export default function Snakes() {
             <div className="grid grid-cols-2 gap-2">
               <Button
                 onClick={roll}
-                disabled={busy || rolling || pos >= RING - 1}
+                disabled={busy || rolling}
                 className="h-11 text-base font-black tracking-wider sm:h-12"
               >
                 <Dices className="mr-2 h-4 w-4" /> ROLL
