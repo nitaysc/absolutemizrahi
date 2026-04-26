@@ -209,7 +209,7 @@ export default function Prediction() {
       },
     };
 
-    const gameAliases = ["prediction", "predictions", "nba_prediction", "nba-prediction", "aviamasters"];
+    const gameAliases = ["prediction", "predictions", "nba_prediction", "nba-prediction", "nbaprediction", "aviamasters"];
     setPlacingId(game.id);
     let data: any[] | null = null;
     let error: { message: string } | null = null;
