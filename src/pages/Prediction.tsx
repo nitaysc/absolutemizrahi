@@ -209,29 +209,24 @@ export default function Prediction() {
       },
     };
 
-    const gameAliases = ["prediction", "predictions", "nba_prediction", "nba-prediction", "nbaprediction", "aviamasters"];
     setPlacingId(game.id);
-    let data: any[] | null = null;
-    let error: { message: string } | null = null;
-
-    for (const gameName of gameAliases) {
-      const res = await supabase.rpc("place_bet", {
-        _game: gameName,
-        _bet_amount: bet,
-        _won: won,
-        _multiplier: multiplier,
-        _details: betDetails,
-      });
-
-      data = res.data;
-      error = res.error;
-
-      if (!error) break;
-      if (!/Unknown game/i.test(error.message)) break;
-    }
+    // TODO: Replace "prediction" below with the exact game name registered
+    // in your Supabase place_bet function.
+    // Run this in Supabase SQL editor to find it:
+    //   SELECT prosrc FROM pg_proc WHERE proname = 'place_bet';
+    // Then look for the IF _game NOT IN (...) check and copy the exact string.
+    const { data, error } = await supabase.rpc("place_bet", {
+      _game: "prediction",
+      _bet_amount: bet,
+      _won: won,
+      _multiplier: multiplier,
+      _details: betDetails,
+    });
     setPlacingId(null);
 
     if (error) {
+      // If you still get "Unknown game", the string above is still wrong.
+      // Paste the output of the SQL query above and update _game accordingly.
       toast.error(error.message);
       return;
     }
