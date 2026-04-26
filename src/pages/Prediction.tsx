@@ -13,8 +13,53 @@ type Team = {
   abbrev: string;
   score: number;
   logo?: string;
+  logoCandidates?: string[];
 };
 
+const ESPN_LOGO_KEY_BY_TRICODE: Record<string, string> = {
+  ATL: "atl",
+  BKN: "bkn",
+  BOS: "bos",
+  CHA: "cha",
+  CHI: "chi",
+  CLE: "cle",
+  DAL: "dal",
+  DEN: "den",
+  DET: "det",
+  GSW: "gs",
+  HOU: "hou",
+  IND: "ind",
+  LAC: "lac",
+  LAL: "lal",
+  MEM: "mem",
+  MIA: "mia",
+  MIL: "mil",
+  MIN: "min",
+  NOP: "no",
+  NYK: "ny",
+  OKC: "okc",
+  ORL: "orl",
+  PHI: "phi",
+  PHX: "phx",
+  POR: "por",
+  SAC: "sac",
+  SAS: "sa",
+  TOR: "tor",
+  UTA: "utah",
+  WAS: "wsh",
+};
+
+function getNbaLogoCandidates(teamId: string, tricode: string) {
+  const normalizedId = String(teamId ?? "").trim();
+  const normalizedTri = String(tricode ?? "").trim().toUpperCase();
+  const espnKey = ESPN_LOGO_KEY_BY_TRICODE[normalizedTri] ?? normalizedTri.toLowerCase();
+
+  return [
+    normalizedId ? `https://cdn.nba.com/logos/nba/${normalizedId}/primary/L/logo.svg` : "",
+    normalizedId ? `https://cdn.nba.com/logos/nba/${normalizedId}/global/L/logo.svg` : "",
+    espnKey ? `https://a.espncdn.com/i/teamlogos/nba/500/${espnKey}.png` : "",
+    espnKey ? `https://a.espncdn.com/i/teamlogos/nba/500-dark/${espnKey}.png` : "",
+  ].filter(Boolean);
 function getEspnNbaLogo(abbrev: string) {
   const key = String(abbrev ?? "").trim().toLowerCase();
   return key ? `https://a.espncdn.com/i/teamlogos/nba/500/${key}.png` : undefined;
@@ -104,6 +149,14 @@ function parseNbaGames(data: any): Matchup[] {
       if (!away || !home) return null;
 
       const gameStatus = safeNum(game?.gameStatus);
+      const awayLogoCandidates = getNbaLogoCandidates(
+        String(away?.teamId ?? ""),
+        String(away?.teamTricode ?? ""),
+      );
+      const homeLogoCandidates = getNbaLogoCandidates(
+        String(home?.teamId ?? ""),
+        String(home?.teamTricode ?? ""),
+      );
       return {
         id: String(game?.gameId ?? `${away?.teamId}-${home?.teamId}`),
         name: `${away?.teamName ?? "Away"} vs ${home?.teamName ?? "Home"}`,
@@ -118,6 +171,8 @@ function parseNbaGames(data: any): Matchup[] {
             name: String(away?.teamName ?? "Away"),
             abbrev: String(away?.teamTricode ?? "AWY"),
             score: safeNum(away?.score),
+            logoCandidates: awayLogoCandidates,
+            logo: awayLogoCandidates[0],
             logo: getEspnNbaLogo(String(away?.teamTricode ?? "")) ?? undefined,
           },
           {
@@ -125,6 +180,8 @@ function parseNbaGames(data: any): Matchup[] {
             name: String(home?.teamName ?? "Home"),
             abbrev: String(home?.teamTricode ?? "HME"),
             score: safeNum(home?.score),
+            logoCandidates: homeLogoCandidates,
+            logo: homeLogoCandidates[0],
             logo: getEspnNbaLogo(String(home?.teamTricode ?? "")) ?? undefined,
           },
         ] as [Team, Team],
@@ -159,6 +216,7 @@ export default function Prediction() {
   const [settledOpenBetIds, setSettledOpenBetIds] = useState<Set<string>>(new Set());
   const [placingId, setPlacingId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [logoIndexByKey, setLogoIndexByKey] = useState<Record<string, number>>({});
   const [brokenLogos, setBrokenLogos] = useState<Record<string, true>>({});
 
   async function loadGames(isRefresh = false) {
@@ -467,7 +525,12 @@ export default function Prediction() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {[a, b].map((t) => (
+                  {[a, b].map((t) => {
+                    const logoKey = `${game.id}:${t.id}`;
+                    const logoIndex = logoIndexByKey[logoKey] ?? 0;
+                    const selectedLogo = t.logoCandidates?.[logoIndex] ?? t.logo;
+
+                    return (
                     <button
                       key={t.id}
                       onClick={() => setSelectedTeam((prev) => ({ ...prev, [game.id]: t.id }))}
@@ -479,13 +542,17 @@ export default function Prediction() {
                       } ${locked ? "cursor-not-allowed opacity-60" : ""}`}
                     >
                       <div className="flex items-center gap-3">
+                        {selectedLogo ? (
                         {t.logo && !brokenLogos[`${game.id}:${t.id}`] ? (
                           <img
-                            src={t.logo}
+                            src={selectedLogo}
                             alt={`${t.name} logo`}
                             className="h-10 w-10 rounded-full border border-border bg-white p-1 object-contain"
                             loading="lazy"
                             onError={() =>
+                              setLogoIndexByKey((prev) => ({
+                                ...prev,
+                                [logoKey]: logoIndex + 1,
                               setBrokenLogos((prev) => ({
                                 ...prev,
                                 [`${game.id}:${t.id}`]: true,
@@ -506,7 +573,8 @@ export default function Prediction() {
                         </div>
                       </div>
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </article>
             );
