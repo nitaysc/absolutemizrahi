@@ -40,10 +40,10 @@ const POP_CURVE: Record<
   Difficulty,
   { base: number; grow: number; cap: number }
 > = {
-  easy:   { base: 0.02, grow: 0.0020, cap: 0.35 },
-  medium: { base: 0.04, grow: 0.0045, cap: 0.55 },
-  hard:   { base: 0.12, grow: 0.0080, cap: 0.75 },
-  insane: { base: 0.25, grow: 0.0150, cap: 0.90 },
+  easy:   { base: 0.04, grow: 0.0020, cap: 0.35 },
+  medium: { base: 0.08, grow: 0.0045, cap: 0.55 },
+  hard:   { base: 0.16, grow: 0.0080, cap: 0.75 },
+  insane: { base: 0.42, grow: 0.0150, cap: 0.90 },
 };
 
 function popChanceAtPump(diff: Difficulty, pumpIndex: number): number {
