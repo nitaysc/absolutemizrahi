@@ -36,10 +36,10 @@ const BOARD_H = TOP_PAD + (ROWS + 1) * ROW_H + 8;
 
 // Physics — slower, floaty Stake-like feel
 // Physics — heavier, real-feeling drop (less glide, more peg-driven motion)
-const GRAVITY = 720;          // svg units / s^2  — proper "falling rock" weight
-const RESTITUTION = 0.55;     // bounce on the normal axis (snappier tap)
-const TANGENTIAL_KEEP = 0.78; // less sideways carry → ball reacts to each peg
-const AIR_DRAG = 0.985;       // a touch more damping
+const GRAVITY = 980;          // stronger downward acceleration for heavier feel
+const RESTITUTION = 0.42;     // lower bounce so impacts feel less pinball-floaty
+const TANGENTIAL_KEEP = 0.72; // keeps some slide, but pegs still redirect decisively
+const AIR_DRAG = 0.993;       // lower air loss so drops keep natural momentum
 const PEG_RADIUS = 2.4;
 const BALL_RADIUS = 4.2;
 const SUB_STEPS = 6;          // physics sub-steps per frame for stable contacts
@@ -184,8 +184,8 @@ export default function Plinko() {
               Math.min(ROWS - 1, Math.floor((b.y - TOP_PAD + ROW_H * 0.45) / ROW_H) - 1),
             );
             const targetLaneX = laneX(guideRow, b.rightsByRow[guideRow]);
-            const lanePull = Math.max(-8, Math.min(8, (targetLaneX - b.x) * 0.6));
-            b.vx += lanePull * sdt * 4;
+            const lanePull = Math.max(-4, Math.min(4, (targetLaneX - b.x) * 0.35));
+            b.vx += lanePull * sdt * 2.5;
           }
 
           b.x += b.vx * sdt;
@@ -229,11 +229,11 @@ export default function Plinko() {
                     const targetLaneX = laneX(r, b.rightsByRow[r]);
                     // Subtle nudge on first contact in this row so the path
                     // converges over many bounces instead of one obvious shove.
-                    b.vx += Math.max(-9, Math.min(9, (targetLaneX - b.x) * 0.55));
+                    b.vx += Math.max(-4, Math.min(4, (targetLaneX - b.x) * 0.3));
                     b.nextRow = r + 1;
                   }
 
-                  if (b.vy < 60) b.vy = 60;
+                  if (b.vy < 100) b.vy = 100;
 
                   litPegsRef.current.set(`${r}-${c}`, performance.now());
                   if ((r + c) % 3 === 0) playTileClick();
@@ -253,14 +253,10 @@ export default function Plinko() {
         }
 
         // After the last peg row, gently pull into the exact bucket center.
-        if (b.y > pegY(ROWS - 1) + ROW_H * 0.5) {
+        if (b.y > pegY(ROWS - 1) + ROW_H * 0.85) {
           const targetX = bucketX(b.bucket);
           const dxT = targetX - b.x;
-          b.vx += Math.max(-24, Math.min(24, dxT * 1.35)) * dt * 10;
-          if (Math.abs(dxT) < 0.75) {
-            b.x = targetX;
-            b.vx *= 0.5;
-          }
+          b.vx += Math.max(-10, Math.min(10, dxT * 0.45)) * dt * 6;
         }
 
         if (b.y >= floorY) {
@@ -342,7 +338,7 @@ export default function Plinko() {
       x: BOARD_W / 2 + (Math.random() - 0.5) * 4,
       y: TOP_PAD - 6,
       vx: (Math.random() - 0.5) * 18,
-      vy: 12,
+      vy: 24,
       nextRow: 0,
       done: false,
       hue: Math.floor(Math.random() * 360),
