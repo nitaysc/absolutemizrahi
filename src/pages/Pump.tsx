@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
+import { CashoutPop } from "@/components/CashoutPop";
 import { formatCoins } from "@/lib/format";
 import {
   Select,
@@ -67,6 +68,7 @@ export default function Pump() {
   const [busy, setBusy] = useState(false);
   const [popped, setPopped] = useState(false);
   const [popAt, setPopAt] = useState<number | null>(null);
+  const [cashoutPop, setCashoutPop] = useState({ show: false, multiplier: 1, payout: 0 });
   // Per-action locks so a click on CASHOUT isn't silently swallowed while a
   // PUMP request is still in flight. We also queue a pending cashout so a
   // fast double-tap (PUMP → CASHOUT) is honoured the moment the pump resolves.
@@ -204,6 +206,8 @@ export default function Pump() {
       toast.success(
         `+${formatCoins(profitNow)} (${Number(r.multiplier).toFixed(2)}×) — pop was ${lanesLeft} pump${lanesLeft === 1 ? "" : "s"} away!`,
       );
+      setCashoutPop({ show: true, multiplier: Number(r.multiplier), payout: Number(r.payout ?? 0) });
+      setTimeout(() => setCashoutPop((prev) => ({ ...prev, show: false })), 1600);
       setTimeout(() => {
         setPumps(0);
         setPopAt(null);
@@ -216,6 +220,7 @@ export default function Pump() {
 
   return (
     <div className="space-y-4">
+      <CashoutPop show={cashoutPop.show} multiplier={cashoutPop.multiplier} payout={cashoutPop.payout} />
       <header>
         <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">
           <Wind className="h-6 w-6 text-primary sm:h-7 sm:w-7" /> PUMP
