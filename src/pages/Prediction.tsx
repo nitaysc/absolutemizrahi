@@ -24,7 +24,6 @@ type Matchup = {
   teams: [Team, Team];
 };
 
-const PAYOUT_MULTIPLIER_FINAL = 2;
 const PAYOUT_MULTIPLIER_LIVE = 1.5;
 const ESPN_SCOREBOARD_URL =
   "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard";
@@ -163,7 +162,7 @@ export default function Prediction() {
     return () => window.clearInterval(interval);
   }, []);
 
-  const availableGames = useMemo(() => games.filter((g) => g.completed || g.isLive), [games]);
+  const availableGames = useMemo(() => games.filter((g) => g.isLive && !g.completed), [games]);
 
   async function placePrediction(game: Matchup) {
     if (!profile) return;
@@ -172,8 +171,8 @@ export default function Prediction() {
       toast.error("Pick a team first");
       return;
     }
-    if (!game.completed && !game.isLive) {
-      toast.error("This market is not open yet");
+    if (game.completed || !game.isLive) {
+      toast.error("Only live markets are open for betting");
       return;
     }
     if (bet < 1) {
@@ -193,8 +192,7 @@ export default function Prediction() {
 
     const winner = teamA.score > teamB.score ? teamA : teamB;
     const won = winner.id === pickedTeamId;
-    const isLiveSettlement = game.isLive && !game.completed;
-    const multiplier = isLiveSettlement ? PAYOUT_MULTIPLIER_LIVE : PAYOUT_MULTIPLIER_FINAL;
+    const multiplier = PAYOUT_MULTIPLIER_LIVE;
 
     setPlacingId(game.id);
     const { data, error } = await supabase.rpc("place_bet", {
@@ -203,14 +201,14 @@ export default function Prediction() {
       _won: won,
       _multiplier: multiplier,
       _details: {
-        market: isLiveSettlement ? "nba-live-leader" : "nba-final-winner",
+        market: "nba-live-leader",
         source: game.source,
         event_id: game.id,
         event_name: game.name,
         status: game.status,
         picked_team_id: pickedTeamId,
         settled_team_id: winner.id,
-        settled_on: isLiveSettlement ? "live" : "final",
+        settled_on: "live",
         scores: {
           [teamA.id]: teamA.score,
           [teamB.id]: teamB.score,
@@ -238,9 +236,7 @@ export default function Prediction() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl font-black tracking-tight">NBA PREDICTION</h1>
-          <p className="text-sm text-muted-foreground">
-            Bet on live leaders or final winners. Live settles instantly at 1.5x, finals settle at 2x.
-          </p>
+          <p className="text-sm text-muted-foreground">Bet only on live leaders. Live settles instantly at 1.5x.</p>
           <p className="text-xs text-muted-foreground/80">
             Feed: {feed === null ? "loading..." : feed.toUpperCase()} (auto-refresh every 30s)
           </p>
@@ -282,15 +278,14 @@ export default function Prediction() {
         </div>
       ) : availableGames.length === 0 ? (
         <div className="rounded-3xl border border-border bg-card/70 p-8 text-center text-muted-foreground">
-          No live/final NBA games available right now. Press refresh later.
+          No live NBA games available right now. Press refresh later.
         </div>
       ) : (
         <div className="space-y-3">
           {availableGames.map((game) => {
             const pickedId = selectedTeam[game.id];
             const [a, b] = game.teams;
-            const liveSettle = game.isLive && !game.completed;
-            const multiplier = liveSettle ? PAYOUT_MULTIPLIER_LIVE : PAYOUT_MULTIPLIER_FINAL;
+            const multiplier = PAYOUT_MULTIPLIER_LIVE;
             return (
               <article key={game.id} className="rounded-3xl border border-border bg-card/70 p-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -309,7 +304,10 @@ export default function Prediction() {
                 </div>
 
                 <div className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                  {liveSettle ? "LIVE market" : "FINAL market"}
+                  <span className="inline-flex items-center gap-2">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" aria-hidden />
+                    LIVE market (bettable)
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
