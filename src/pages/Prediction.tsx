@@ -60,9 +60,6 @@ function getNbaLogoCandidates(teamId: string, tricode: string) {
     espnKey ? `https://a.espncdn.com/i/teamlogos/nba/500/${espnKey}.png` : "",
     espnKey ? `https://a.espncdn.com/i/teamlogos/nba/500-dark/${espnKey}.png` : "",
   ].filter(Boolean);
-function getEspnNbaLogo(abbrev: string) {
-  const key = String(abbrev ?? "").trim().toLowerCase();
-  return key ? `https://a.espncdn.com/i/teamlogos/nba/500/${key}.png` : undefined;
 }
 
 type Matchup = {
@@ -173,7 +170,6 @@ function parseNbaGames(data: any): Matchup[] {
             score: safeNum(away?.score),
             logoCandidates: awayLogoCandidates,
             logo: awayLogoCandidates[0],
-            logo: getEspnNbaLogo(String(away?.teamTricode ?? "")) ?? undefined,
           },
           {
             id: String(home?.teamId ?? "home"),
@@ -182,7 +178,6 @@ function parseNbaGames(data: any): Matchup[] {
             score: safeNum(home?.score),
             logoCandidates: homeLogoCandidates,
             logo: homeLogoCandidates[0],
-            logo: getEspnNbaLogo(String(home?.teamTricode ?? "")) ?? undefined,
           },
         ] as [Team, Team],
       };
@@ -217,7 +212,6 @@ export default function Prediction() {
   const [placingId, setPlacingId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [logoIndexByKey, setLogoIndexByKey] = useState<Record<string, number>>({});
-  const [brokenLogos, setBrokenLogos] = useState<Record<string, true>>({});
 
   async function loadGames(isRefresh = false) {
     if (isRefresh) setRefreshing(true);
@@ -543,21 +537,25 @@ export default function Prediction() {
                     >
                       <div className="flex items-center gap-3">
                         {selectedLogo ? (
-                        {t.logo && !brokenLogos[`${game.id}:${t.id}`] ? (
                           <img
                             src={selectedLogo}
                             alt={`${t.name} logo`}
                             className="h-10 w-10 rounded-full border border-border bg-white p-1 object-contain"
                             loading="lazy"
-                            onError={() =>
+                            onError={() => {
+                              if ((t.logoCandidates?.length ?? 0) > logoIndex + 1) {
+                                setLogoIndexByKey((prev) => ({
+                                  ...prev,
+                                  [logoKey]: logoIndex + 1,
+                                }));
+                                return;
+                              }
+
                               setLogoIndexByKey((prev) => ({
                                 ...prev,
-                                [logoKey]: logoIndex + 1,
-                              setBrokenLogos((prev) => ({
-                                ...prev,
-                                [`${game.id}:${t.id}`]: true,
-                              }))
-                            }
+                                [logoKey]: Number.MAX_SAFE_INTEGER,
+                              }));
+                            }}
                           />
                         ) : (
                           <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background text-xs font-black">
