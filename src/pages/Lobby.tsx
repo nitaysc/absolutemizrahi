@@ -16,7 +16,6 @@ import coinflipImg from "@/assets/games/coinflip.jpg";
 import blackjackImg from "@/assets/games/blackjack.jpg";
 import chickenImg from "@/assets/games/chicken.jpg";
 import plinkoImg from "@/assets/games/plinko.jpg";
-import pumpImg from "@/assets/games/pump.jpg";
 import dragontowerImg from "@/assets/games/dragontower.jpg";
 import pokerImg from "@/assets/games/poker.jpg";
 import snakesImg from "@/assets/games/snakes.jpg";
@@ -51,7 +50,6 @@ export default function Lobby() {
     { to: "/blackjack", key: "blackjack", title: "BLACKJACK", img: blackjackImg },
     { to: "/chicken", key: "chicken", title: "CHICKEN", img: chickenImg },
     { to: "/plinko", key: "plinko", title: "PLINKO", img: plinkoImg },
-    { to: "/pump", key: "pump", title: "PUMP", img: pumpImg },
     { to: "/dragontower", key: "dragontower", title: "DRAGON", img: dragontowerImg },
     { to: "/poker", key: "poker", title: "POKER", img: pokerImg },
     { to: "/snakes", key: "snakes", title: "SNAKES", img: snakesImg },
