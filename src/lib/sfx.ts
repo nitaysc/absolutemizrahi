@@ -81,6 +81,31 @@ export function playTileClick() {
   tone({ freq: 520, duration: 0.06, type: "square", gain: 0.08 });
 }
 
+/** Bright "release" tick for Plinko ball drops. */
+export function playPlinkoDrop() {
+  tone({ freq: 700, duration: 0.05, type: "triangle", gain: 0.08 });
+  tone({ freq: 960, duration: 0.07, type: "triangle", gain: 0.06, delay: 0.02 });
+}
+
+/** Mid-tier Plinko land (neutral/small win). */
+export function playPlinkoLand() {
+  tone({ freq: 540, duration: 0.08, type: "sine", gain: 0.09 });
+  tone({ freq: 760, duration: 0.09, type: "triangle", gain: 0.07, delay: 0.04 });
+}
+
+/** Big Plinko win sparkle. */
+export function playPlinkoBigWin() {
+  tone({ freq: 880, duration: 0.08, type: "triangle", gain: 0.14 });
+  tone({ freq: 1175, duration: 0.1, type: "triangle", gain: 0.12, delay: 0.04 });
+  tone({ freq: 1568, duration: 0.15, type: "triangle", gain: 0.11, delay: 0.09 });
+}
+
+/** Soft downer for a losing Plinko bucket. */
+export function playPlinkoLose() {
+  tone({ freq: 390, duration: 0.08, type: "sawtooth", gain: 0.08 });
+  tone({ freq: 300, duration: 0.14, type: "sawtooth", gain: 0.1, delay: 0.03 });
+}
+
 /** Cheery cashout sound. */
 export function playCashout() {
   tone({ freq: 660, duration: 0.12, type: "triangle", gain: 0.18 });
