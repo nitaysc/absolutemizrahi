@@ -5,12 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatCoins } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { RefreshCw, ShieldCheck, Timer } from "lucide-react";
 
 type Team = {
   id: string;
   name: string;
   abbrev: string;
   score: number;
+  logo?: string;
 };
 
 type Matchup = {
@@ -74,12 +76,14 @@ function parseEspnGames(data: any): Matchup[] {
             name: String(teamA?.team?.displayName ?? teamA?.team?.name ?? "Team A"),
             abbrev: String(teamA?.team?.abbreviation ?? "A"),
             score: safeNum(teamA?.score),
+            logo: String(teamA?.team?.logos?.[0]?.href ?? ""),
           },
           {
             id: String(teamB?.team?.id ?? teamB?.id ?? "team-b"),
             name: String(teamB?.team?.displayName ?? teamB?.team?.name ?? "Team B"),
             abbrev: String(teamB?.team?.abbreviation ?? "B"),
             score: safeNum(teamB?.score),
+            logo: String(teamB?.team?.logos?.[0]?.href ?? ""),
           },
         ] as [Team, Team],
       };
@@ -109,12 +113,20 @@ function parseNbaGames(data: any): Matchup[] {
             name: String(away?.teamName ?? "Away"),
             abbrev: String(away?.teamTricode ?? "AWY"),
             score: safeNum(away?.score),
+            logo:
+              away?.teamId
+                ? `https://cdn.nba.com/logos/nba/${away.teamId}/global/L/logo.svg`
+                : undefined,
           },
           {
             id: String(home?.teamId ?? "home"),
             name: String(home?.teamName ?? "Home"),
             abbrev: String(home?.teamTricode ?? "HME"),
             score: safeNum(home?.score),
+            logo:
+              home?.teamId
+                ? `https://cdn.nba.com/logos/nba/${home.teamId}/global/L/logo.svg`
+                : undefined,
           },
         ] as [Team, Team],
       };
@@ -359,34 +371,43 @@ export default function Prediction() {
             Feed: {feed === null ? "loading..." : feed.toUpperCase()} (auto-refresh every 30s)
           </p>
         </div>
-        <Button variant="outline" onClick={() => loadGames(true)} disabled={refreshing || loading}>
+        <Button variant="outline" onClick={() => loadGames(true)} disabled={refreshing || loading} className="gap-2">
+          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
           {refreshing ? "Refreshing..." : "Refresh Games"}
         </Button>
       </header>
 
-      <section className="rounded-3xl border border-border bg-card/70 p-4 backdrop-blur-xl">
-        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Stake</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {[10, 25, 50, 100, 250].map((n) => (
-            <button
-              key={n}
-              onClick={() => setBet(n)}
-              className={`rounded-full px-4 py-1.5 text-sm font-bold ${
-                bet === n
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-background text-muted-foreground"
-              }`}
-            >
-              {n}
-            </button>
-          ))}
-          <input
-            type="number"
-            min={1}
-            value={bet}
-            onChange={(e) => setBet(Math.max(1, Number(e.target.value) || 1))}
-            className="w-28 rounded-full border border-border bg-background px-3 py-1.5 text-sm"
-          />
+      <section className="rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/15 via-card/80 to-card/50 p-4 backdrop-blur-xl">
+        <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Stake</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {[10, 25, 50, 100, 250].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setBet(n)}
+                  className={`rounded-full border px-4 py-1.5 text-sm font-bold transition ${
+                    bet === n
+                      ? "border-primary bg-primary text-primary-foreground shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
+                      : "border-border bg-background/70 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {formatCoins(n)}
+                </button>
+              ))}
+              <input
+                type="number"
+                min={1}
+                value={bet}
+                onChange={(e) => setBet(Math.max(1, Number(e.target.value) || 1))}
+                className="w-28 rounded-full border border-border bg-background px-3 py-1.5 text-sm font-semibold"
+              />
+            </div>
+          </div>
+          <div className="rounded-2xl border border-border/80 bg-background/60 px-4 py-3 text-sm">
+            <p className="flex items-center gap-2 font-semibold text-foreground"><ShieldCheck className="h-4 w-4 text-emerald-500" /> 1 pick per matchup</p>
+            <p className="mt-1 flex items-center gap-2 text-muted-foreground"><Timer className="h-4 w-4" /> Auto-settles at final score</p>
+          </div>
         </div>
       </section>
 
@@ -405,7 +426,7 @@ export default function Prediction() {
             const [a, b] = game.teams;
             const locked = lockedBets[game.id];
             return (
-              <article key={game.id} className="rounded-3xl border border-border bg-card/70 p-4">
+              <article key={game.id} className="rounded-3xl border border-border bg-card/70 p-4 shadow-[0_8px_24px_-12px_hsl(var(--background))]">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h2 className="text-base font-bold">{game.name}</h2>
@@ -453,15 +474,31 @@ export default function Prediction() {
                       disabled={!!locked}
                       className={`rounded-2xl border p-3 text-left transition ${
                         pickedId === t.id
-                          ? "border-primary bg-primary/10"
-                          : "border-border bg-background/60"
+                          ? "border-primary bg-gradient-to-br from-primary/20 to-primary/5 shadow-[0_0_18px_hsl(var(--primary)/0.25)]"
+                          : "border-border bg-background/60 hover:border-primary/40"
                       } ${locked ? "cursor-not-allowed opacity-60" : ""}`}
                     >
-                      <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                        {t.abbrev}
-                      </p>
-                      <p className="text-base font-black">{t.name}</p>
-                      <p className="text-sm text-muted-foreground">Score: {t.score}</p>
+                      <div className="flex items-center gap-3">
+                        {t.logo ? (
+                          <img
+                            src={t.logo}
+                            alt={`${t.name} logo`}
+                            className="h-10 w-10 rounded-full border border-border bg-white p-1 object-contain"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background text-xs font-black">
+                            {t.abbrev}
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                            {t.abbrev}
+                          </p>
+                          <p className="text-base font-black">{t.name}</p>
+                          <p className="text-sm text-muted-foreground">Score: {t.score}</p>
+                        </div>
+                      </div>
                     </button>
                   ))}
                 </div>
