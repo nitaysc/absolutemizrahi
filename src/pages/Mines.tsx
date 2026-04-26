@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
 import { NumberField } from "@/components/NumberField";
+import { CashoutPop } from "@/components/CashoutPop";
 import { formatCoins } from "@/lib/format";
 import { Bomb, Gem, Target, Repeat } from "lucide-react";
 import { playGem, playBomb, playTileClick, playCashout } from "@/lib/sfx";
@@ -26,6 +27,7 @@ export default function Mines() {
   const [revealedCount, setRevealedCount] = useState(0);
   const [multiplier, setMultiplier] = useState(1);
   const [busy, setBusy] = useState(false);
+  const [cashoutPop, setCashoutPop] = useState({ show: false, multiplier: 1, payout: 0 });
 
   // Auto-mode state
   const [picks, setPicks] = useState<Set<number>>(new Set());
@@ -141,6 +143,8 @@ export default function Mines() {
       playCashout();
       const profit = Math.max(Number(r.payout ?? 0) - bet, 0);
       toast.success(`+${formatCoins(profit)} (${Number(r.multiplier).toFixed(2)}×)`);
+      setCashoutPop({ show: true, multiplier: Number(r.multiplier), payout: Number(r.payout ?? 0) });
+      setTimeout(() => setCashoutPop((prev) => ({ ...prev, show: false })), 1600);
       const bombs = (r.bombs as number[]) ?? [];
       setTiles((prev) => {
         const next: Tile[] = [...prev];
@@ -291,6 +295,7 @@ export default function Mines() {
 
   return (
     <div className="space-y-6">
+      <CashoutPop show={cashoutPop.show} multiplier={cashoutPop.multiplier} payout={cashoutPop.payout} />
       <header>
         <h1 className="flex items-center gap-2 text-3xl font-black tracking-tight">
           <Bomb className="h-7 w-7 text-primary" /> MINES
