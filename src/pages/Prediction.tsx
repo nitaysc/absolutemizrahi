@@ -24,7 +24,17 @@ type Matchup = {
   teams: [Team, Team];
 };
 
-const PAYOUT_MULTIPLIER_LIVE = 1.5;
+type LockedBet = {
+  betId: string;
+  eventId: string;
+  eventName: string;
+  pickedTeamId: string;
+  pickedTeamName: string;
+  amount: number;
+};
+
+const WIN_MULTIPLIER = 2;
+const WIN_SETTLEMENT_MULTIPLIER = 3;
 const ESPN_SCOREBOARD_URL =
   "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard";
 const NBA_SCOREBOARD_URL =
@@ -121,7 +131,10 @@ export default function Prediction() {
   const [feed, setFeed] = useState<"espn" | "nba" | null>(null);
   const [bet, setBet] = useState(25);
   const [selectedTeam, setSelectedTeam] = useState<Record<string, string>>({});
+  const [lockedBets, setLockedBets] = useState<Record<string, LockedBet>>({});
+  const [settledOpenBetIds, setSettledOpenBetIds] = useState<Set<string>>(new Set());
   const [placingId, setPlacingId] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   async function loadGames(isRefresh = false) {
     if (isRefresh) setRefreshing(true);
@@ -156,17 +169,108 @@ export default function Prediction() {
     }
   }
 
+  async function loadLockedBets() {
+    if (!profile) return;
+    const { data, error } = await supabase
+      .from("bets")
+      .select("id,bet_amount,details")
+      .eq("game", "prediction")
+      .order("created_at", { ascending: false });
+
+    if (error || !data) return;
+
+    const settled = new Set<string>();
+    for (const row of data) {
+      const details = (row.details ?? {}) as Record<string, any>;
+      if (details.entry_type === "prediction-settlement" && details.settlement_for) {
+        settled.add(String(details.settlement_for));
+      }
+    }
+
+    const locked: Record<string, LockedBet> = {};
+    for (const row of data) {
+      const details = (row.details ?? {}) as Record<string, any>;
+      if (details.entry_type !== "prediction-open") continue;
+      const eventId = String(details.event_id ?? "");
+      if (!eventId || settled.has(row.id)) continue;
+      if (locked[eventId]) continue;
+      locked[eventId] = {
+        betId: row.id,
+        eventId,
+        eventName: String(details.event_name ?? "NBA Game"),
+        pickedTeamId: String(details.picked_team_id ?? ""),
+        pickedTeamName: String(details.picked_team_name ?? "Team"),
+        amount: Number(row.bet_amount ?? 0),
+      };
+    }
+
+    setSettledOpenBetIds(settled);
+    setLockedBets(locked);
+  }
+
   useEffect(() => {
     loadGames();
-    const interval = window.setInterval(() => loadGames(true), 30000);
+    loadLockedBets();
+    const interval = window.setInterval(() => {
+      loadGames(true);
+      loadLockedBets();
+    }, 30000);
     return () => window.clearInterval(interval);
-  }, []);
+  }, [profile?.id]);
+
+  useEffect(() => {
+    if (!profile) return;
+
+    const settleWinners = async () => {
+      for (const game of games) {
+        if (!game.completed) continue;
+
+        const openBet = lockedBets[game.id];
+        if (!openBet || settledOpenBetIds.has(openBet.betId)) continue;
+
+        const [a, b] = game.teams;
+        if (a.score === b.score) continue;
+        const winner = a.score > b.score ? a : b;
+        if (winner.id !== openBet.pickedTeamId) continue;
+
+        const { error } = await supabase.rpc("place_bet", {
+          _game: "prediction",
+          _bet_amount: openBet.amount,
+          _won: true,
+          _multiplier: WIN_SETTLEMENT_MULTIPLIER,
+          _details: {
+            entry_type: "prediction-settlement",
+            settlement_for: openBet.betId,
+            event_id: game.id,
+            event_name: game.name,
+            winner_team_id: winner.id,
+            winner_team_name: winner.name,
+            settled_at: new Date().toISOString(),
+          },
+        });
+
+        if (!error) {
+          toast.success(`✅ ${openBet.eventName} settled: ${openBet.pickedTeamName} won, paid ${WIN_MULTIPLIER}x`);
+          await loadLockedBets();
+        }
+      }
+    };
+
+    void settleWinners();
+  }, [games, lockedBets, profile, settledOpenBetIds]);
 
   const availableGames = useMemo(() => games.filter((g) => g.isLive && !g.completed), [games]);
 
   async function placePrediction(game: Matchup) {
     if (!profile) return;
     const pickedTeamId = selectedTeam[game.id];
+    const locked = lockedBets[game.id];
+
+    if (locked) {
+      toast.error("You already placed your pick for this game. Decision is locked.");
+      return;
+    }
+
     if (!pickedTeamId) {
       toast.error("Pick a team first");
       return;
@@ -184,60 +288,49 @@ export default function Prediction() {
       return;
     }
 
-    const [teamA, teamB] = game.teams;
-    if (teamA.score === teamB.score) {
-      toast.error("Game score is tied right now, wait for a lead or final");
+    const picked = game.teams.find((t) => t.id === pickedTeamId);
+    if (!picked) {
+      toast.error("Invalid team pick");
       return;
     }
 
-    const winner = teamA.score > teamB.score ? teamA : teamB;
-    const won = winner.id === pickedTeamId;
-    const multiplier = PAYOUT_MULTIPLIER_LIVE;
-
-    const betDetails = {
-      market: "nba-live-leader",
-      source: game.source,
-      event_id: game.id,
-      event_name: game.name,
-      status: game.status,
-      picked_team_id: pickedTeamId,
-      settled_team_id: winner.id,
-      settled_on: "live",
-      scores: {
-        [teamA.id]: teamA.score,
-        [teamB.id]: teamB.score,
-      },
-    };
+    if (
+      !window.confirm(
+        `Are you sure? Bet ${formatCoins(bet)} on ${picked.name}. This cannot be changed after placing.`,
+      )
+    ) {
+      return;
+    }
 
     setPlacingId(game.id);
-    // TODO: Replace "prediction" below with the exact game name registered
-    // in your Supabase place_bet function.
-    // Run this in Supabase SQL editor to find it:
-    //   SELECT prosrc FROM pg_proc WHERE proname = 'place_bet';
-    // Then look for the IF _game NOT IN (...) check and copy the exact string.
     const { data, error } = await supabase.rpc("place_bet", {
       _game: "prediction",
       _bet_amount: bet,
-      _won: won,
-      _multiplier: multiplier,
-      _details: betDetails,
+      _won: false,
+      _multiplier: 0,
+      _details: {
+        entry_type: "prediction-open",
+        event_id: game.id,
+        event_name: game.name,
+        source: game.source,
+        picked_team_id: picked.id,
+        picked_team_name: picked.name,
+        expected_payout_multiplier: WIN_MULTIPLIER,
+        status: "pending",
+        opened_at: new Date().toISOString(),
+      },
     });
     setPlacingId(null);
+    setConfirmingId(null);
 
     if (error) {
-      // If you still get "Unknown game", the string above is still wrong.
-      // Paste the output of the SQL query above and update _game accordingly.
       toast.error(error.message);
       return;
     }
 
     if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
-
-    if (won) {
-      toast.success(`Winner! +${formatCoins(Math.round(bet * (multiplier - 1)))} profit (${multiplier}x)`);
-    } else {
-      toast.error(`Lost ${formatCoins(bet)} coins`);
-    }
+    toast.success(`Bet locked: ${picked.name}. You will auto-settle at ${WIN_MULTIPLIER}x if this team wins.`);
+    await loadLockedBets();
   }
 
   return (
@@ -245,7 +338,7 @@ export default function Prediction() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl font-black tracking-tight">NBA PREDICTION</h1>
-          <p className="text-sm text-muted-foreground">Bet only on live leaders. Live settles instantly at 1.5x.</p>
+          <p className="text-sm text-muted-foreground">Lock one pick per game. Stake is deducted now. Winners settle at 2x when game is final.</p>
           <p className="text-xs text-muted-foreground/80">
             Feed: {feed === null ? "loading..." : feed.toUpperCase()} (auto-refresh every 30s)
           </p>
@@ -294,7 +387,7 @@ export default function Prediction() {
           {availableGames.map((game) => {
             const pickedId = selectedTeam[game.id];
             const [a, b] = game.teams;
-            const multiplier = PAYOUT_MULTIPLIER_LIVE;
+            const locked = lockedBets[game.id];
             return (
               <article key={game.id} className="rounded-3xl border border-border bg-card/70 p-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -303,19 +396,33 @@ export default function Prediction() {
                     <p className="text-xs text-muted-foreground">
                       {new Date(game.startTime).toLocaleString()} · {game.status}
                     </p>
+                    {locked ? (
+                      <p className="text-xs font-semibold text-amber-500">
+                        Locked on {locked.pickedTeamName} ({formatCoins(locked.amount)})
+                      </p>
+                    ) : null}
                   </div>
-                  <Button
-                    onClick={() => placePrediction(game)}
-                    disabled={placingId === game.id || !pickedId}
-                  >
-                    {placingId === game.id ? "Placing..." : `Bet ${formatCoins(bet)} for ${multiplier}x`}
-                  </Button>
+                  {confirmingId === game.id && !locked ? (
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" onClick={() => setConfirmingId(null)}>Cancel</Button>
+                      <Button onClick={() => placePrediction(game)} disabled={placingId === game.id || !pickedId}>
+                        {placingId === game.id ? "Placing..." : "Are you sure? Place"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={() => setConfirmingId(game.id)}
+                      disabled={placingId === game.id || !pickedId || !!locked}
+                    >
+                      {locked ? "Locked" : `Bet ${formatCoins(bet)} for ${WIN_MULTIPLIER}x`}
+                    </Button>
+                  )}
                 </div>
 
                 <div className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
                   <span className="inline-flex items-center gap-2">
                     <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" aria-hidden />
-                    LIVE market (bettable)
+                    LIVE market (one pick only)
                   </span>
                 </div>
 
@@ -324,11 +431,12 @@ export default function Prediction() {
                     <button
                       key={t.id}
                       onClick={() => setSelectedTeam((prev) => ({ ...prev, [game.id]: t.id }))}
+                      disabled={!!locked}
                       className={`rounded-2xl border p-3 text-left transition ${
                         pickedId === t.id
                           ? "border-primary bg-primary/10"
                           : "border-border bg-background/60"
-                      }`}
+                      } ${locked ? "cursor-not-allowed opacity-60" : ""}`}
                     >
                       <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                         {t.abbrev}
