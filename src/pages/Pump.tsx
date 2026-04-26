@@ -27,17 +27,29 @@ import { playGem, playBomb, playTileClick, playCashout } from "@/lib/sfx";
 type Difficulty = "easy" | "medium" | "hard" | "insane";
 
 const STEP: Record<Difficulty, number> = {
-  easy: 1.035,
-  medium: 1.13,
-  hard: 1.32,
-  insane: 1.70,
+  easy: 1.0175,
+  medium: 1.065,
+  hard: 1.16,
+  insane: 1.35,
 };
-const POP_PCT: Record<Difficulty, number> = {
-  easy: 4,
-  medium: 8,
-  hard: 25,
-  insane: 45,
+/**
+ * Pop chance grows every pump (matches `pump_start` server-side):
+ *   chance(i) = min(cap, base + (i-1) * grow)
+ */
+const POP_CURVE: Record<
+  Difficulty,
+  { base: number; grow: number; cap: number }
+> = {
+  easy:   { base: 0.02, grow: 0.0020, cap: 0.35 },
+  medium: { base: 0.04, grow: 0.0045, cap: 0.55 },
+  hard:   { base: 0.12, grow: 0.0080, cap: 0.75 },
+  insane: { base: 0.25, grow: 0.0150, cap: 0.90 },
 };
+
+function popChanceAtPump(diff: Difficulty, pumpIndex: number): number {
+  const { base, grow, cap } = POP_CURVE[diff];
+  return Math.min(cap, base + Math.max(0, pumpIndex - 1) * grow);
+}
 
 function multForPump(diff: Difficulty, pumps: number) {
   if (pumps <= 0) return 1;
@@ -94,6 +106,9 @@ export default function Pump() {
   const currentMult = multForPump(difficulty, displayPumps);
   const nextMult = multForPump(difficulty, displayPumps + 1);
   const profit = active ? Math.floor(bet * currentMult) - bet : 0;
+  // Risk meters
+  const nextPopChance = popChanceAtPump(difficulty, displayPumps + 1);
+  const currentPopChance = popChanceAtPump(difficulty, Math.max(1, displayPumps));
   // Visual scale: balloon grows with each pump, capped so it doesn't escape.
   const balloonScale = Math.min(1 + displayPumps * 0.06, 2.6);
 
@@ -285,11 +300,15 @@ export default function Pump() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(Object.keys(STEP) as Difficulty[]).map((d) => (
-                  <SelectItem key={d} value={d}>
-                    {d.charAt(0).toUpperCase() + d.slice(1)} — {POP_PCT[d]}% pop / pump · ×{STEP[d]}
-                  </SelectItem>
-                ))}
+                {(Object.keys(STEP) as Difficulty[]).map((d) => {
+                  const c = POP_CURVE[d];
+                  return (
+                    <SelectItem key={d} value={d}>
+                      {d.charAt(0).toUpperCase() + d.slice(1)} — start {(c.base * 100).toFixed(0)}% +
+                      {(c.grow * 100).toFixed(2)}%/pump · ×{STEP[d]}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
@@ -304,6 +323,14 @@ export default function Pump() {
               />
             </div>
           )}
+
+          {/* Per-pump risk display — always visible so the player can see
+              how much riskier each successive pump gets. */}
+          <RiskTable
+            difficulty={difficulty}
+            currentPump={displayPumps}
+            active={active}
+          />
 
           {!active ? (
             <Button
@@ -320,14 +347,14 @@ export default function Pump() {
                 disabled={busy}
                 className="h-12 text-base font-black tracking-wider"
               >
-                PUMP
+                PUMP · {(nextPopChance * 100).toFixed(1)}% risk
               </Button>
               <Button
                 onClick={cashout}
                 disabled={displayPumps < 1 || cashingRef.current}
                 className="h-12 bg-[hsl(var(--success))] text-background hover:bg-[hsl(var(--success))]/90"
               >
-                CASHOUT
+                CASHOUT {currentMult > 1 ? `(${currentMult.toFixed(2)}×)` : ""}
               </Button>
             </div>
           )}
@@ -350,6 +377,68 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "wi
       >
         {value}
       </div>
+    </div>
+  );
+}
+
+function RiskTable({
+  difficulty,
+  currentPump,
+  active,
+}: {
+  difficulty: Difficulty;
+  currentPump: number;
+  active: boolean;
+}) {
+  // Show 8 upcoming pumps so the curve is visible at a glance.
+  const start = active ? Math.max(0, currentPump) : 0;
+  const rows = Array.from({ length: 8 }, (_, k) => {
+    const i = start + k + 1; // 1-indexed pump number
+    return {
+      i,
+      mult: +(Math.pow(STEP[difficulty], i) * 0.99).toFixed(2),
+      risk: popChanceAtPump(difficulty, i),
+    };
+  });
+  const cap = POP_CURVE[difficulty].cap;
+  return (
+    <div className="rounded-2xl border border-border bg-background/40 p-2">
+      <div className="mb-1 flex items-baseline justify-between px-1">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          {active ? "Next 8 pumps" : "Risk preview"}
+        </span>
+        <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+          cap {(cap * 100).toFixed(0)}%
+        </span>
+      </div>
+      <ul className="grid grid-cols-4 gap-1">
+        {rows.map((r, k) => {
+          const pct = (r.risk * 100).toFixed(1);
+          const tone =
+            r.risk >= 0.5
+              ? "border-destructive/50 bg-destructive/10 text-destructive"
+              : r.risk >= 0.25
+                ? "border-orange-500/50 bg-orange-500/10 text-orange-400"
+                : r.risk >= 0.1
+                  ? "border-amber-400/50 bg-amber-400/10 text-amber-300"
+                  : "border-emerald-500/40 bg-emerald-500/10 text-emerald-300";
+          return (
+            <li
+              key={k}
+              className={`rounded-lg border px-1.5 py-1 text-center ${tone}`}
+              title={`Pump #${r.i}: ${pct}% pop risk · ${r.mult}×`}
+            >
+              <div className="text-[9px] font-bold uppercase tracking-wider opacity-70">
+                #{r.i}
+              </div>
+              <div className="text-[11px] font-black tabular-nums">{pct}%</div>
+              <div className="text-[9px] font-bold tabular-nums opacity-80">
+                {r.mult}×
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
