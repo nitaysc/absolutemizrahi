@@ -30,6 +30,9 @@ export default function Profile() {
   const [grantTo, setGrantTo] = useState("");
   const [grantAmount, setGrantAmount] = useState("");
   const [granting, setGranting] = useState(false);
+  const [sendTo, setSendTo] = useState("");
+  const [sendAmount, setSendAmount] = useState("");
+  const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -151,6 +154,30 @@ export default function Profile() {
     }
   }
 
+  async function sendCoins() {
+    const u = sendTo.trim();
+    const amt = Math.floor(Number(sendAmount));
+    if (!u) return toast.error("Enter a username");
+    if (!Number.isFinite(amt) || amt <= 0) return toast.error("Amount must be positive");
+    if (profile && amt > profile.coins) return toast.error("Not enough coins");
+    setSending(true);
+    const { data, error } = await supabase.rpc("transfer_coins", {
+      _recipient_username: u,
+      _amount: amt,
+    });
+    setSending(false);
+    if (error) return toast.error(error.message);
+    const r = data?.[0];
+    if (r) {
+      setLocalCoins(Number(r.new_balance));
+      toast.success(
+        `Sent ${formatCoins(Number(r.amount))} → ${r.recipient_username}`,
+      );
+      setSendTo("");
+      setSendAmount("");
+    }
+  }
+
   const profit = (profile?.total_won ?? 0) - (profile?.total_wagered ?? 0);
 
   return (
@@ -253,6 +280,42 @@ export default function Profile() {
           />
           <Button onClick={redeem} disabled={redeeming || !code.trim()}>
             {redeeming ? "..." : "Redeem"}
+          </Button>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-[hsl(var(--success))]/30 bg-gradient-to-br from-[hsl(var(--success))]/10 to-transparent p-5">
+        <h2 className="text-sm font-black uppercase tracking-widest text-[hsl(var(--success))]">
+          💸 Send coins to a player
+        </h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Transfer Mizrahi Coins to anyone by their username. No takebacks.
+        </p>
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_140px_auto]">
+          <Input
+            value={sendTo}
+            onChange={(e) => setSendTo(e.target.value)}
+            placeholder="Recipient username"
+            disabled={sending}
+          />
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            value={sendAmount}
+            onChange={(e) => setSendAmount(e.target.value)}
+            placeholder="Amount"
+            disabled={sending}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") sendCoins();
+            }}
+          />
+          <Button
+            onClick={sendCoins}
+            disabled={sending || !sendTo.trim() || !sendAmount}
+            className="bg-[hsl(var(--success))] text-background hover:bg-[hsl(var(--success))]/90"
+          >
+            {sending ? "..." : "Send"}
           </Button>
         </div>
       </section>
