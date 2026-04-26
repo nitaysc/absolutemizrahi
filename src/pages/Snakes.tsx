@@ -32,7 +32,7 @@ const DIFF_CFG: Record<
   Difficulty,
   { snakes: number; maxMult: number; highCount: number; label: string }
 > = {
-  easy:   { snakes: 1, maxMult: 2.0,   highCount: 2, label: "Easy" },
+  easy:   { snakes: 1, maxMult: 1.4,   highCount: 1, label: "Easy" },
   medium: { snakes: 3, maxMult: 4.0,   highCount: 1, label: "Medium" },
   hard:   { snakes: 5, maxMult: 7.5,   highCount: 1, label: "Hard" },
   expert: { snakes: 7, maxMult: 10.0,  highCount: 1, label: "Expert" },
@@ -67,10 +67,10 @@ function buildRing(diff: Difficulty): Tile[] {
   // Per-step multipliers (each tile applies once when landed) — keep them small so
   // the cumulative product stays close to maxMult by the end.
   // Solve: product over n tiles ≈ maxMult  =>  per-step ≈ maxMult^(1/n)
-  // House edge: shave per-step multipliers ~6% so the cumulative product undershoots
-  // maxMult on average. Also steepen the ramp so the BIG tiles are clustered near
-  // the end (and harder to reach without busting on a snake first).
-  const HOUSE_EDGE = 0.94;
+  // House edge: shave per-step multipliers so the cumulative product undershoots
+  // maxMult on average. Easy mode uses a tight 1% house edge; harder modes keep
+  // the original 6% to compensate for their much larger headline payouts.
+  const HOUSE_EDGE = diff === "easy" ? 0.99 : 0.94;
   const perStep = Math.pow(cfg.maxMult, 1 / Math.max(1, n)) * HOUSE_EDGE;
   multIdxs.forEach((idx, k) => {
     // Steeper ramp: earlier tiles much lower, later tiles ramp up to the headline.
@@ -387,7 +387,7 @@ export default function Snakes() {
             <div className="grid grid-cols-2 gap-2">
               <Button
                 onClick={roll}
-                disabled={busy || rolling || pos >= RING - 1}
+                disabled={busy || rolling}
                 className="h-11 text-base font-black tracking-wider sm:h-12"
               >
                 <Dices className="mr-2 h-4 w-4" /> ROLL

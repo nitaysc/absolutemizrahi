@@ -367,7 +367,8 @@ export default function ChessGame() {
 
       <div className="overflow-hidden rounded-xl">
         <Chessboard
-          id={"chess-" + game.id}
+          id={"chess-" + game.id + "-" + (myColor ?? "spectator")}
+          key={"board-" + game.id + "-" + (myColor ?? "spectator") + "-" + game.status}
           position={fen}
           boardOrientation={orientation === "white" ? "white" : "black"}
           onPieceDrop={(sourceSquare, targetSquare) => {
@@ -378,9 +379,9 @@ export default function ChessGame() {
             return sourceSquare ? makeMove(sourceSquare, targetSquare ?? null, promotion) : false;
           }}
           isDraggablePiece={({ piece }) =>
-            game.status === "active" && game.turn === myColor && piece.startsWith(myColor ?? "")
+            !!myColor && game.status === "active" && game.turn === myColor && piece.startsWith(myColor)
           }
-          arePiecesDraggable={game.status === "active" && game.turn === myColor}
+          arePiecesDraggable={!!myColor && game.status === "active"}
           arePremovesAllowed={false}
           animationDuration={200}
         />

@@ -105,11 +105,13 @@ export const moveTimeForElo = (elo: number): number => {
 export const ELO_TIERS = [400, 800, 1200, 1600, 2000, 2400, 2800] as const;
 
 export const eloMultiplier = (elo: number): number => {
-  if (elo <= 400) return 1.10;
-  if (elo <= 800) return 1.30;
-  if (elo <= 1200) return 1.70;
-  if (elo <= 1600) return 2.20;
-  if (elo <= 2000) return 3.00;
-  if (elo <= 2400) return 4.50;
-  return 8.00;
+  // Low payouts on purpose — chess is skill-based, so the house edge stays small
+  // but the upside is capped. Tops out at 1.20× for 2800 Elo.
+  if (elo <= 400) return 1.02;
+  if (elo <= 800) return 1.04;
+  if (elo <= 1200) return 1.06;
+  if (elo <= 1600) return 1.09;
+  if (elo <= 2000) return 1.12;
+  if (elo <= 2400) return 1.16;
+  return 1.20;
 };

@@ -18,9 +18,11 @@ import { playGem, playBomb, playTileClick } from "@/lib/sfx";
 const ROWS = 16;
 type Risk = "low" | "medium" | "high";
 const PAYOUTS_BY_RISK: Record<Risk, number[]> = {
-  low:    [22, 12, 3, 1.6, 1.2, 1.1, 0.7, 1, 0.5, 1, 0.7, 1.1, 1.2, 1.6, 3, 12, 22],
-  medium: [70, 22, 8, 3, 1.6, 1.1, 0.6, 0.4, 0.3, 0.4, 0.6, 1.1, 1.6, 3, 8, 22, 70],
-  high:   [1000, 220, 48, 14, 4, 1.8, 0.4, 0.2, 0.1, 0.2, 0.4, 1.8, 4, 14, 48, 220, 1000],
+  // Slightly more generous, smoother curves — center penalty is softer so it
+  // doesn't feel rigged. Edges still pay big to keep the dopamine.
+  low:    [16, 9, 4, 2, 1.4, 1.2, 1, 0.9, 0.7, 0.9, 1, 1.2, 1.4, 2, 4, 9, 16],
+  medium: [55, 18, 7, 3, 1.8, 1.3, 1.1, 0.8, 0.5, 0.8, 1.1, 1.3, 1.8, 3, 7, 18, 55],
+  high:   [555, 130, 38, 12, 4.5, 2, 1.1, 0.4, 0.2, 0.4, 1.1, 2, 4.5, 12, 38, 130, 555],
 };
 const BUCKETS = 17;
 
