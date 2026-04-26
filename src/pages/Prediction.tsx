@@ -15,6 +15,11 @@ type Team = {
   logo?: string;
 };
 
+function getEspnNbaLogo(abbrev: string) {
+  const key = String(abbrev ?? "").trim().toLowerCase();
+  return key ? `https://a.espncdn.com/i/teamlogos/nba/500/${key}.png` : undefined;
+}
+
 type Matchup = {
   id: string;
   name: string;
@@ -113,20 +118,14 @@ function parseNbaGames(data: any): Matchup[] {
             name: String(away?.teamName ?? "Away"),
             abbrev: String(away?.teamTricode ?? "AWY"),
             score: safeNum(away?.score),
-            logo:
-              away?.teamId
-                ? `https://cdn.nba.com/logos/nba/${away.teamId}/global/L/logo.svg`
-                : undefined,
+            logo: getEspnNbaLogo(String(away?.teamTricode ?? "")) ?? undefined,
           },
           {
             id: String(home?.teamId ?? "home"),
             name: String(home?.teamName ?? "Home"),
             abbrev: String(home?.teamTricode ?? "HME"),
             score: safeNum(home?.score),
-            logo:
-              home?.teamId
-                ? `https://cdn.nba.com/logos/nba/${home.teamId}/global/L/logo.svg`
-                : undefined,
+            logo: getEspnNbaLogo(String(home?.teamTricode ?? "")) ?? undefined,
           },
         ] as [Team, Team],
       };
@@ -160,6 +159,7 @@ export default function Prediction() {
   const [settledOpenBetIds, setSettledOpenBetIds] = useState<Set<string>>(new Set());
   const [placingId, setPlacingId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [brokenLogos, setBrokenLogos] = useState<Record<string, true>>({});
 
   async function loadGames(isRefresh = false) {
     if (isRefresh) setRefreshing(true);
@@ -479,12 +479,18 @@ export default function Prediction() {
                       } ${locked ? "cursor-not-allowed opacity-60" : ""}`}
                     >
                       <div className="flex items-center gap-3">
-                        {t.logo ? (
+                        {t.logo && !brokenLogos[`${game.id}:${t.id}`] ? (
                           <img
                             src={t.logo}
                             alt={`${t.name} logo`}
                             className="h-10 w-10 rounded-full border border-border bg-white p-1 object-contain"
                             loading="lazy"
+                            onError={() =>
+                              setBrokenLogos((prev) => ({
+                                ...prev,
+                                [`${game.id}:${t.id}`]: true,
+                              }))
+                            }
                           />
                         ) : (
                           <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background text-xs font-black">
