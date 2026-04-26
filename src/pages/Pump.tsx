@@ -77,9 +77,18 @@ export default function Pump() {
   const startingRef = useRef(false);
   const pendingCashoutRef = useRef(false);
   const activeRef = useRef(false);
+  const hideCashoutTimerRef = useRef<number | null>(null);
+  const resetStageTimerRef = useRef<number | null>(null);
   useEffect(() => {
     activeRef.current = active;
   }, [active]);
+
+  useEffect(() => {
+    return () => {
+      if (hideCashoutTimerRef.current) window.clearTimeout(hideCashoutTimerRef.current);
+      if (resetStageTimerRef.current) window.clearTimeout(resetStageTimerRef.current);
+    };
+  }, []);
 
   // Resume any active server-side round on mount so a refresh doesn't lose state.
   useEffect(() => {
@@ -121,6 +130,9 @@ export default function Pump() {
     if (startingRef.current || activeRef.current) return;
     startingRef.current = true;
     setBusy(true);
+    if (hideCashoutTimerRef.current) window.clearTimeout(hideCashoutTimerRef.current);
+    if (resetStageTimerRef.current) window.clearTimeout(resetStageTimerRef.current);
+    setCashoutPop((prev) => ({ ...prev, show: false }));
     try {
       const { data, error } = await supabase.rpc("pump_start", {
         _bet_amount: bet,
@@ -161,7 +173,8 @@ export default function Pump() {
         pendingCashoutRef.current = false;
         setPendingPump(false);
         toast.error(`Pop! -${formatCoins(bet)}`);
-        setTimeout(() => {
+        if (resetStageTimerRef.current) window.clearTimeout(resetStageTimerRef.current);
+        resetStageTimerRef.current = window.setTimeout(() => {
           setPumps(0);
           setPopped(false);
         }, 2200);
@@ -207,8 +220,13 @@ export default function Pump() {
         `+${formatCoins(profitNow)} (${Number(r.multiplier).toFixed(2)}×) — pop was ${lanesLeft} pump${lanesLeft === 1 ? "" : "s"} away!`,
       );
       setCashoutPop({ show: true, multiplier: Number(r.multiplier), payout: Number(r.payout ?? 0) });
-      setTimeout(() => setCashoutPop((prev) => ({ ...prev, show: false })), 1600);
-      setTimeout(() => {
+      if (hideCashoutTimerRef.current) window.clearTimeout(hideCashoutTimerRef.current);
+      hideCashoutTimerRef.current = window.setTimeout(
+        () => setCashoutPop((prev) => ({ ...prev, show: false })),
+        1600,
+      );
+      if (resetStageTimerRef.current) window.clearTimeout(resetStageTimerRef.current);
+      resetStageTimerRef.current = window.setTimeout(() => {
         setPumps(0);
         setPopAt(null);
       }, 2200);
@@ -220,7 +238,6 @@ export default function Pump() {
 
   return (
     <div className="space-y-4">
-      <CashoutPop show={cashoutPop.show} multiplier={cashoutPop.multiplier} payout={cashoutPop.payout} />
       <header>
         <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">
           <Wind className="h-6 w-6 text-primary sm:h-7 sm:w-7" /> PUMP
@@ -233,6 +250,12 @@ export default function Pump() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_320px]">
         {/* Stage */}
         <div className="relative flex min-h-[360px] flex-col items-center justify-center overflow-hidden rounded-3xl border border-border bg-card/70 p-6 backdrop-blur-xl">
+          <CashoutPop
+            show={cashoutPop.show}
+            multiplier={cashoutPop.multiplier}
+            payout={cashoutPop.payout}
+            className="absolute left-1/2 top-5 z-30 -translate-x-1/2"
+          />
           <AnimatePresence mode="wait">
             {popped ? (
               <motion.div
