@@ -39,6 +39,7 @@ const ESPN_SCOREBOARD_URL =
   "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard";
 const NBA_SCOREBOARD_URL =
   "https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json";
+const BETTING_WINDOW_DAYS = 7;
 
 function safeNum(value: unknown) {
   const n = Number(value ?? 0);
@@ -119,6 +120,18 @@ function parseNbaGames(data: any): Matchup[] {
       };
     })
     .filter(Boolean);
+}
+
+function isBettableGame(game: Matchup, now = Date.now()) {
+  if (game.completed) return false;
+  if (game.isLive) return true;
+
+  const startAt = new Date(game.startTime).getTime();
+  if (!Number.isFinite(startAt)) return false;
+
+  const inFuture = startAt >= now;
+  const withinWeek = startAt <= now + BETTING_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  return inFuture && withinWeek;
 }
 
 export default function Prediction() {
@@ -259,7 +272,10 @@ export default function Prediction() {
     void settleWinners();
   }, [games, lockedBets, profile, settledOpenBetIds]);
 
-  const availableGames = useMemo(() => games.filter((g) => g.isLive && !g.completed), [games]);
+  const availableGames = useMemo(
+    () => games.filter((g) => isBettableGame(g)).sort((a, b) => +new Date(a.startTime) - +new Date(b.startTime)),
+    [games],
+  );
 
   async function placePrediction(game: Matchup) {
     if (!profile) return;
@@ -275,8 +291,8 @@ export default function Prediction() {
       toast.error("Pick a team first");
       return;
     }
-    if (game.completed || !game.isLive) {
-      toast.error("Only live markets are open for betting");
+    if (!isBettableGame(game)) {
+      toast.error("Betting is open only for live games or games starting within 7 days");
       return;
     }
     if (bet < 1) {
@@ -338,7 +354,7 @@ export default function Prediction() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl font-black tracking-tight">NBA PREDICTION</h1>
-          <p className="text-sm text-muted-foreground">Lock one pick per game. Stake is deducted now. Winners settle at 2x when game is final.</p>
+          <p className="text-sm text-muted-foreground">Lock one pick per game. Bet live games or upcoming games within the next 7 days. Stake is deducted now. Winners settle at 2x when game is final.</p>
           <p className="text-xs text-muted-foreground/80">
             Feed: {feed === null ? "loading..." : feed.toUpperCase()} (auto-refresh every 30s)
           </p>
@@ -380,7 +396,7 @@ export default function Prediction() {
         </div>
       ) : availableGames.length === 0 ? (
         <div className="rounded-3xl border border-border bg-card/70 p-8 text-center text-muted-foreground">
-          No live NBA games available right now. Press refresh later.
+          No live or upcoming NBA games (next 7 days) available right now. Press refresh later.
         </div>
       ) : (
         <div className="space-y-3">
@@ -421,8 +437,11 @@ export default function Prediction() {
 
                 <div className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
                   <span className="inline-flex items-center gap-2">
-                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" aria-hidden />
-                    LIVE market (one pick only)
+                    <span
+                      className={`inline-block h-2.5 w-2.5 rounded-full ${game.isLive ? "bg-red-500" : "bg-emerald-500"}`}
+                      aria-hidden
+                    />
+                    {game.isLive ? "LIVE market" : "UPCOMING market"} (one pick only)
                   </span>
                 </div>
 
