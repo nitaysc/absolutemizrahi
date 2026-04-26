@@ -194,27 +194,41 @@ export default function Prediction() {
     const won = winner.id === pickedTeamId;
     const multiplier = PAYOUT_MULTIPLIER_LIVE;
 
-    setPlacingId(game.id);
-    const { data, error } = await supabase.rpc("place_bet", {
-      _game: "prediction",
-      _bet_amount: bet,
-      _won: won,
-      _multiplier: multiplier,
-      _details: {
-        market: "nba-live-leader",
-        source: game.source,
-        event_id: game.id,
-        event_name: game.name,
-        status: game.status,
-        picked_team_id: pickedTeamId,
-        settled_team_id: winner.id,
-        settled_on: "live",
-        scores: {
-          [teamA.id]: teamA.score,
-          [teamB.id]: teamB.score,
-        },
+    const betDetails = {
+      market: "nba-live-leader",
+      source: game.source,
+      event_id: game.id,
+      event_name: game.name,
+      status: game.status,
+      picked_team_id: pickedTeamId,
+      settled_team_id: winner.id,
+      settled_on: "live",
+      scores: {
+        [teamA.id]: teamA.score,
+        [teamB.id]: teamB.score,
       },
-    });
+    };
+
+    const gameAliases = ["prediction", "predictions", "nba_prediction", "nba-prediction", "aviamasters"];
+    setPlacingId(game.id);
+    let data: any[] | null = null;
+    let error: { message: string } | null = null;
+
+    for (const gameName of gameAliases) {
+      const res = await supabase.rpc("place_bet", {
+        _game: gameName,
+        _bet_amount: bet,
+        _won: won,
+        _multiplier: multiplier,
+        _details: betDetails,
+      });
+
+      data = res.data;
+      error = res.error;
+
+      if (!error) break;
+      if (!/Unknown game/i.test(error.message)) break;
+    }
     setPlacingId(null);
 
     if (error) {
