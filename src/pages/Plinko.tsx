@@ -506,7 +506,7 @@ function BucketCell({
   highlight: number;
 }) {
   return (
-    <div className="relative flex-1 min-w-0">
+    <div className="relative min-w-0 px-[1px]">
       <motion.div
         key={highlight}
         initial={{ y: 0 }}
