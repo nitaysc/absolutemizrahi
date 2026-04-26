@@ -35,13 +35,14 @@ const BOARD_W = SIDE_PAD * 2 + (BUCKETS - 1) * COL;
 const BOARD_H = TOP_PAD + (ROWS + 1) * ROW_H + 8;
 
 // Physics — slower, floaty Stake-like feel
-const GRAVITY = 320;          // svg units / s^2
-const RESTITUTION = 0.42;     // bounce on the normal axis
-const TANGENTIAL_KEEP = 0.98; // preserve sideways glide across peg surface
-const AIR_DRAG = 0.992;       // global damping (applied via dt)
+// Physics — heavier, real-feeling drop (less glide, more peg-driven motion)
+const GRAVITY = 720;          // svg units / s^2  — proper "falling rock" weight
+const RESTITUTION = 0.55;     // bounce on the normal axis (snappier tap)
+const TANGENTIAL_KEEP = 0.78; // less sideways carry → ball reacts to each peg
+const AIR_DRAG = 0.985;       // a touch more damping
 const PEG_RADIUS = 2.4;
 const BALL_RADIUS = 4.2;
-const SUB_STEPS = 4;          // physics sub-steps per frame for stable contacts
+const SUB_STEPS = 6;          // physics sub-steps per frame for stable contacts
 
 type Ball = {
   id: number;
@@ -141,14 +142,17 @@ export default function Plinko() {
           b.vy += GRAVITY * sdt;
           b.vx *= Math.pow(AIR_DRAG, sdt * 60);
 
+          // Tiny continuous lane pull so the ball still ends up in the
+          // correct bucket — but small enough that the visible bounces feel
+          // peg-driven, not floaty/scripted.
           if (b.y <= pegY(ROWS - 1) + ROW_H * 0.35) {
             const guideRow = Math.max(
               0,
               Math.min(ROWS - 1, Math.floor((b.y - TOP_PAD + ROW_H * 0.45) / ROW_H) - 1),
             );
             const targetLaneX = laneX(guideRow, b.rightsByRow[guideRow]);
-            const lanePull = Math.max(-28, Math.min(28, (targetLaneX - b.x) * 1.8));
-            b.vx += lanePull * sdt * 12;
+            const lanePull = Math.max(-8, Math.min(8, (targetLaneX - b.x) * 0.6));
+            b.vx += lanePull * sdt * 4;
           }
 
           b.x += b.vx * sdt;
@@ -190,11 +194,13 @@ export default function Plinko() {
 
                   if (r === b.nextRow) {
                     const targetLaneX = laneX(r, b.rightsByRow[r]);
-                    b.vx += Math.max(-18, Math.min(18, (targetLaneX - b.x) * 1.4));
+                    // Subtle nudge on first contact in this row so the path
+                    // converges over many bounces instead of one obvious shove.
+                    b.vx += Math.max(-9, Math.min(9, (targetLaneX - b.x) * 0.55));
                     b.nextRow = r + 1;
                   }
 
-                  if (b.vy < 30) b.vy = 30;
+                  if (b.vy < 60) b.vy = 60;
 
                   litPegsRef.current.set(`${r}-${c}`, performance.now());
                   if ((r + c) % 3 === 0) playTileClick();
