@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatCoins } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { RefreshCw, ShieldCheck, Timer } from "lucide-react";
+import { RefreshCw, ShieldCheck, Timer, CalendarDays } from "lucide-react";
 
 type Team = {
   id: string;
@@ -106,6 +106,15 @@ function parseEspnGames(data: any): Matchup[] {
       const teamA = competitors[0];
       const teamB = competitors[1];
 
+      const teamAId = String(teamA?.team?.id ?? teamA?.id ?? "team-a");
+      const teamBId = String(teamB?.team?.id ?? teamB?.id ?? "team-b");
+      const teamAAbbr = String(teamA?.team?.abbreviation ?? "A");
+      const teamBAbbr = String(teamB?.team?.abbreviation ?? "B");
+      const teamALogo = String(teamA?.team?.logo ?? teamA?.team?.logos?.[0]?.href ?? "");
+      const teamBLogo = String(teamB?.team?.logo ?? teamB?.team?.logos?.[0]?.href ?? "");
+      const teamACandidates = [teamALogo, ...getNbaLogoCandidates(teamAId, teamAAbbr)].filter(Boolean);
+      const teamBCandidates = [teamBLogo, ...getNbaLogoCandidates(teamBId, teamBAbbr)].filter(Boolean);
+
       return {
         id: String(event.id ?? `${teamA?.id}-${teamB?.id}`),
         name: String(
@@ -119,18 +128,20 @@ function parseEspnGames(data: any): Matchup[] {
         source: "espn" as const,
         teams: [
           {
-            id: String(teamA?.team?.id ?? teamA?.id ?? "team-a"),
+            id: teamAId,
             name: String(teamA?.team?.displayName ?? teamA?.team?.name ?? "Team A"),
-            abbrev: String(teamA?.team?.abbreviation ?? "A"),
+            abbrev: teamAAbbr,
             score: safeNum(teamA?.score),
-            logo: String(teamA?.team?.logos?.[0]?.href ?? ""),
+            logo: teamACandidates[0],
+            logoCandidates: teamACandidates,
           },
           {
-            id: String(teamB?.team?.id ?? teamB?.id ?? "team-b"),
+            id: teamBId,
             name: String(teamB?.team?.displayName ?? teamB?.team?.name ?? "Team B"),
-            abbrev: String(teamB?.team?.abbreviation ?? "B"),
+            abbrev: teamBAbbr,
             score: safeNum(teamB?.score),
-            logo: String(teamB?.team?.logos?.[0]?.href ?? ""),
+            logo: teamBCandidates[0],
+            logoCandidates: teamBCandidates,
           },
         ] as [Team, Team],
       };
