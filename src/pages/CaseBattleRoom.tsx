@@ -654,6 +654,7 @@ export default function CaseBattleRoom() {
                     spinKey={`${slot}-${spinningRound.id}`}
                     durationMs={battle.fast ? 1600 : 4200}
                     size={isMobile ? "xs" : slots <= 2 ? "md" : "sm"}
+                    hideValuesUntilLanded
                   />
                 ) : (
                   <div className={`flex ${isMobile ? "h-[180px]" : "h-[256px]"} items-center justify-center rounded-2xl border border-dashed border-border bg-background/40 text-xs text-muted-foreground`}>
