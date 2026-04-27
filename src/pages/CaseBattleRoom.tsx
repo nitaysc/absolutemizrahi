@@ -60,6 +60,16 @@ const RARITY_TEXT: Record<string, string> = {
   mythic: "text-rose-400",
 };
 
+// Per-team colour palette so teammates are instantly recognisable.
+// Index 0 = team 1, index 1 = team 2, etc. Cycles after 4.
+const TEAM_STYLES: { border: string; bg: string; chip: string; dot: string; label: string }[] = [
+  { border: "border-sky-400/70", bg: "bg-sky-500/5", chip: "bg-sky-500/20 text-sky-200", dot: "bg-sky-400", label: "text-sky-300" },
+  { border: "border-rose-400/70", bg: "bg-rose-500/5", chip: "bg-rose-500/20 text-rose-200", dot: "bg-rose-400", label: "text-rose-300" },
+  { border: "border-emerald-400/70", bg: "bg-emerald-500/5", chip: "bg-emerald-500/20 text-emerald-200", dot: "bg-emerald-400", label: "text-emerald-300" },
+  { border: "border-amber-400/70", bg: "bg-amber-500/5", chip: "bg-amber-500/20 text-amber-200", dot: "bg-amber-400", label: "text-amber-300" },
+];
+const teamStyle = (team: number | undefined) => TEAM_STYLES[(team ?? 0) % TEAM_STYLES.length];
+
 function ImgOrEmoji({ src, alt, className }: { src: string | null | undefined; alt: string; className?: string }) {
   if (src && /^https?:\/\//i.test(src)) {
     return <img src={src} alt={alt} className={className} loading="lazy" />;
