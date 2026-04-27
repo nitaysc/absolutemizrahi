@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatCoins } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { RefreshCw, ShieldCheck, Timer, CalendarDays } from "lucide-react";
+import { RefreshCw, ShieldCheck, Timer, CalendarDays, Zap, TrendingUp, Lock } from "lucide-react";
 
 type Team = {
   id: string;
@@ -14,6 +14,8 @@ type Team = {
   score: number;
   logo?: string;
   logoCandidates?: string[];
+  /** Win-loss record parsed from ESPN, e.g. { w: 50, l: 32 }. */
+  record?: { w: number; l: number };
 };
 
 const ESPN_LOGO_KEY_BY_TRICODE: Record<string, string> = {
@@ -80,16 +82,60 @@ type LockedBet = {
   pickedTeamId: string;
   pickedTeamName: string;
   amount: number;
+  /** Multiplier promised at lock time — what we pay out if they win. */
+  multiplier: number;
 };
 
-const WIN_MULTIPLIER = 2;
-const WIN_SETTLEMENT_MULTIPLIER = 3;
+/** House edge applied to the fair multiplier (5%). */
+const HOUSE_EDGE = 0.05;
+/** Minimum multiplier we'll ever pay (capping huge favorites). */
+const MIN_MULTIPLIER = 1.05;
+/** Maximum multiplier (capping crazy underdogs / no-record games). */
+const MAX_MULTIPLIER = 10;
 const ESPN_SCOREBOARD_URL =
   "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard";
 const NBA_SCOREBOARD_URL =
   "https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json";
 const BETTING_WINDOW_DAYS = 7;
 const SETTLEMENT_LOOKBACK_DAYS = 2;
+
+/** Convert a fair win probability (0-1) into a payout multiplier. */
+function probabilityToMultiplier(p: number) {
+  const clamped = Math.max(0.02, Math.min(0.98, p));
+  const fair = 1 / clamped;
+  const withEdge = fair * (1 - HOUSE_EDGE);
+  return Math.max(MIN_MULTIPLIER, Math.min(MAX_MULTIPLIER, withEdge));
+}
+
+/** Parse ESPN "50-32" record summaries into win/loss numbers. */
+function parseRecord(summary: string | undefined | null): { w: number; l: number } | undefined {
+  if (!summary) return undefined;
+  const m = String(summary).match(/(\d+)\s*-\s*(\d+)/);
+  if (!m) return undefined;
+  const w = Number(m[1]);
+  const l = Number(m[2]);
+  if (!Number.isFinite(w) || !Number.isFinite(l) || w + l <= 0) return undefined;
+  return { w, l };
+}
+
+/** Log5 formula — given two teams' win pct, return prob A beats B. */
+function log5(pa: number, pb: number) {
+  const num = pa - pa * pb;
+  const den = pa + pb - 2 * pa * pb;
+  if (den <= 0) return 0.5;
+  return num / den;
+}
+
+/** Pre-game probability based on season records. Falls back to 50/50. */
+function getPreGameProbability(team: Team, opponent: Team): number {
+  if (!team.record || !opponent.record) return 0.5;
+  const pa = team.record.w / (team.record.w + team.record.l);
+  const pb = opponent.record.w / (opponent.record.w + opponent.record.l);
+  if (pa <= 0 && pb <= 0) return 0.5;
+  // Slight regression toward the mean to avoid extremes off small samples.
+  const regress = (p: number) => 0.85 * p + 0.15 * 0.5;
+  return log5(regress(pa), regress(pb));
+}
 
 function formatYmd(d: Date) {
   const y = d.getUTCFullYear();
@@ -127,6 +173,16 @@ function parseEspnGames(data: any): Matchup[] {
       const teamBLogo = String(teamB?.team?.logo ?? teamB?.team?.logos?.[0]?.href ?? "");
       const teamACandidates = [teamALogo, ...getNbaLogoCandidates(teamAId, teamAAbbr)].filter(Boolean);
       const teamBCandidates = [teamBLogo, ...getNbaLogoCandidates(teamBId, teamBAbbr)].filter(Boolean);
+      const teamARecord =
+        parseRecord(
+          (teamA?.records ?? []).find((r: any) => r?.type === "total")?.summary ??
+            teamA?.record,
+        );
+      const teamBRecord =
+        parseRecord(
+          (teamB?.records ?? []).find((r: any) => r?.type === "total")?.summary ??
+            teamB?.record,
+        );
 
       return {
         id: String(event.id ?? `${teamA?.id}-${teamB?.id}`),
@@ -147,6 +203,7 @@ function parseEspnGames(data: any): Matchup[] {
             score: safeNum(teamA?.score),
             logo: teamACandidates[0],
             logoCandidates: teamACandidates,
+            record: teamARecord,
           },
           {
             id: teamBId,
@@ -155,6 +212,7 @@ function parseEspnGames(data: any): Matchup[] {
             score: safeNum(teamB?.score),
             logo: teamBCandidates[0],
             logoCandidates: teamBCandidates,
+            record: teamBRecord,
           },
         ] as [Team, Team],
       };
@@ -221,11 +279,32 @@ function isBettableGame(game: Matchup, now = Date.now()) {
   return inFuture && withinWeek;
 }
 
-function getTeamMarketChance(team: Team, opponent: Team, isLive: boolean) {
-  if (!isLive) return 50;
-  const scoreDiff = team.score - opponent.score;
-  const shifted = 50 + scoreDiff * 6;
-  return Math.max(5, Math.min(95, shifted));
+/**
+ * Live games: blend pre-game prob with a score-differential signal.
+ * Pre-game: pure log5 from records.
+ * Returns probability in [0.02, 0.98].
+ */
+function getTeamWinProbability(team: Team, opponent: Team, isLive: boolean) {
+  const pre = getPreGameProbability(team, opponent);
+  if (!isLive) return Math.max(0.02, Math.min(0.98, pre));
+  const diff = team.score - opponent.score;
+  // Score differential adds ~6% per point, capped, then averaged with pre-game.
+  const live = 0.5 + Math.max(-0.45, Math.min(0.45, diff * 0.06));
+  const blended = 0.4 * pre + 0.6 * live;
+  return Math.max(0.02, Math.min(0.98, blended));
+}
+
+/** Computes paired probabilities that sum to 1 for a matchup. */
+function getMatchupOdds(a: Team, b: Team, isLive: boolean) {
+  const pa = getTeamWinProbability(a, b, isLive);
+  const pb = getTeamWinProbability(b, a, isLive);
+  const total = pa + pb;
+  const na = total > 0 ? pa / total : 0.5;
+  const nb = 1 - na;
+  return {
+    a: { prob: na, multiplier: probabilityToMultiplier(na) },
+    b: { prob: nb, multiplier: probabilityToMultiplier(nb) },
+  };
 }
 
 export default function Prediction() {
