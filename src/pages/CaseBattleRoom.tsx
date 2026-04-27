@@ -26,6 +26,7 @@ type Battle = {
   fill_with_bots: boolean;
   winner_team: number | null;
   pot_payout: number | null;
+  finished_at: string | null;
 };
 type Player = {
   id: string;
