@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { ChevronLeft, Plus, Minus, Info } from "lucide-react";
 import { CaseDetailsModal } from "@/components/CaseDetailsModal";
 
-type Case = { id: string; name: string; image: string | null; price: number };
+type Case = { id: string; name: string; image: string | null; price: number; status?: string };
 
 const MODES = [
   { v: "1v1", label: "1 v 1", slots: 2 },
@@ -51,11 +51,14 @@ export default function CaseBattleCreate() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
+      const { data: adm } = await supabase.rpc("is_admin");
+      let q = supabase
         .from("cases")
-        .select("id,name,image,price")
-        .eq("status", "approved")
+        .select("id,name,image,price,status")
         .order("price");
+      // Admins see everything; everyone else sees approved + their own pending (RLS-filtered).
+      if (!adm) q = q.in("status", ["approved", "pending"]);
+      const { data } = await q;
       setAllCases((data ?? []) as Case[]);
     })();
   }, []);
@@ -213,6 +216,11 @@ export default function CaseBattleCreate() {
                   </div>
                   <div className="mt-1 truncate text-sm font-bold">{c.name}</div>
                 </button>
+                {c.status && c.status !== "approved" && (
+                  <div className="absolute left-2 top-2 rounded-full bg-amber-500/30 px-1.5 py-0.5 text-[9px] font-black uppercase text-amber-300">
+                    {c.status}
+                  </div>
+                )}
                 <div className="inline-flex items-center gap-1 text-xs text-primary">
                   <MizrahiCoin size={10} /> {formatCoins(c.price)}
                 </div>
