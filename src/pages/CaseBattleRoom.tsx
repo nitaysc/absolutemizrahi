@@ -60,6 +60,13 @@ const RARITY_TEXT: Record<string, string> = {
   mythic: "text-rose-400",
 };
 
+function ImgOrEmoji({ src, alt, className }: { src: string | null | undefined; alt: string; className?: string }) {
+  if (src && /^https?:\/\//i.test(src)) {
+    return <img src={src} alt={alt} className={className} loading="lazy" />;
+  }
+  return <span className={className}>{src ?? "🎁"}</span>;
+}
+
 export default function CaseBattleRoom() {
   const { id } = useParams();
   const { profile, refetch } = useUserProfile();
@@ -335,7 +342,11 @@ export default function CaseBattleRoom() {
           </div>
           {visibleCase && battle.status !== "waiting" && (
             <div className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
-              <span className="text-base">{caseMeta[visibleCase.case_id]?.image ?? "🎁"}</span>
+              <ImgOrEmoji
+                src={caseMeta[visibleCase.case_id]?.image}
+                alt={caseMeta[visibleCase.case_id]?.name ?? "case"}
+                className="h-5 w-5 object-contain text-base"
+              />
               {caseMeta[visibleCase.case_id]?.name ?? "Case"}
             </div>
           )}
@@ -356,7 +367,9 @@ export default function CaseBattleRoom() {
                     : "border-border"
                 }`}
               >
-                <div className="text-2xl">{meta?.image ?? "🎁"}</div>
+                <div className="flex h-8 w-8 items-center justify-center text-2xl">
+                  <ImgOrEmoji src={meta?.image} alt={meta?.name ?? "case"} className="h-8 w-8 object-contain text-2xl" />
+                </div>
                 <div className="text-[10px] font-bold">{i + 1}</div>
               </div>
             );
