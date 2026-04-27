@@ -7,7 +7,7 @@ import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { formatCoins } from "@/lib/format";
 import { toast } from "sonner";
-import { Bot, Crown, Play, LogOut, Swords, X, RotateCcw, Pencil, Trophy } from "lucide-react";
+import { Bot, Crown, Play, LogOut, Swords, X, RotateCcw, Pencil, Trophy, UserPlus } from "lucide-react";
 import { CaseReel, type ReelItem } from "@/components/CaseReel";
 
 type Battle = {
@@ -267,6 +267,14 @@ export default function CaseBattleRoom() {
     setTimeout(() => refetch(), 1500);
   }
 
+  async function callBot() {
+    setBusy(true);
+    const { error } = await supabase.rpc("add_bot_to_battle", { _battle_id: id! });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Bot called in!");
+  }
+
   // Build the case_ids list for "Recreate" / "Edit Battle"
   const caseIdList = useMemo(
     () => bcases.slice().sort((a, b) => a.position - b.position).map((bc) => bc.case_id),
@@ -359,6 +367,16 @@ export default function CaseBattleRoom() {
                   className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-4 py-1.5 text-sm font-bold text-emerald-950 disabled:bg-muted disabled:text-muted-foreground"
                 >
                   <Play className="h-3 w-3" /> Start
+                </button>
+              )}
+              {isHost && players.length < battle.player_slots && (
+                <button
+                  onClick={callBot}
+                  disabled={busy}
+                  className="inline-flex items-center gap-1 rounded-full border border-fuchsia-400/50 bg-fuchsia-500/15 px-3 py-1.5 text-sm font-bold text-fuchsia-200 hover:bg-fuchsia-500/25 disabled:opacity-50"
+                  title="Add a bot to fill an empty slot"
+                >
+                  <UserPlus className="h-3 w-3" /> Call Bot
                 </button>
               )}
               {battle.fill_with_bots && autoStartIn !== null && autoStartIn > 0 && (
