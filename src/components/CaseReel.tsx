@@ -215,12 +215,14 @@ export function CaseReel({
         out.push(basePool[Math.floor(Math.random() * basePool.length)]);
       }
       out[LANDING_INDEX] = landed;
-      // More bait positions around the landing zone for stronger "almost!" feel.
-      const baitOffsets = [-5, -4, -3, -2, -1, 2, 3, 4, 5, 6];
+      // Bait positions — kept FAR enough from the landing tile that they
+      // never sit visibly next to the result (which would look like "I almost
+      // got that" / confuse what was actually won).
+      const baitOffsets = [-6, -5, -4, 4, 5, 6, 7];
       baitOffsets.forEach((off, idx) => {
         const pos = LANDING_INDEX + off;
         if (pos < 0 || pos >= STRIP_LEN || pos === LANDING_INDEX) return;
-        if (Math.random() < 0.7 && baitPool.length) {
+        if (Math.random() < 0.55 && baitPool.length) {
           out[pos] = baitPool[idx % baitPool.length];
         }
       });
