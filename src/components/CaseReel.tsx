@@ -533,16 +533,20 @@ export function CaseReel({
           className="pointer-events-none absolute inset-x-0 top-1/2 z-40 mt-1 flex -translate-y-1/2 items-center justify-center"
         >
           <div
-            className={`inline-flex items-center gap-1.5 rounded-full border-2 px-3 py-1 text-sm font-black shadow-[0_0_25px_rgba(255,215,0,0.55)] backdrop-blur ${
+            className={`flex flex-col items-center gap-0.5 rounded-xl border-2 px-3 py-1.5 shadow-[0_0_25px_rgba(255,215,0,0.55)] backdrop-blur ${
               RARITY_TEXT[result.rarity] ?? "text-slate-100"
-            } border-current bg-background/70`}
+            } border-current bg-background/75`}
           >
-            <MizrahiCoin size={12} />
+            <span className="max-w-[140px] truncate text-[10px] font-bold uppercase tracking-wide opacity-90">
+              {result.name && /^https?:\/\//i.test(result.name) ? "Item" : result.name}
+            </span>
             <motion.span
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.18 }}
+              className="inline-flex items-center gap-1.5 text-sm font-black"
             >
+              <MizrahiCoin size={12} />
               +{formatCoins(result.value)}
             </motion.span>
           </div>
