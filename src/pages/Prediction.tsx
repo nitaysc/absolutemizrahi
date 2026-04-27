@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatCoins } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { RefreshCw, ShieldCheck, Timer } from "lucide-react";
+import { RefreshCw, ShieldCheck, Timer, CalendarDays } from "lucide-react";
 
 type Team = {
   id: string;
@@ -90,6 +90,18 @@ const NBA_SCOREBOARD_URL =
   "https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json";
 const BETTING_WINDOW_DAYS = 7;
 
+function formatYmd(d: Date) {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}${m}${day}`;
+}
+
+function dayKey(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+}
+
 function safeNum(value: unknown) {
   const n = Number(value ?? 0);
   return Number.isFinite(n) ? n : 0;
@@ -106,6 +118,15 @@ function parseEspnGames(data: any): Matchup[] {
       const teamA = competitors[0];
       const teamB = competitors[1];
 
+      const teamAId = String(teamA?.team?.id ?? teamA?.id ?? "team-a");
+      const teamBId = String(teamB?.team?.id ?? teamB?.id ?? "team-b");
+      const teamAAbbr = String(teamA?.team?.abbreviation ?? "A");
+      const teamBAbbr = String(teamB?.team?.abbreviation ?? "B");
+      const teamALogo = String(teamA?.team?.logo ?? teamA?.team?.logos?.[0]?.href ?? "");
+      const teamBLogo = String(teamB?.team?.logo ?? teamB?.team?.logos?.[0]?.href ?? "");
+      const teamACandidates = [teamALogo, ...getNbaLogoCandidates(teamAId, teamAAbbr)].filter(Boolean);
+      const teamBCandidates = [teamBLogo, ...getNbaLogoCandidates(teamBId, teamBAbbr)].filter(Boolean);
+
       return {
         id: String(event.id ?? `${teamA?.id}-${teamB?.id}`),
         name: String(
@@ -119,18 +140,20 @@ function parseEspnGames(data: any): Matchup[] {
         source: "espn" as const,
         teams: [
           {
-            id: String(teamA?.team?.id ?? teamA?.id ?? "team-a"),
+            id: teamAId,
             name: String(teamA?.team?.displayName ?? teamA?.team?.name ?? "Team A"),
-            abbrev: String(teamA?.team?.abbreviation ?? "A"),
+            abbrev: teamAAbbr,
             score: safeNum(teamA?.score),
-            logo: String(teamA?.team?.logos?.[0]?.href ?? ""),
+            logo: teamACandidates[0],
+            logoCandidates: teamACandidates,
           },
           {
-            id: String(teamB?.team?.id ?? teamB?.id ?? "team-b"),
+            id: teamBId,
             name: String(teamB?.team?.displayName ?? teamB?.team?.name ?? "Team B"),
-            abbrev: String(teamB?.team?.abbreviation ?? "B"),
+            abbrev: teamBAbbr,
             score: safeNum(teamB?.score),
-            logo: String(teamB?.team?.logos?.[0]?.href ?? ""),
+            logo: teamBCandidates[0],
+            logoCandidates: teamBCandidates,
           },
         ] as [Team, Team],
       };
@@ -221,10 +244,36 @@ export default function Prediction() {
       let parsed: Matchup[] = [];
 
       try {
-        const res = await fetch(ESPN_SCOREBOARD_URL);
-        if (!res.ok) throw new Error("ESPN unavailable");
-        parsed = parseEspnGames(await res.json());
+        // Fetch ESPN scoreboard for each of the next 7 days. The default
+        // endpoint only returns today's slate, so to surface upcoming
+        // games we query each date explicitly.
+        const today = new Date();
+        const dates: string[] = [];
+        for (let i = 0; i < BETTING_WINDOW_DAYS; i++) {
+          const d = new Date(today);
+          d.setUTCDate(today.getUTCDate() + i);
+          dates.push(formatYmd(d));
+        }
+        const responses = await Promise.all(
+          dates.map((d) =>
+            fetch(`${ESPN_SCOREBOARD_URL}?dates=${d}`)
+              .then((r) => (r.ok ? r.json() : null))
+              .catch(() => null),
+          ),
+        );
+        const all: Matchup[] = [];
+        const seen = new Set<string>();
+        for (const data of responses) {
+          if (!data) continue;
+          for (const g of parseEspnGames(data)) {
+            if (seen.has(g.id)) continue;
+            seen.add(g.id);
+            all.push(g);
+          }
+        }
+        parsed = all;
         if (parsed.length > 0) setFeed("espn");
+        else throw new Error("ESPN returned no games");
       } catch {
         parsed = [];
       }
@@ -340,6 +389,20 @@ export default function Prediction() {
     () => games.filter((g) => isBettableGame(g)).sort((a, b) => +new Date(a.startTime) - +new Date(b.startTime)),
     [games],
   );
+
+  const gamesByDay = useMemo(() => {
+    const groups: { key: string; games: Matchup[] }[] = [];
+    const map = new Map<string, Matchup[]>();
+    for (const g of availableGames) {
+      const k = dayKey(g.startTime);
+      if (!map.has(k)) {
+        map.set(k, []);
+        groups.push({ key: k, games: map.get(k)! });
+      }
+      map.get(k)!.push(g);
+    }
+    return groups;
+  }, [availableGames]);
 
   async function placePrediction(game: Matchup) {
     if (!profile) return;
@@ -472,8 +535,15 @@ export default function Prediction() {
           No live or upcoming NBA games (next 7 days) available right now. Press refresh later.
         </div>
       ) : (
-        <div className="space-y-3">
-          {availableGames.map((game) => {
+        <div className="space-y-6">
+          {gamesByDay.map((group) => (
+            <div key={group.key} className="space-y-3">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground">
+                <CalendarDays className="h-4 w-4" />
+                {group.key}
+                <span className="text-muted-foreground/60">· {group.games.length} game{group.games.length === 1 ? "" : "s"}</span>
+              </div>
+              {group.games.map((game) => {
             const pickedId = selectedTeam[game.id];
             const [a, b] = game.teams;
             const locked = lockedBets[game.id];
@@ -576,7 +646,9 @@ export default function Prediction() {
                 </div>
               </article>
             );
-          })}
+              })}
+            </div>
+          ))}
         </div>
       )}
     </div>
