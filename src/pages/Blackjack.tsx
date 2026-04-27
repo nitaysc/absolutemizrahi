@@ -479,7 +479,7 @@ function SeatCard({
                 <div className="flex flex-wrap gap-1">
                   <AnimatePresence>
                     {h.cards.map((c, i) => (
-                      <PlayingCard key={`${hi}-${i}`} card={c} idx={i} small />
+                      <PlayingCard key={`${hi}-${i}`} card={c} idx={i} size="sm" />
                     ))}
                   </AnimatePresence>
                 </div>
