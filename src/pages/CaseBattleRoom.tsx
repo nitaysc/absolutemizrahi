@@ -524,7 +524,11 @@ export default function CaseBattleRoom() {
       <div
         className="grid gap-3"
         style={{
-          gridTemplateColumns: `repeat(${slots}, minmax(0, 1fr))`,
+          // On mobile, cap to 2 columns so 3v3 (6 slots) becomes a 2x3 grid
+          // instead of 6 unreadable slivers. Desktop keeps one column per slot.
+          gridTemplateColumns: isMobile
+            ? `repeat(${Math.min(slots, 2)}, minmax(0, 1fr))`
+            : `repeat(${slots}, minmax(0, 1fr))`,
         }}
       >
         {Array.from({ length: slots }).map((_, slot) => {
