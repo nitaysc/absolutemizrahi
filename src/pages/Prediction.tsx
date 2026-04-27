@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTrackGame } from "@/hooks/usePresence";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { supabase } from "@/integrations/supabase/client";
@@ -89,6 +89,7 @@ const ESPN_SCOREBOARD_URL =
 const NBA_SCOREBOARD_URL =
   "https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json";
 const BETTING_WINDOW_DAYS = 7;
+const SETTLEMENT_LOOKBACK_DAYS = 2;
 
 function formatYmd(d: Date) {
   const y = d.getUTCFullYear();
@@ -220,6 +221,13 @@ function isBettableGame(game: Matchup, now = Date.now()) {
   return inFuture && withinWeek;
 }
 
+function getTeamMarketChance(team: Team, opponent: Team, isLive: boolean) {
+  if (!isLive) return 50;
+  const scoreDiff = team.score - opponent.score;
+  const shifted = 50 + scoreDiff * 6;
+  return Math.max(5, Math.min(95, shifted));
+}
+
 export default function Prediction() {
   useTrackGame("prediction");
   const { profile, setLocalCoins } = useUserProfile();
@@ -244,12 +252,12 @@ export default function Prediction() {
       let parsed: Matchup[] = [];
 
       try {
-        // Fetch ESPN scoreboard for each of the next 7 days. The default
+        // Fetch ESPN scoreboard for recent + upcoming dates. The default
         // endpoint only returns today's slate, so to surface upcoming
         // games we query each date explicitly.
         const today = new Date();
         const dates: string[] = [];
-        for (let i = 0; i < BETTING_WINDOW_DAYS; i++) {
+        for (let i = -SETTLEMENT_LOOKBACK_DAYS; i < BETTING_WINDOW_DAYS; i++) {
           const d = new Date(today);
           d.setUTCDate(today.getUTCDate() + i);
           dates.push(formatYmd(d));
@@ -301,6 +309,7 @@ export default function Prediction() {
       .from("bets")
       .select("id,bet_amount,details")
       .eq("game", "prediction")
+      .eq("user_id", profile.id)
       .order("created_at", { ascending: false });
 
     if (error || !data) return;
@@ -344,46 +353,49 @@ export default function Prediction() {
     return () => window.clearInterval(interval);
   }, [profile?.id]);
 
-  useEffect(() => {
+  const settleWinners = useCallback(async () => {
     if (!profile) return;
+    let paidAny = false;
+    for (const game of games) {
+      if (!game.completed) continue;
 
-    const settleWinners = async () => {
-      for (const game of games) {
-        if (!game.completed) continue;
+      const openBet = lockedBets[game.id];
+      if (!openBet || settledOpenBetIds.has(openBet.betId)) continue;
 
-        const openBet = lockedBets[game.id];
-        if (!openBet || settledOpenBetIds.has(openBet.betId)) continue;
+      const [a, b] = game.teams;
+      if (a.score === b.score) continue;
+      const winner = a.score > b.score ? a : b;
+      if (winner.id !== openBet.pickedTeamId) continue;
 
-        const [a, b] = game.teams;
-        if (a.score === b.score) continue;
-        const winner = a.score > b.score ? a : b;
-        if (winner.id !== openBet.pickedTeamId) continue;
+      const { data, error } = await supabase.rpc("place_bet", {
+        _game: "prediction",
+        _bet_amount: openBet.amount,
+        _won: true,
+        _multiplier: WIN_SETTLEMENT_MULTIPLIER,
+        _details: {
+          entry_type: "prediction-settlement",
+          settlement_for: openBet.betId,
+          event_id: game.id,
+          event_name: game.name,
+          winner_team_id: winner.id,
+          winner_team_name: winner.name,
+          settled_at: new Date().toISOString(),
+        },
+      });
 
-        const { error } = await supabase.rpc("place_bet", {
-          _game: "prediction",
-          _bet_amount: openBet.amount,
-          _won: true,
-          _multiplier: WIN_SETTLEMENT_MULTIPLIER,
-          _details: {
-            entry_type: "prediction-settlement",
-            settlement_for: openBet.betId,
-            event_id: game.id,
-            event_name: game.name,
-            winner_team_id: winner.id,
-            winner_team_name: winner.name,
-            settled_at: new Date().toISOString(),
-          },
-        });
-
-        if (!error) {
-          toast.success(`✅ ${openBet.eventName} settled: ${openBet.pickedTeamName} won, paid ${WIN_MULTIPLIER}x`);
-          await loadLockedBets();
-        }
+      if (!error) {
+        paidAny = true;
+        if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
+        toast.success(`✅ ${openBet.eventName} settled: ${openBet.pickedTeamName} won, paid ${WIN_MULTIPLIER}x`);
       }
-    };
+    }
 
+    if (paidAny) await loadLockedBets();
+  }, [games, lockedBets, profile, setLocalCoins, settledOpenBetIds]);
+
+  useEffect(() => {
     void settleWinners();
-  }, [games, lockedBets, profile, settledOpenBetIds]);
+  }, [settleWinners]);
 
   const availableGames = useMemo(
     () => games.filter((g) => isBettableGame(g)).sort((a, b) => +new Date(a.startTime) - +new Date(b.startTime)),
@@ -480,16 +492,21 @@ export default function Prediction() {
     <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black tracking-tight">NBA PREDICTION</h1>
-          <p className="text-sm text-muted-foreground">Lock one pick per game. Bet live games or upcoming games within the next 7 days. Stake is deducted now. Winners settle at 2x when game is final.</p>
+          <h1 className="text-3xl font-black tracking-tight">NBA MARKETS</h1>
+          <p className="text-sm text-muted-foreground">Polymarket-inspired boards in Mizrahi style: one locked pick per matchup, stake deducted at entry, and automatic winner settlement at 2x when final.</p>
           <p className="text-xs text-muted-foreground/80">
             Feed: {feed === null ? "loading..." : feed.toUpperCase()} (auto-refresh every 30s)
           </p>
         </div>
-        <Button variant="outline" onClick={() => loadGames(true)} disabled={refreshing || loading} className="gap-2">
-          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-          {refreshing ? "Refreshing..." : "Refresh Games"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => loadGames(true)} disabled={refreshing || loading} className="gap-2">
+            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Refreshing..." : "Refresh Games"}
+          </Button>
+          <Button variant="outline" onClick={() => void settleWinners()} disabled={loading}>
+            Settle Winners
+          </Button>
+        </div>
       </header>
 
       <section className="rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/15 via-card/80 to-card/50 p-4 backdrop-blur-xl">
@@ -548,7 +565,7 @@ export default function Prediction() {
             const [a, b] = game.teams;
             const locked = lockedBets[game.id];
             return (
-              <article key={game.id} className="rounded-3xl border border-border bg-card/70 p-4 shadow-[0_8px_24px_-12px_hsl(var(--background))]">
+              <article key={game.id} className="rounded-3xl border border-primary/20 bg-gradient-to-b from-[#060d1f] to-card p-4 shadow-[0_12px_28px_-16px_hsl(var(--primary)/0.5)]">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h2 className="text-base font-bold">{game.name}</h2>
@@ -593,6 +610,8 @@ export default function Prediction() {
                     const logoKey = `${game.id}:${t.id}`;
                     const logoIndex = logoIndexByKey[logoKey] ?? 0;
                     const selectedLogo = t.logoCandidates?.[logoIndex] ?? t.logo;
+                    const opposing = t.id === a.id ? b : a;
+                    const marketChance = getTeamMarketChance(t, opposing, game.isLive);
 
                     return (
                     <button
@@ -601,11 +620,12 @@ export default function Prediction() {
                       disabled={!!locked}
                       className={`rounded-2xl border p-3 text-left transition ${
                         pickedId === t.id
-                          ? "border-primary bg-gradient-to-br from-primary/20 to-primary/5 shadow-[0_0_18px_hsl(var(--primary)/0.25)]"
-                          : "border-border bg-background/60 hover:border-primary/40"
+                          ? "border-primary bg-gradient-to-r from-primary/20 via-primary/10 to-transparent shadow-[0_0_18px_hsl(var(--primary)/0.25)]"
+                          : "border-border/80 bg-background/40 hover:border-primary/40"
                       } ${locked ? "cursor-not-allowed opacity-60" : ""}`}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
                         {selectedLogo ? (
                           <img
                             src={selectedLogo}
@@ -638,6 +658,11 @@ export default function Prediction() {
                           </p>
                           <p className="text-base font-black">{t.name}</p>
                           <p className="text-sm text-muted-foreground">Score: {t.score}</p>
+                        </div>
+                        </div>
+                        <div className="rounded-xl border border-primary/30 bg-primary/15 px-3 py-2 text-right">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Chance</p>
+                          <p className="text-2xl font-black text-primary">{marketChance}%</p>
                         </div>
                       </div>
                     </button>
