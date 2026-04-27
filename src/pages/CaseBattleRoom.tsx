@@ -7,7 +7,7 @@ import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { formatCoins } from "@/lib/format";
 import { toast } from "sonner";
-import { Bot, Crown, Play, LogOut, Swords, X, RotateCcw, Pencil, Trophy, UserPlus, Package } from "lucide-react";
+import { Bot, Crown, Play, LogOut, Swords, X, RotateCcw, Pencil, Trophy, UserPlus, Package, Coins } from "lucide-react";
 import { CaseReel, type ReelItem } from "@/components/CaseReel";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -325,6 +325,23 @@ export default function CaseBattleRoom() {
     if (error) return toast.error(error.message);
     refetch();
     navigate(`/cases/battles/${data}`);
+  }
+
+  async function quickSell() {
+    if (!battle) return;
+    setBusy(true);
+    const { data, error } = await supabase.rpc("sell_battle_inventory", {
+      _battle_id: battle.id,
+    });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    const amt = Number(data ?? 0);
+    if (amt > 0) {
+      toast.success(`Quick-sold for ${formatCoins(amt)} coins`);
+      refetch();
+    } else {
+      toast.info("Nothing to sell from this battle");
+    }
   }
 
   function editBattle() {
@@ -787,7 +804,7 @@ export default function CaseBattleRoom() {
                     )}
                     .
                     <div className="mt-1 text-[11px] font-bold text-amber-300">
-                      💎 Each winner's share lands in their inventory as items they can sell anytime.
+                      💎 Winners get items + cash voucher in inventory · Quick Sell pays 100%.
                     </div>
                   </div>
                 );
@@ -812,6 +829,21 @@ export default function CaseBattleRoom() {
                 >
                   <Package className="h-4 w-4" /> Inventory
                 </button>
+                {(() => {
+                  const meWon = !!players.find(
+                    (p) => p.user_id === profile?.id && p.team === battle.winner_team && !p.is_bot,
+                  );
+                  if (!meWon) return null;
+                  return (
+                    <button
+                      onClick={quickSell}
+                      disabled={busy}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 to-primary px-5 py-2 text-sm font-black uppercase tracking-wider text-background shadow-[0_0_20px_hsl(var(--primary)/0.55)] transition hover:brightness-110 disabled:opacity-50"
+                    >
+                      <Coins className="h-4 w-4" /> Quick Sell · 100%
+                    </button>
+                  );
+                })()}
                 <button
                   onClick={recreate}
                   disabled={busy}
