@@ -415,6 +415,7 @@ export default function Prediction() {
         pickedTeamId: String(details.picked_team_id ?? ""),
         pickedTeamName: String(details.picked_team_name ?? "Team"),
         amount: Number(row.bet_amount ?? 0),
+        multiplier: Number(details.expected_payout_multiplier ?? 2),
       };
     }
 
@@ -446,11 +447,15 @@ export default function Prediction() {
       const winner = a.score > b.score ? a : b;
       if (winner.id !== openBet.pickedTeamId) continue;
 
+      const payoutMultiplier = Math.max(MIN_MULTIPLIER, Number(openBet.multiplier) || 2);
+      // place_bet adds (multiplier - 1) * stake on a win, so we pass payoutMultiplier + 1
+      // to net out to payoutMultiplier × stake total return. We keep the simpler model:
+      // pass the full payout multiplier and let RPC apply it.
       const { data, error } = await supabase.rpc("place_bet", {
         _game: "prediction",
         _bet_amount: openBet.amount,
         _won: true,
-        _multiplier: WIN_SETTLEMENT_MULTIPLIER,
+        _multiplier: payoutMultiplier + 1,
         _details: {
           entry_type: "prediction-settlement",
           settlement_for: openBet.betId,
@@ -458,6 +463,7 @@ export default function Prediction() {
           event_name: game.name,
           winner_team_id: winner.id,
           winner_team_name: winner.name,
+          payout_multiplier: payoutMultiplier,
           settled_at: new Date().toISOString(),
         },
       });
@@ -465,7 +471,9 @@ export default function Prediction() {
       if (!error) {
         paidAny = true;
         if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
-        toast.success(`✅ ${openBet.eventName} settled: ${openBet.pickedTeamName} won, paid ${WIN_MULTIPLIER}x`);
+        toast.success(
+          `✅ ${openBet.eventName} — ${openBet.pickedTeamName} won! Paid ${payoutMultiplier.toFixed(2)}×`,
+        );
       }
     }
 
@@ -528,9 +536,14 @@ export default function Prediction() {
       return;
     }
 
+    const opponent = game.teams.find((t) => t.id !== picked.id)!;
+    const odds = getMatchupOdds(game.teams[0], game.teams[1], game.isLive);
+    const pickedOdds = picked.id === game.teams[0].id ? odds.a : odds.b;
+    const pickedMultiplier = pickedOdds.multiplier;
+
     if (
       !window.confirm(
-        `Are you sure? Bet ${formatCoins(bet)} on ${picked.name}. This cannot be changed after placing.`,
+        `Bet ${formatCoins(bet)} on ${picked.name} @ ${pickedMultiplier.toFixed(2)}× (win pays ${formatCoins(Math.floor(bet * pickedMultiplier))}). This cannot be changed.`,
       )
     ) {
       return;
@@ -549,7 +562,10 @@ export default function Prediction() {
         source: game.source,
         picked_team_id: picked.id,
         picked_team_name: picked.name,
-        expected_payout_multiplier: WIN_MULTIPLIER,
+        expected_payout_multiplier: pickedMultiplier,
+        picked_team_probability: pickedOdds.prob,
+        opponent_team_id: opponent.id,
+        opponent_team_name: opponent.name,
         status: "pending",
         opened_at: new Date().toISOString(),
       },
@@ -563,7 +579,9 @@ export default function Prediction() {
     }
 
     if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
-    toast.success(`Bet locked: ${picked.name}. You will auto-settle at ${WIN_MULTIPLIER}x if this team wins.`);
+    toast.success(
+      `🔒 Locked ${picked.name} @ ${pickedMultiplier.toFixed(2)}× — auto-settles when game ends.`,
+    );
     await loadLockedBets();
   }
 
