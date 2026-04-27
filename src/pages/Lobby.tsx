@@ -22,8 +22,8 @@ import snakesImg from "@/assets/games/snakes.jpg";
 import molesImg from "@/assets/games/moles.jpg";
 import chessImg from "@/assets/games/chess.jpg";
 import pumpImg from "@/assets/games/pump.jpg";
- import rouletteImg from "@/assets/games/roulette.png";
- import kenoImg from "@/assets/games/keno.png";
+import rouletteImg from "@/assets/games/roulette.png";
+import kenoImg from "@/assets/games/keno.png";
 
 export default function Lobby() {
   const { profile, refetch } = useUserProfile();
@@ -60,6 +60,7 @@ export default function Lobby() {
     { to: "/pump", key: "pump", title: "PUMP", img: pumpImg },
     { to: "/roulette", key: "roulette", title: "ROULETTE", img: rouletteImg },
     { to: "/keno", key: "keno", title: "KENO", img: kenoImg },
+    { to: "/slide", key: "slide", title: "SLIDE", img: pumpImg },
   ];
 
   return (

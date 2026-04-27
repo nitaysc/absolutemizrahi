@@ -161,21 +161,21 @@ export default function Keno() {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-b from-[#1a2f88] via-[#1f3ea7] to-[#10165f] p-4 text-primary-foreground shadow-[0_20px_60px_rgba(6,12,40,0.55)] sm:p-6">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.25),transparent_68%)]" />
-      <div className="pointer-events-none absolute -bottom-16 left-1/2 h-56 w-[120%] -translate-x-1/2 rounded-[100%] bg-[#090d43]/85" />
+    <div className="relative overflow-hidden rounded-3xl border border-border bg-card/70 p-4 text-foreground shadow-[0_20px_60px_rgba(6,12,40,0.35)] backdrop-blur-xl sm:p-6">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.15),transparent_68%)]" />
+      <div className="pointer-events-none absolute -bottom-16 left-1/2 h-56 w-[120%] -translate-x-1/2 rounded-[100%] bg-background/70" />
 
       <div className="relative grid grid-cols-1 gap-4 xl:grid-cols-[360px_1fr]">
-        <section className="rounded-3xl border border-white/20 bg-[#0d1d67]/70 p-4 backdrop-blur-sm">
+        <section className="rounded-3xl border border-border bg-background/40 p-4 backdrop-blur-sm">
           <div className="flex items-center justify-between gap-3">
-            <h1 className="flex items-center gap-2 text-2xl font-black tracking-wide text-white">
-              <Plane className="h-6 w-6 text-cyan-300" /> SKY KENO
+            <h1 className="flex items-center gap-2 text-2xl font-black tracking-wide">
+              <Plane className="h-6 w-6 text-primary" /> SKY KENO
             </h1>
-            <span className="rounded-full border border-cyan-300/30 bg-cyan-400/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-cyan-200">
+            <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-primary">
               live
             </span>
           </div>
-          <p className="mt-2 text-sm text-blue-100/90">
+          <p className="mt-2 text-sm text-muted-foreground">
             Aviator-style cockpit with classic Keno mechanics. Pick up to 10 numbers
             and launch for a higher multiplier.
           </p>
@@ -184,7 +184,7 @@ export default function Keno() {
             <BetControls bet={bet} setBet={setBet} disabled={rolling} />
 
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-blue-200/80">
+              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 Difficulty
               </label>
               <Select
@@ -192,10 +192,10 @@ export default function Keno() {
                 onValueChange={(value) => setDifficulty(value as Difficulty)}
                 disabled={rolling}
               >
-                <SelectTrigger className="mt-2 h-11 rounded-xl border-white/25 bg-[#08134a]/90 text-base font-semibold text-white">
+                <SelectTrigger className="mt-2 h-10 rounded-xl border-border bg-background/60 text-sm font-semibold">
                   <SelectValue placeholder="Select difficulty" />
                 </SelectTrigger>
-                <SelectContent className="border-white/20 bg-[#0d1956] text-white">
+                <SelectContent className="border-border bg-popover">
                   <SelectItem value="low">Low turbulence</SelectItem>
                   <SelectItem value="medium">Cruise</SelectItem>
                   <SelectItem value="high">Storm</SelectItem>
@@ -208,7 +208,7 @@ export default function Keno() {
                 variant="secondary"
                 onClick={randomPick}
                 disabled={rolling}
-                className="h-11 border border-white/15 bg-white/10 text-white hover:bg-white/20"
+                className="h-11 border border-border bg-background/60 hover:bg-muted"
               >
                 <Shuffle className="mr-2 h-4 w-4" /> Random
               </Button>
@@ -216,7 +216,7 @@ export default function Keno() {
                 variant="secondary"
                 onClick={clearBoard}
                 disabled={rolling}
-                className="h-11 border border-white/15 bg-white/10 text-white hover:bg-white/20"
+                className="h-11 border border-border bg-background/60 hover:bg-muted"
               >
                 <RotateCcw className="mr-2 h-4 w-4" /> Reset
               </Button>
@@ -225,56 +225,56 @@ export default function Keno() {
             <Button
               onClick={placeBet}
               disabled={rolling || selected.size === 0}
-              className="h-14 w-full rounded-2xl border border-cyan-200/50 bg-cyan-400/25 text-lg font-black tracking-wide text-white shadow-[0_0_25px_rgba(34,211,238,0.35)] hover:bg-cyan-300/35"
+              className="h-14 w-full rounded-2xl text-lg font-black tracking-wide shadow-[0_0_25px_hsl(var(--primary)/0.35)]"
             >
               <Play className="mr-2 h-5 w-5" /> {rolling ? "LAUNCHING..." : "LAUNCH ROUND"}
             </Button>
 
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="rounded-xl border border-white/15 bg-[#08124a]/75 p-3">
-                <p className="text-xs uppercase tracking-wider text-blue-200/75">Selected</p>
-                <p className="text-xl font-black text-white">{selected.size}/10</p>
+              <div className="rounded-xl border border-border bg-background/60 p-3">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Selected</p>
+                <p className="text-xl font-black">{selected.size}/10</p>
               </div>
-              <div className="rounded-xl border border-white/15 bg-[#08124a]/75 p-3">
-                <p className="text-xs uppercase tracking-wider text-blue-200/75">Drawn</p>
-                <p className="text-xl font-black text-white">{drawnSequence.length}/{drawCount}</p>
+              <div className="rounded-xl border border-border bg-background/60 p-3">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Drawn</p>
+                <p className="text-xl font-black">{drawnSequence.length}/{drawCount}</p>
               </div>
-              <div className="rounded-xl border border-white/15 bg-[#08124a]/75 p-3">
-                <p className="text-xs uppercase tracking-wider text-blue-200/75">Hits</p>
-                <p className="text-xl font-black text-emerald-300">{hits}</p>
+              <div className="rounded-xl border border-border bg-background/60 p-3">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Hits</p>
+                <p className="text-xl font-black text-[hsl(var(--success))]">{hits}</p>
               </div>
-              <div className="rounded-xl border border-white/15 bg-[#08124a]/75 p-3">
-                <p className="text-xs uppercase tracking-wider text-blue-200/75">Multiplier</p>
-                <p className="text-xl font-black text-yellow-300">{multiplier.toFixed(2)}×</p>
+              <div className="rounded-xl border border-border bg-background/60 p-3">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Multiplier</p>
+                <p className="text-xl font-black text-primary">{multiplier.toFixed(2)}×</p>
               </div>
             </div>
 
-            <div className="rounded-xl border border-cyan-300/20 bg-cyan-400/10 p-3 text-sm font-semibold text-cyan-100">
-              Profit on win: <span className="text-white">+{formatCoins(potentialProfit)}</span>
+            <div className="rounded-xl border border-primary/25 bg-primary/10 p-3 text-sm font-semibold text-foreground">
+              Profit on win: <span className="font-black">+{formatCoins(potentialProfit)}</span>
             </div>
           </div>
         </section>
 
-        <section className="rounded-3xl border border-white/20 bg-[#0a1552]/65 p-4 backdrop-blur-sm sm:p-5">
-          <div className="mb-4 grid grid-cols-1 gap-2 text-white sm:grid-cols-3">
-            <div className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2">
-              <Gauge className="h-4 w-4 text-cyan-300" />
+        <section className="rounded-3xl border border-border bg-background/35 p-4 backdrop-blur-sm sm:p-5">
+          <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-background/50 px-3 py-2">
+              <Gauge className="h-4 w-4 text-primary" />
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-blue-200">Altitude</p>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Altitude</p>
                 <p className="text-sm font-bold">{drawnSequence.length * 120} m</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2">
-              <Compass className="h-4 w-4 text-cyan-300" />
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-background/50 px-3 py-2">
+              <Compass className="h-4 w-4 text-primary" />
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-blue-200">Distance</p>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Distance</p>
                 <p className="text-sm font-bold">{selected.size * 8} km</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2">
-              <Radar className="h-4 w-4 text-cyan-300" />
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-background/50 px-3 py-2">
+              <Radar className="h-4 w-4 text-primary" />
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-blue-200">Target Lock</p>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Target Lock</p>
                 <p className="text-sm font-bold">{Math.round((hits / Math.max(selected.size, 1)) * 100)}%</p>
               </div>
             </div>
@@ -309,7 +309,7 @@ export default function Keno() {
                         ? "border-cyan-300 bg-cyan-400/30 text-white"
                         : isDrawn
                           ? "border-amber-300 bg-amber-400/25 text-amber-100"
-                          : "border-white/15 bg-[#0a1658]/80 text-white hover:border-cyan-300/70"
+                          : "border-border bg-background/60 hover:border-primary/70"
                   }`}
                 >
                   {n}
@@ -318,8 +318,8 @@ export default function Keno() {
             })}
           </div>
 
-          <div className="mt-4 flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-bold uppercase tracking-wider text-blue-100">
-            <Target className="h-4 w-4 text-cyan-300" />
+          <div className="mt-4 flex items-center gap-2 rounded-xl border border-border bg-background/50 px-3 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            <Target className="h-4 w-4 text-primary" />
             Draw order: {drawnSequence.length ? drawnSequence.join(" · ") : "Waiting for launch"}
           </div>
         </section>
