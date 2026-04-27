@@ -3,9 +3,9 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { usePresence } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
-import { Gift, TrendingUp, Package, Swords, Upload } from "lucide-react";
+import { Gift, TrendingUp, Package, Swords } from "lucide-react";
 import { formatCoins } from "@/lib/format";
 import mizrahi from "@/assets/absolute-mizrahi.gif";
 import diceImg from "@/assets/games/dice.jpg";
@@ -30,19 +30,6 @@ export default function Lobby() {
   const { profile, refetch } = useUserProfile();
   const { counts: playing, total } = usePresence();
   const [claiming, setClaiming] = useState(false);
-  const [cases, setCases] = useState<{ id: string; name: string; image: string | null; price: number }[]>([]);
-
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from("cases")
-        .select("id,name,image,price")
-        .eq("status", "approved")
-        .order("price")
-        .limit(8);
-      setCases(data ?? []);
-    })();
-  }, []);
 
   const canClaim =
     !profile?.last_daily_bonus ||
