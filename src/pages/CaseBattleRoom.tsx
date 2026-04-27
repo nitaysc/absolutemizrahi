@@ -142,8 +142,8 @@ export default function CaseBattleRoom() {
     // If the battle finished more than 30s ago, treat it as "already played" and
     // skip the animation — that prevents the room feeling "stuck" when revisiting.
     const finishedSecs =
-      battle.status === "finished" && (battle as any).finished_at
-        ? (Date.now() - new Date((battle as any).finished_at).getTime()) / 1000
+      battle.status === "finished" && battle.finished_at
+        ? (Date.now() - new Date(battle.finished_at).getTime()) / 1000
         : 0;
     if (finishedSecs > 30) {
       setCurrentSpin(battle.rounds_total - 1);
