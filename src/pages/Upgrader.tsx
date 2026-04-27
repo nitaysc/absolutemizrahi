@@ -177,7 +177,7 @@ export default function Upgrader() {
               <Zap className="h-7 w-7 text-fuchsia-400" /> UPGRADER
             </h1>
             <p className="text-sm text-muted-foreground">
-              Risk inventory items + coins for a shot at a higher-value target. House edge 10%.
+              Risk your items (and/or coins) for a shot at a bigger item. Lose the roll, lose the stake. House edge 10%.
             </p>
           </div>
         </div>
@@ -195,7 +195,7 @@ export default function Upgrader() {
           {/* Stake side */}
           <div className="rounded-2xl border border-border bg-card/60 p-4">
             <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              Your stake
+              Your stake (items + coins)
             </div>
             <div className="mt-1 inline-flex items-center gap-1 text-2xl font-black">
               <MizrahiCoin size={18} /> {formatCoins(totalStake)}
@@ -204,6 +204,11 @@ export default function Upgrader() {
               {selectedIds.size} item{selectedIds.size === 1 ? "" : "s"} ·{" "}
               {formatCoins(Math.floor(cash || 0))} coins
             </div>
+            {target && totalStake > 0 && (
+              <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-fuchsia-500/15 px-2 py-0.5 text-[11px] font-black text-fuchsia-200">
+                ×{(target.value / totalStake).toFixed(2)} multiplier
+              </div>
+            )}
             <div className="mt-3 flex items-center gap-2">
               <Coins className="h-4 w-4 text-amber-300" />
               <input
@@ -211,10 +216,13 @@ export default function Upgrader() {
                 min={0}
                 value={cash || ""}
                 onChange={(e) => setCash(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
-                placeholder="Add coins"
+                placeholder="Add coins (optional)"
                 className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm font-bold outline-none focus:border-primary"
               />
             </div>
+            <p className="mt-2 text-[10px] text-muted-foreground">
+              Tip: you can stake items only — no coins required. Just pick skins below.
+            </p>
           </div>
 
           {/* Wheel */}

@@ -6,7 +6,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { formatCoins } from "@/lib/format";
 import { toast } from "sonner";
-import { Swords, Upload, Shield, Package, X } from "lucide-react";
+import { Swords, Upload, Shield, Package, X, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { CaseReel, type ReelItem, type ReelResult } from "@/components/CaseReel";
 import { CaseDetailsModal } from "@/components/CaseDetailsModal";
@@ -116,6 +116,18 @@ export default function Cases() {
         <div className="mt-4 flex flex-wrap gap-2">
           <Link to="/cases/battles" className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-[0_0_18px_hsl(var(--primary)/0.5)]">
             <Swords className="h-4 w-4" /> Case Battles
+          </Link>
+          <Link
+            to="/upgrader"
+            className="inline-flex items-center gap-2 rounded-full border border-fuchsia-400/50 bg-gradient-to-r from-fuchsia-500/20 to-primary/20 px-4 py-2 text-sm font-bold text-fuchsia-200 hover:brightness-110"
+          >
+            <Zap className="h-4 w-4" /> Upgrader
+          </Link>
+          <Link
+            to="/inventory"
+            className="inline-flex items-center gap-2 rounded-full border border-amber-400/50 bg-amber-500/15 px-4 py-2 text-sm font-bold text-amber-200 hover:bg-amber-500/25"
+          >
+            <Package className="h-4 w-4" /> Inventory
           </Link>
           <Link to="/cases/upload" className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-bold">
             <Upload className="h-4 w-4" /> Upload Case
