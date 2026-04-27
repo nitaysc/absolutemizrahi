@@ -14,12 +14,18 @@ type Difficulty = "low" | "medium" | "high";
 const BOARD_NUMBERS = Array.from({ length: 40 }, (_, i) => i + 1);
 const DRAW_COUNT = 10;
 const DRAW_REVEAL_MS = 120;
+const HOUSE_EDGE = 0.01;
 
 const DIFFICULTY_MULTIPLIERS: Record<Difficulty, number[]> = {
   low: [0, 0, 0.6, 1.1, 1.8, 3, 5, 8, 12, 18, 26],
   medium: [0, 0, 0.3, 1.4, 2.4, 4.2, 8, 13, 20, 32, 48],
   high: [0, 0, 0, 1.8, 3.2, 6, 12, 22, 40, 65, 100],
 };
+
+function applyHouseEdge(multiplier: number) {
+  if (multiplier <= 0) return 0;
+  return multiplier * (1 - HOUSE_EDGE);
+}
 
 export default function Keno() {
   useTrackGame("keno");
@@ -35,7 +41,7 @@ export default function Keno() {
     () => [...selected].filter((n) => drawn.has(n)).length,
     [selected, drawn],
   );
-  const multiplier = selected.size > 0 ? DIFFICULTY_MULTIPLIERS[difficulty][hits] ?? 0 : 0;
+  const multiplier = selected.size > 0 ? applyHouseEdge(DIFFICULTY_MULTIPLIERS[difficulty][hits] ?? 0) : 0;
   const potentialProfit = Math.max(Math.floor(bet * multiplier) - bet, 0);
 
   function toggleNumber(n: number) {
@@ -76,7 +82,7 @@ export default function Keno() {
     const draw = [...BOARD_NUMBERS].sort(() => Math.random() - 0.5).slice(0, DRAW_COUNT);
     const drawSet = new Set(draw);
     const hitCount = [...selected].filter((n) => drawSet.has(n)).length;
-    const roundMultiplier = DIFFICULTY_MULTIPLIERS[difficulty][hitCount] ?? 0;
+    const roundMultiplier = applyHouseEdge(DIFFICULTY_MULTIPLIERS[difficulty][hitCount] ?? 0);
     const won = roundMultiplier > 1;
 
     const animateDraw = new Promise<void>((resolve) => {
@@ -125,7 +131,9 @@ export default function Keno() {
         <h1 className="flex items-center gap-2 text-2xl font-black">
           <Target className="h-6 w-6 text-primary" /> KENO
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">Select up to 10 numbers and match the draw.</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Select up to 10 numbers and match the draw. Payouts include a 1% house edge.
+        </p>
 
         <div className="mt-4 space-y-4">
           <BetControls bet={bet} setBet={setBet} disabled={rolling} />
