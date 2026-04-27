@@ -13,8 +13,7 @@ import { GalleryHorizontal, ChevronDown } from "lucide-react";
 // Stake-style "Slides": a long horizontal strip of randomly-generated
 // multipliers scrolls past a fixed pointer in the middle. Whatever card
 // stops under the pointer is the round result. Win if landed >= target.
-// Heavier house edge than Limbo — Slides was paying out way too generously.
-const HOUSE_EDGE = 0.82;
+const HOUSE_EDGE = 0.99;
 const CARD_W = 88; // px including gap
 const STRIP_LEN = 80;
 const LANDING_INDEX = 60; // where the marker stops in the strip
