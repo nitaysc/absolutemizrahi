@@ -100,6 +100,8 @@ export default function CaseBattleRoom() {
   // Track previous human-player count so we can extend the countdown when
   // a new player joins (gives the room time to settle / let others join too).
   const prevPlayerCountRef = useRef<number>(0);
+  // Borrow % chosen when joining (only used if host enabled allow_borrow)
+  const [joinBorrowPct, setJoinBorrowPct] = useState(0);
 
   async function refreshAll() {
     const [{ data: b }, { data: p }, { data: bc }, { data: r }] = await Promise.all([
@@ -272,8 +274,12 @@ export default function CaseBattleRoom() {
   }, [battle?.status, battle?.fill_with_bots, players.length, isHost]);
 
   async function join() {
+    const pct = battle?.allow_borrow ? joinBorrowPct : 0;
     setBusy(true);
-    const { error } = await supabase.rpc("join_case_battle", { _battle_id: id! });
+    const { error } = await supabase.rpc("join_case_battle", {
+      _battle_id: id!,
+      _borrow_pct: pct,
+    });
     setBusy(false);
     if (error) return toast.error(error.message);
     refetch();
