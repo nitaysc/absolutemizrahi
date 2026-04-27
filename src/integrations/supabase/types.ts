@@ -683,6 +683,51 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory: {
+        Row: {
+          created_at: string
+          id: string
+          item_image: string | null
+          item_name: string
+          rarity: string
+          sold_at: string | null
+          sold_for: number | null
+          source: string
+          source_ref: string | null
+          status: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_image?: string | null
+          item_name: string
+          rarity?: string
+          sold_at?: string | null
+          sold_for?: number | null
+          source?: string
+          source_ref?: string | null
+          status?: string
+          user_id: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_image?: string | null
+          item_name?: string
+          rarity?: string
+          sold_at?: string | null
+          sold_for?: number | null
+          source?: string
+          source_ref?: string | null
+          status?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: []
+      }
       poker_seats: {
         Row: {
           avatar: string
@@ -916,6 +961,10 @@ export type Database = {
           value: number
           weight: number
         }[]
+      }
+      _settle_battle_to_inventory: {
+        Args: { _battle_id: string }
+        Returns: undefined
       }
       _slots_for_mode: {
         Args: { _mode: string }
@@ -1338,6 +1387,8 @@ export type Database = {
           username: string
         }[]
       }
+      sell_all_inventory: { Args: never; Returns: number }
+      sell_inventory_item: { Args: { _item_id: string }; Returns: number }
       start_case_battle: { Args: { _battle_id: string }; Returns: undefined }
       transfer_coins: {
         Args: { _amount: number; _recipient_username: string }
