@@ -28,6 +28,7 @@ type Battle = {
   winner_team: number | null;
   pot_payout: number | null;
   finished_at: string | null;
+  allow_borrow?: boolean | null;
 };
 type Player = {
   id: string;
