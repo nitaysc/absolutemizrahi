@@ -22,7 +22,9 @@ const PAYOUTS_BY_RISK: Record<Risk, number[]> = {
   // doesn't feel rigged. Edges still pay big to keep the dopamine.
   low:    [16, 9, 4, 2, 1.4, 1.2, 1, 0.9, 0.7, 0.9, 1, 1.2, 1.4, 2, 4, 9, 16],
   medium: [55, 18, 7, 3, 1.8, 1.3, 1.1, 0.8, 0.5, 0.8, 1.1, 1.3, 1.8, 3, 7, 18, 55],
-  high:   [555, 130, 38, 12, 4.5, 2, 1.1, 0.4, 0.2, 0.4, 1.1, 2, 4.5, 12, 38, 130, 555],
+  // High risk: still a real jackpot on the edges, but the top multipliers
+  // are dialed down so the EV stays balanced (was way too OP at 555×).
+  high:   [180, 50, 18, 7, 3, 1.4, 0.8, 0.3, 0.2, 0.3, 0.8, 1.4, 3, 7, 18, 50, 180],
 };
 const BUCKETS = 17;
 

@@ -204,7 +204,17 @@ export default function Profile() {
             <PlayerAvatar avatar={profile?.avatar} size={56} className="rounded-2xl" />
           </div>
           <div>
-            <h1 className="text-3xl font-black tracking-tight">PROFILE</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-3xl font-black tracking-tight">PROFILE</h1>
+              {streak > 0 && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full border border-orange-400/40 bg-orange-500/15 px-2 py-0.5 text-xs font-black tabular-nums text-orange-300"
+                  title={`${streak} day daily-bet streak`}
+                >
+                  🔥 {streak}d
+                </span>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground">{user?.email}</p>
           </div>
         </div>
