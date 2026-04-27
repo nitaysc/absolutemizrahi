@@ -9,7 +9,18 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { AVATAR_OPTIONS } from "@/lib/avatars";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
-import { calculateDailyStreak } from "@/lib/streak";
+import {
+  calculateDailyStreak,
+  getStreakTimezone,
+  setStreakTimezone,
+} from "@/lib/streak";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Bet {
   id: string;
@@ -37,6 +48,8 @@ export default function Profile() {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [tz, setTz] = useState<string>(() => getStreakTimezone());
+  const [betDays, setBetDays] = useState<string[]>([]);
 
   const isAdmin = user?.email?.toLowerCase() === "ps4spotifynitay@gmail.com";
 
@@ -111,10 +124,25 @@ export default function Profile() {
       );
 
       setStreak(
-        calculateDailyStreak((streakRes.data ?? []).map((r) => r.created_at)),
+        calculateDailyStreak(
+          (streakRes.data ?? []).map((r) => r.created_at),
+          new Date(),
+          tz,
+        ),
       );
+      setBetDays((streakRes.data ?? []).map((r) => r.created_at));
     })();
-  }, [user, profile?.coins]);
+  }, [user, profile?.coins, tz]);
+
+  // Re-derive streak whenever the chosen timezone changes — no need to refetch.
+  useEffect(() => {
+    setStreak(calculateDailyStreak(betDays, new Date(), tz));
+  }, [tz, betDays]);
+
+  function changeTz(value: string) {
+    setStreakTimezone(value);
+    setTz(value);
+  }
 
   async function saveName() {
     if (!user) return;
@@ -398,6 +426,30 @@ export default function Profile() {
         Streak rule: log in and place at least one bet each day. Miss a day and it resets.
       </p>
 
+      <section className="rounded-3xl border border-border bg-card/70 p-5 backdrop-blur-xl">
+        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+          Streak timezone
+        </label>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Days are counted using this timezone — pick the one you actually live in so
+          midnight matches your day.
+        </p>
+        <div className="mt-3">
+          <Select value={tz} onValueChange={changeTz}>
+            <SelectTrigger className="w-full sm:w-80">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="max-h-72">
+              {TIMEZONE_OPTIONS.map((z) => (
+                <SelectItem key={z.value} value={z.value} className="text-sm">
+                  {z.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </section>
+
       <section>
         <h2 className="mb-2 text-sm font-bold uppercase tracking-widest text-muted-foreground">Recent bets</h2>
         {bets.length === 0 ? (
@@ -433,6 +485,36 @@ export default function Profile() {
     </div>
   );
 }
+
+const TIMEZONE_OPTIONS: { value: string; label: string }[] = (() => {
+  const local = (() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    } catch {
+      return "UTC";
+    }
+  })();
+  const base = [
+    { value: local, label: `Local (${local})` },
+    { value: "UTC", label: "UTC" },
+    { value: "Asia/Jerusalem", label: "Israel · Asia/Jerusalem" },
+    { value: "Europe/London", label: "UK · Europe/London" },
+    { value: "Europe/Berlin", label: "Central Europe · Europe/Berlin" },
+    { value: "America/New_York", label: "US East · America/New_York" },
+    { value: "America/Chicago", label: "US Central · America/Chicago" },
+    { value: "America/Denver", label: "US Mountain · America/Denver" },
+    { value: "America/Los_Angeles", label: "US West · America/Los_Angeles" },
+    { value: "America/Sao_Paulo", label: "Brazil · America/Sao_Paulo" },
+    { value: "Asia/Dubai", label: "UAE · Asia/Dubai" },
+    { value: "Asia/Kolkata", label: "India · Asia/Kolkata" },
+    { value: "Asia/Shanghai", label: "China · Asia/Shanghai" },
+    { value: "Asia/Tokyo", label: "Japan · Asia/Tokyo" },
+    { value: "Australia/Sydney", label: "Australia · Australia/Sydney" },
+  ];
+  // Dedupe in case local matches one of the named zones.
+  const seen = new Set<string>();
+  return base.filter((o) => (seen.has(o.value) ? false : (seen.add(o.value), true)));
+})();
 
 function Stat({
   label,
