@@ -41,6 +41,7 @@ const RARITY_TEXT: Record<string, string> = {
 
 export default function Cases() {
   const { profile, refetch } = useUserProfile();
+  const isMobile = useIsMobile();
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
   const [opening, setOpening] = useState<string | null>(null);
@@ -249,7 +250,7 @@ export default function Cases() {
                     result={{ name: r.name, image: r.image, value: r.value, rarity: r.rarity }}
                     spinKey={`${spinKey}-${i}`}
                     durationMs={5500 + i * 250}
-                    size="md"
+                    size={isMobile ? "sm" : "md"}
                     onComplete={
                       i === results.length - 1
                         ? () => {
