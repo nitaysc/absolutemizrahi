@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { formatCoins } from "@/lib/format";
 import { toast } from "sonner";
-import { Bot, Crown, Play, LogOut, Sparkles, Swords } from "lucide-react";
+import { Bot, Crown, Play, LogOut, Swords } from "lucide-react";
+import { CaseReel, type ReelItem } from "@/components/CaseReel";
 
 type Battle = {
   id: string;
@@ -48,13 +49,13 @@ type Round = {
   special_spin: string;
 };
 
-const RARITY: Record<string, string> = {
-  common: "from-slate-500/40 to-slate-700/20 border-slate-500/40",
-  uncommon: "from-emerald-500/40 to-emerald-700/20 border-emerald-400/50",
-  rare: "from-sky-500/40 to-blue-700/20 border-sky-400/50",
-  epic: "from-fuchsia-500/40 to-purple-700/20 border-fuchsia-400/60",
-  legendary: "from-amber-500/50 to-orange-700/20 border-amber-400/70",
-  mythic: "from-rose-500/60 to-pink-700/20 border-rose-400/80",
+const RARITY_TEXT: Record<string, string> = {
+  common: "text-slate-300",
+  uncommon: "text-emerald-400",
+  rare: "text-sky-400",
+  epic: "text-fuchsia-400",
+  legendary: "text-amber-400",
+  mythic: "text-rose-400",
 };
 
 export default function CaseBattleRoom() {
@@ -66,6 +67,7 @@ export default function CaseBattleRoom() {
   const [bcases, setBcases] = useState<BattleCase[]>([]);
   const [rounds, setRounds] = useState<Round[]>([]);
   const [caseMeta, setCaseMeta] = useState<Record<string, { name: string; image: string | null }>>({});
+  const [itemPools, setItemPools] = useState<Record<string, ReelItem[]>>({});
   const [revealCount, setRevealCount] = useState(0);
   const [busy, setBusy] = useState(false);
 
@@ -82,13 +84,19 @@ export default function CaseBattleRoom() {
     setRounds((r ?? []) as Round[]);
     if (bc && bc.length) {
       const ids = Array.from(new Set(bc.map((x) => x.case_id)));
-      const { data: cs } = await supabase
-        .from("cases")
-        .select("id,name,image")
-        .in("id", ids);
+      const [{ data: cs }, { data: items }] = await Promise.all([
+        supabase.from("cases").select("id,name,image").in("id", ids),
+        supabase.from("case_items").select("case_id,name,image,value,rarity").in("case_id", ids),
+      ]);
       const meta: Record<string, { name: string; image: string | null }> = {};
-      (cs ?? []).forEach((c) => (meta[c.id] = { name: c.name, image: c.image }));
+      (cs ?? []).forEach((c: any) => (meta[c.id] = { name: c.name, image: c.image }));
       setCaseMeta(meta);
+      const pools: Record<string, ReelItem[]> = {};
+      (items ?? []).forEach((it: any) => {
+        if (!pools[it.case_id]) pools[it.case_id] = [];
+        pools[it.case_id].push({ name: it.name, image: it.image, value: it.value, rarity: it.rarity });
+      });
+      setItemPools(pools);
     }
   }
 
@@ -107,22 +115,26 @@ export default function CaseBattleRoom() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // Reveal rounds one-by-one for animation
+  // Reveal rounds one-by-one for animation — paced to match the reel spin
   useEffect(() => {
     if (!battle || battle.status !== "finished") {
       setRevealCount(rounds.length > 0 ? rounds.length : 0);
       return;
     }
     setRevealCount(0);
-    const stepMs = battle.fast ? 350 : 900;
-    let i = 0;
+    const stepMs = battle.fast ? 2200 : 6000;
     const total = battle.rounds_total;
+    const kickOff = setTimeout(() => setRevealCount(1), 250);
+    let i = 1;
     const t = setInterval(() => {
       i++;
       setRevealCount(i);
       if (i >= total) clearInterval(t);
     }, stepMs);
-    return () => clearInterval(t);
+    return () => {
+      clearInterval(t);
+      clearTimeout(kickOff);
+    };
   }, [battle?.status, battle?.rounds_total, battle?.fast, rounds.length]);
 
   const isHost = battle?.host_id === profile?.id;
@@ -163,7 +175,7 @@ export default function CaseBattleRoom() {
   if (!battle) return <p className="text-muted-foreground">Loading battle...</p>;
 
   const currentReveal = Math.min(revealCount, battle.rounds_total);
-  const cur = bcases[currentReveal - 1] ?? bcases[0];
+  const currentBcase = bcases[currentReveal - 1] ?? bcases[0];
 
   return (
     <div className="space-y-4">
@@ -218,8 +230,19 @@ export default function CaseBattleRoom() {
       </header>
 
       {/* Case row */}
-      <div className="overflow-x-auto rounded-3xl border border-border bg-card/70 p-4">
-        <div className="flex gap-2">
+      <div className="rounded-3xl border border-border bg-card/70 p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            Cases ({battle.rounds_total} rounds)
+          </div>
+          {currentBcase && battle.status !== "waiting" && (
+            <div className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+              <span className="text-base">{caseMeta[currentBcase.case_id]?.image ?? "🎁"}</span>
+              {caseMeta[currentBcase.case_id]?.name ?? "Case"}
+            </div>
+          )}
+        </div>
+        <div className="flex gap-2 overflow-x-auto">
           {bcases.map((bc, i) => {
             const meta = caseMeta[bc.case_id];
             const active = i === currentReveal - 1 && battle.status !== "waiting";
@@ -248,9 +271,15 @@ export default function CaseBattleRoom() {
         {Array.from({ length: battle.player_slots }).map((_, slot) => {
           const p = players.find((pp) => pp.slot === slot);
           const playerRounds = rounds
-            .filter((r) => r.player_slot === slot && r.round_index < currentReveal)
-            .sort((a, b) => b.round_index - a.round_index);
-          const latest = playerRounds[0];
+            .filter((r) => r.player_slot === slot)
+            .sort((a, b) => a.round_index - b.round_index);
+          const spinningIdx = currentReveal - 1;
+          const spinningRound = playerRounds.find((r) => r.round_index === spinningIdx);
+          const completedRounds = playerRounds.filter((r) => r.round_index < spinningIdx);
+          const totalSoFar = playerRounds
+            .filter((r) => r.round_index < currentReveal)
+            .reduce((s, r) => s + r.item_value, 0);
+          const poolForSpin = spinningRound ? itemPools[spinningRound.case_id] ?? [] : [];
           const isWinnerTeam =
             battle.status === "finished" &&
             currentReveal >= battle.rounds_total &&
@@ -276,55 +305,59 @@ export default function CaseBattleRoom() {
                   </div>
                 </div>
                 <div className="inline-flex items-center gap-1 text-xs font-black text-primary">
-                  <MizrahiCoin size={10} />{" "}
-                  {formatCoins(
-                    rounds
-                      .filter((r) => r.player_slot === slot && r.round_index < currentReveal)
-                      .reduce((s, r) => s + r.item_value, 0)
-                  )}
+                  <MizrahiCoin size={10} /> {formatCoins(totalSoFar)}
                 </div>
               </div>
 
-              {/* Reel */}
-              <div className="relative mt-3 flex h-32 items-center justify-center overflow-hidden rounded-xl border border-border bg-background">
-                <AnimatePresence mode="popLayout">
-                  {latest ? (
-                    <motion.div
-                      key={latest.id}
-                      initial={{ y: -80, opacity: 0, scale: 0.7 }}
-                      animate={{ y: 0, opacity: 1, scale: 1 }}
-                      exit={{ y: 80, opacity: 0 }}
-                      transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                      className={`absolute inset-2 flex flex-col items-center justify-center rounded-lg border-2 bg-gradient-to-b ${
-                        RARITY[latest.rarity] ?? RARITY.common
-                      }`}
-                    >
-                      {latest.special_spin !== "none" && (
-                        <div className="absolute left-1 top-1 inline-flex items-center gap-1 rounded-full bg-fuchsia-500/30 px-2 py-0.5 text-[9px] font-black uppercase text-fuchsia-200">
-                          <Sparkles className="h-2.5 w-2.5" />
-                          {latest.special_spin === "empire" ? "Empire Spin" : "Duel Spin"}
-                        </div>
-                      )}
-                      <div className="text-4xl">{latest.item_image ?? "🎁"}</div>
-                      <div className="text-[10px] font-bold uppercase opacity-80">
-                        {latest.rarity}
-                      </div>
-                      <div className="truncate px-1 text-xs font-bold">{latest.item_name}</div>
-                      <div className="inline-flex items-center gap-1 text-[10px] font-black">
-                        <MizrahiCoin size={8} /> {formatCoins(latest.item_value)}
-                      </div>
-                    </motion.div>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">
-                      {battle.status === "waiting" ? "Waiting..." : "Spinning..."}
-                    </span>
-                  )}
-                </AnimatePresence>
+              {/* Empire-Drop style horizontal reel */}
+              <div className="mt-3">
+                {spinningRound && poolForSpin.length ? (
+                  <CaseReel
+                    pool={poolForSpin}
+                    result={{
+                      name: spinningRound.item_name,
+                      image: spinningRound.item_image,
+                      value: spinningRound.item_value,
+                      rarity: spinningRound.rarity,
+                      special_spin: spinningRound.special_spin,
+                    }}
+                    spinKey={`${slot}-${spinningRound.id}`}
+                    durationMs={battle.fast ? 1800 : 5200}
+                    size="sm"
+                  />
+                ) : (
+                  <div className="flex h-[128px] items-center justify-center rounded-2xl border border-border bg-background/50 text-xs text-muted-foreground">
+                    {battle.status === "waiting" ? "Waiting for start..." : "Get ready..."}
+                  </div>
+                )}
               </div>
 
-              {/* Bet bar */}
+              {/* Past round chips */}
+              {completedRounds.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {completedRounds.map((r) => (
+                    <div
+                      key={r.id}
+                      className="inline-flex items-center gap-1 rounded-full border border-border bg-background/60 px-1.5 py-0.5 text-[10px]"
+                      title={`${r.item_name} · ${r.rarity}`}
+                    >
+                      <span>{r.item_image ?? "🎁"}</span>
+                      <span className={`font-bold ${RARITY_TEXT[r.rarity] ?? RARITY_TEXT.common}`}>
+                        {formatCoins(r.item_value)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Winner badge */}
               {battle.status === "finished" && currentReveal >= battle.rounds_total && isWinnerTeam && (
-                <div className="mt-2 rounded-lg bg-amber-500/15 p-2 text-center text-xs font-black text-amber-400">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 14 }}
+                  className="mt-2 rounded-lg bg-amber-500/15 p-2 text-center text-xs font-black text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.5)]"
+                >
                   WINNER · +
                   {formatCoins(
                     Math.floor(
@@ -335,7 +368,7 @@ export default function CaseBattleRoom() {
                         )
                     )
                   )}
-                </div>
+                </motion.div>
               )}
             </div>
           );
