@@ -5,6 +5,7 @@ import { Layout } from "@/components/Layout";
 import { ProfileProvider } from "@/hooks/useUserProfile";
 import { PresenceProvider } from "@/hooks/usePresence";
 import AuthPage from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Lobby from "./pages/Lobby";
 import Dice from "./pages/Dice";
 import Coinflip from "./pages/Coinflip";
@@ -61,6 +62,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route
             element={
               <Protected>
