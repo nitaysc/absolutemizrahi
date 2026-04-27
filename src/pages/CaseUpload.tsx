@@ -34,6 +34,23 @@ function isUrl(s: string | null | undefined) {
   return !!s && /^https?:\/\//i.test(s);
 }
 
+/** Strict URL guard: must be http(s) and parseable. */
+function isValidImageUrl(s: string | null | undefined): boolean {
+  if (!s) return false;
+  if (!/^https?:\/\//i.test(s)) return false;
+  try {
+    new URL(s);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Reject any text that looks like a URL inside name fields. */
+function looksLikeUrl(s: string): boolean {
+  return /^\s*https?:\/\//i.test(s) || /\.(png|jpg|jpeg|webp|gif|svg)(\?|$)/i.test(s);
+}
+
 export default function CaseUpload() {
   const { profile } = useUserProfile();
   const navigate = useNavigate();
@@ -77,10 +94,21 @@ export default function CaseUpload() {
   async function submit() {
     if (!profile) return;
     if (!name.trim()) return toast.error("Name required");
+    if (looksLikeUrl(name)) return toast.error("Case name can't be a URL — use the icon upload instead");
     if (price < 1) return toast.error("Invalid price");
     if (items.length === 0) return toast.error("Add at least one item");
-    if (items.some((i) => !i.name.trim() || i.weight <= 0))
-      return toast.error("Each item needs a name and weight > 0");
+    for (const i of items) {
+      if (!i.name.trim() || i.weight <= 0)
+        return toast.error("Each item needs a name and weight > 0");
+      if (looksLikeUrl(i.name))
+        return toast.error(`Item "${i.name.slice(0, 30)}…" — name can't be a URL. Upload the image and give it a real name.`);
+      // image must be either an emoji (short, no URL chars) OR a valid http(s) URL
+      if (i.image && /^https?:\/\//i.test(i.image) && !isValidImageUrl(i.image))
+        return toast.error(`Invalid image URL for item "${i.name}"`);
+    }
+    // Also check the case icon
+    if (image && /^https?:\/\//i.test(image) && !isValidImageUrl(image))
+      return toast.error("Case icon URL is invalid");
 
     setBusy(true);
     const { data: c, error: ce } = await supabase
