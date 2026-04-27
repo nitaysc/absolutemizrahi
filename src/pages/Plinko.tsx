@@ -114,6 +114,10 @@ export default function Plinko() {
     (row: number, rights: number) => BOARD_W / 2 + (rights - (row + 1) / 2) * COL,
     []
   );
+  const bucketFromX = useCallback((x: number) => {
+    const i = Math.round((x - COL / 2) / COL);
+    return Math.max(0, Math.min(BUCKETS - 1, i));
+  }, []);
   const floorY = TOP_PAD + (ROWS + 1) * ROW_H;
 
   // Sum of stakes for balls that have been dropped but not yet settled.
@@ -186,7 +190,7 @@ export default function Plinko() {
         // Watchdog: if a ball has been alive way too long (stuck on a peg
         // with near-zero velocity), force it down to its bucket.
         if (ts - b.spawnedAt > 6000) {
-          b.x = bucketX(b.bucket);
+          b.x = bucketX(bucketFromX(b.x));
           b.y = floorY;
           b.vx = 0;
           b.vy = 0;
@@ -283,10 +287,9 @@ export default function Plinko() {
         }
 
         if (b.y >= floorY) {
-          // Always settle to the precomputed bucket for this ball. The physics
-          // path is visual, but payout must stay deterministic per drop and not
-          // drift because of tiny floating-point differences at the floor.
-          const landedBucket = b.bucket;
+          // Settle to the bucket the ball actually reached on-screen so the
+          // highlighted/payout bucket always matches what the player sees.
+          const landedBucket = bucketFromX(b.x);
           b.x = bucketX(landedBucket);
           b.done = true;
           const landedMultiplier = b.payoutTable[landedBucket] ?? 0;
@@ -325,7 +328,7 @@ export default function Plinko() {
       rafRef.current = null;
       lastTsRef.current = null;
     };
-  }, [pegX, pegY, bucketX, laneX, floorY, settleBall]);
+  }, [pegX, pegY, bucketX, bucketFromX, laneX, floorY, settleBall]);
 
   async function drop(betOverride?: number): Promise<AutoBetRoundResult | null> {
     if (!profile) return null;
