@@ -112,3 +112,14 @@ export function playCashout() {
   tone({ freq: 880, duration: 0.14, type: "triangle", gain: 0.18, delay: 0.08 });
   tone({ freq: 1175, duration: 0.2, type: "triangle", gain: 0.18, delay: 0.16 });
 }
+
+/** Crisp short tick used as a case-reel item passes the center marker. */
+export function playReelTick() {
+  tone({ freq: 1100, duration: 0.035, type: "square", gain: 0.06 });
+}
+
+/** Final landing chime when the reel settles on a result. */
+export function playReelLand() {
+  tone({ freq: 660, duration: 0.09, type: "triangle", gain: 0.16 });
+  tone({ freq: 990, duration: 0.13, type: "triangle", gain: 0.14, delay: 0.05 });
+}

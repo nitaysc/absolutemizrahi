@@ -7,7 +7,7 @@ import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { formatCoins } from "@/lib/format";
 import { toast } from "sonner";
-import { Bot, Crown, Play, LogOut, Swords } from "lucide-react";
+import { Bot, Crown, Play, LogOut, Swords, X } from "lucide-react";
 import { CaseReel, type ReelItem } from "@/components/CaseReel";
 
 type Battle = {
@@ -75,6 +75,8 @@ export default function CaseBattleRoom() {
   // True after the last round's reels have all visually landed
   const [revealComplete, setRevealComplete] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Countdown until auto-start once bots are filled (null = no countdown)
+  const [autoStartIn, setAutoStartIn] = useState<number | null>(null);
 
   async function refreshAll() {
     const [{ data: b }, { data: p }, { data: bc }, { data: r }] = await Promise.all([
@@ -153,14 +155,16 @@ export default function CaseBattleRoom() {
 
     setRevealComplete(false);
     setCurrentSpin(0);
-    const stepMs = battle.fast ? 2400 : 6200;
+    // Step length accounts for potential 2-stage special spins (Empire/Duel),
+    // which add ~3.6-4s of follow-up animation on top of the base spin.
+    const stepMs = battle.fast ? 3200 : 9800;
     const total = battle.rounds_total;
     let i = 0;
     const intervalId = setInterval(() => {
       i++;
       if (i >= total) {
         clearInterval(intervalId);
-        setTimeout(() => setRevealComplete(true), battle.fast ? 1900 : 5400);
+        setTimeout(() => setRevealComplete(true), battle.fast ? 2400 : 6800);
         return;
       }
       setCurrentSpin(i);
@@ -178,6 +182,40 @@ export default function CaseBattleRoom() {
 
   const isHost = battle?.host_id === profile?.id;
   const inBattle = !!players.find((p) => p.user_id === profile?.id);
+
+  // Auto-start: when bots-fill is enabled and there's at least one human, run a 3s countdown
+  // and then auto-call start_case_battle. Only the host triggers the RPC to avoid races.
+  useEffect(() => {
+    if (!battle) return;
+    if (battle.status !== "waiting") {
+      setAutoStartIn(null);
+      return;
+    }
+    if (!battle.fill_with_bots) {
+      setAutoStartIn(null);
+      return;
+    }
+    if (players.length === 0) {
+      setAutoStartIn(null);
+      return;
+    }
+    if (autoStartIn === null) setAutoStartIn(3);
+    const t = setInterval(() => {
+      setAutoStartIn((v) => {
+        if (v === null) return null;
+        if (v <= 1) {
+          clearInterval(t);
+          if (isHost && !busy) {
+            void start();
+          }
+          return 0;
+        }
+        return v - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [battle?.status, battle?.fill_with_bots, players.length, isHost]);
 
   async function join() {
     setBusy(true);
@@ -249,7 +287,7 @@ export default function CaseBattleRoom() {
                   <LogOut className="h-3 w-3" /> Leave
                 </button>
               )}
-              {isHost && (
+              {isHost && !battle.fill_with_bots && (
                 <button
                   onClick={start}
                   disabled={busy || (!battle.fill_with_bots && players.length < battle.player_slots)}
@@ -258,7 +296,20 @@ export default function CaseBattleRoom() {
                   <Play className="h-3 w-3" /> Start
                 </button>
               )}
+              {battle.fill_with_bots && autoStartIn !== null && autoStartIn > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-3 py-1.5 text-sm font-black text-amber-300">
+                  Auto-start in {autoStartIn}s
+                </span>
+              )}
             </>
+          )}
+          {showFinishedUI && (
+            <button
+              onClick={() => navigate("/cases/battles")}
+              className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-1.5 text-sm font-bold text-primary-foreground"
+            >
+              <X className="h-3 w-3" /> Exit
+            </button>
           )}
         </div>
       </header>
@@ -368,13 +419,6 @@ export default function CaseBattleRoom() {
                     spinKey={`${slot}-${spinningRound.id}`}
                     durationMs={battle.fast ? 1800 : 5200}
                     size={slots <= 2 ? "md" : "sm"}
-                    preBadge={
-                      spinningRound.special_spin === "empire"
-                        ? "empire"
-                        : spinningRound.special_spin === "duel"
-                        ? "duel"
-                        : null
-                    }
                   />
                 ) : (
                   <div className="flex h-[256px] items-center justify-center rounded-2xl border border-dashed border-border bg-background/40 text-xs text-muted-foreground">
