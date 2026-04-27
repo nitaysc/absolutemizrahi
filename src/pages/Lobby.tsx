@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
-import { Gift, TrendingUp, Package, Swords } from "lucide-react";
+import { Gift, TrendingUp, Package, Swords, Zap } from "lucide-react";
 import { formatCoins } from "@/lib/format";
 import mizrahi from "@/assets/absolute-mizrahi.gif";
 import diceImg from "@/assets/games/dice.jpg";
@@ -149,7 +149,7 @@ export default function Lobby() {
         <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground">
           <Package className="h-4 w-4" /> Mizrahi Cases
         </h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Link
             to="/cases"
             className="group relative flex items-center justify-between overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/20 via-card to-background p-5 shadow-lg transition hover:-translate-y-0.5 hover:border-primary hover:shadow-[0_10px_30px_-5px_hsl(var(--primary)/0.6)]"
@@ -179,6 +179,36 @@ export default function Lobby() {
               </p>
             </div>
             <Swords className="h-12 w-12 text-rose-400 drop-shadow-[0_0_20px_rgba(244,63,94,0.7)]" />
+          </Link>
+          <Link
+            to="/upgrader"
+            className="group relative flex items-center justify-between overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-fuchsia-500/25 via-card to-background p-5 shadow-lg transition hover:-translate-y-0.5 hover:border-fuchsia-400 hover:shadow-[0_10px_30px_-5px_rgba(217,70,239,0.6)]"
+          >
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-300">
+                Risk
+              </p>
+              <h3 className="text-2xl font-black">Upgrader</h3>
+              <p className="text-xs text-muted-foreground">
+                Risk items for bigger loot
+              </p>
+            </div>
+            <Zap className="h-12 w-12 text-fuchsia-400 drop-shadow-[0_0_20px_rgba(217,70,239,0.7)]" />
+          </Link>
+          <Link
+            to="/inventory"
+            className="group relative flex items-center justify-between overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-amber-500/25 via-card to-background p-5 shadow-lg transition hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-[0_10px_30px_-5px_rgba(245,158,11,0.6)]"
+          >
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-300">
+                Loot
+              </p>
+              <h3 className="text-2xl font-black">Inventory</h3>
+              <p className="text-xs text-muted-foreground">
+                Sell items for 100% value
+              </p>
+            </div>
+            <Package className="h-12 w-12 text-amber-400 drop-shadow-[0_0_20px_rgba(245,158,11,0.7)]" />
           </Link>
         </div>
       </section>
