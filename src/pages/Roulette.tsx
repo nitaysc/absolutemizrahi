@@ -70,6 +70,7 @@ export default function Roulette() {
   const [result, setResult] = useState<number | null>(null);
   const [history, setHistory] = useState<number[]>([]);
   const [angle, setAngle] = useState<number>(0);
+  const [spinDuration, setSpinDuration] = useState<number>(4.2);
   const [showWin, setShowWin] = useState<{ profit: number } | null>(null);
   const lastBetsRef = useRef<Record<string, number>>({});
 
@@ -111,13 +112,18 @@ export default function Roulette() {
     // Provably-random pick
     const winning = WHEEL_ORDER[Math.floor(Math.random() * WHEEL_ORDER.length)];
 
-    // Spin animation: 6-10 full turns then land on winning index
+    // Spin animation: maintain a consistent CCW speed and land exactly on result.
     const idx = WHEEL_ORDER.indexOf(winning);
     const slice = 360 / WHEEL_ORDER.length;
-    const turns = 6 + Math.floor(Math.random() * 4);
-    // Negative because wheel rotates CCW visually while ball rotates CW; we
-    // animate the wheel CCW so the pointer (top) ends on `idx`.
-    const target = -(turns * 360 + idx * slice);
+    const extraTurns = 8;
+    const currentNorm = ((angle % 360) + 360) % 360;
+    const targetNorm = (((-idx * slice) % 360) + 360) % 360;
+    const settleDelta = (currentNorm - targetNorm + 360) % 360;
+    const travel = extraTurns * 360 + settleDelta;
+    const target = angle - travel;
+    const nextDuration = travel / 760;
+
+    setSpinDuration(nextDuration);
     setAngle(target);
 
     // Compute payouts
@@ -135,7 +141,7 @@ export default function Roulette() {
     const mult = stake > 0 ? +(totalReturn / stake).toFixed(4) : 0;
 
     // Wait for spin animation
-    await new Promise((r) => setTimeout(r, 4200));
+    await new Promise((r) => setTimeout(r, Math.ceil(nextDuration * 1000) + 120));
 
     const { data, error } = await supabase.rpc("place_bet", {
       _game: "roulette",
@@ -211,7 +217,7 @@ export default function Roulette() {
               <div className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1">
                 <div className="h-0 w-0 border-l-[10px] border-r-[10px] border-t-[16px] border-l-transparent border-r-transparent border-t-amber-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]" />
               </div>
-              <Wheel angle={angle} spinning={spinning} />
+              <Wheel angle={angle} spinning={spinning} duration={spinDuration} />
             </div>
 
             {/* Result chip */}
@@ -352,7 +358,15 @@ export default function Roulette() {
 }
 
 /** Visual wheel: SVG conic of pockets that rotates by `angle` degrees. */
-function Wheel({ angle, spinning }: { angle: number; spinning: boolean }) {
+function Wheel({
+  angle,
+  spinning,
+  duration,
+}: {
+  angle: number;
+  spinning: boolean;
+  duration: number;
+}) {
   const N = WHEEL_ORDER.length;
   const slice = 360 / N;
   const r = 120;
@@ -363,7 +377,7 @@ function Wheel({ angle, spinning }: { angle: number; spinning: boolean }) {
       <motion.div
         animate={{ rotate: angle }}
         transition={{
-          duration: spinning ? 4 : 0,
+          duration: spinning ? duration : 0,
           ease: spinning ? [0.18, 0.7, 0.2, 1] : "linear",
         }}
         className="h-full w-full"
