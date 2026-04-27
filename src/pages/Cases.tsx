@@ -142,7 +142,7 @@ export default function Cases() {
 
       <section>
         <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground">
-          <Package className="h-4 w-4" /> Available cases
+          <Shield className="h-4 w-4 text-amber-400" /> Featured Cases
         </h2>
         {loading ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
@@ -151,8 +151,9 @@ export default function Cases() {
             ))}
           </div>
         ) : (
+          <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {cases.map((c) => (
+            {cases.filter((c) => c.is_official).map((c) => (
               <div
                 key={c.id}
                 className="group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-card to-background p-4 transition hover:-translate-y-1 hover:border-primary hover:shadow-[0_10px_30px_-5px_hsl(var(--primary)/0.6)]"
@@ -208,10 +209,68 @@ export default function Cases() {
                 )}
               </div>
             ))}
-            {cases.length === 0 && (
-              <p className="col-span-full text-sm text-muted-foreground">No cases available yet.</p>
+            {cases.filter((c) => c.is_official).length === 0 && (
+              <p className="col-span-full text-sm text-muted-foreground">No featured cases yet.</p>
             )}
           </div>
+
+          <h2 className="mb-3 mt-8 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground">
+            <Upload className="h-4 w-4 text-fuchsia-400" /> Custom Cases
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {cases.filter((c) => !c.is_official).map((c) => (
+              <div
+                key={c.id}
+                className="group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-card to-background p-4 transition hover:-translate-y-1 hover:border-fuchsia-400 hover:shadow-[0_10px_30px_-5px_rgba(217,70,239,0.5)]"
+              >
+                <button
+                  onClick={() => setDetailsCase(c)}
+                  className="flex aspect-[3/4] w-full flex-col items-center justify-between text-left"
+                  aria-label={`See ${c.name} odds`}
+                >
+                  <div className="flex h-32 w-full items-center justify-center text-7xl drop-shadow-[0_0_20px_rgba(217,70,239,0.4)]">
+                    {c.image && /^https?:\/\//i.test(c.image) ? (
+                      <img src={c.image} alt={c.name} className="h-full w-full object-contain" loading="lazy" />
+                    ) : (
+                      c.image ?? "🎁"
+                    )}
+                  </div>
+                  <div className="w-full text-center">
+                    <div className="truncate text-sm font-bold">{c.name}</div>
+                    <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-fuchsia-500/15 px-3 py-1 text-xs font-black text-fuchsia-300">
+                      <MizrahiCoin size={12} /> {formatCoins(c.price)}
+                    </div>
+                  </div>
+                </button>
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                  <button
+                    onClick={() => setDetailsCase(c)}
+                    className="rounded-full border border-border bg-background/60 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground"
+                  >
+                    Odds
+                  </button>
+                  <button
+                    onClick={() => openSolo(c, 1)}
+                    disabled={opening === c.id}
+                    className="rounded-full bg-fuchsia-500 py-1.5 text-[11px] font-black text-white shadow-[0_0_10px_rgba(217,70,239,0.5)] disabled:opacity-50"
+                  >
+                    Open
+                  </button>
+                </div>
+                {c.status && c.status !== "approved" && (
+                  <div className="absolute right-2 top-2 rounded-full bg-amber-500/30 px-2 py-0.5 text-[10px] font-black uppercase text-amber-300">
+                    {c.status}
+                  </div>
+                )}
+              </div>
+            ))}
+            {cases.filter((c) => !c.is_official).length === 0 && (
+              <p className="col-span-full text-sm text-muted-foreground">
+                No custom cases yet — be the first to upload one!
+              </p>
+            )}
+          </div>
+          </>
         )}
       </section>
 
