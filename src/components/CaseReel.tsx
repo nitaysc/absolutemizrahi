@@ -52,7 +52,7 @@ type Props = {
   result: ReelResult | null;
   spinKey: string | number;
   durationMs?: number;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   onComplete?: () => void;
   /** Deprecated — Empire/Duel are now in-reel special tiles via result.special_spin */
   preBadge?: "empire" | "duel" | null;
@@ -60,7 +60,7 @@ type Props = {
 
 const ItemCard = forwardRef<
   HTMLDivElement,
-  { item: ReelItem; size?: "sm" | "md" | "lg"; height: number }
+  { item: ReelItem; size?: "xs" | "sm" | "md" | "lg"; height: number }
 >(function ItemCard({ item, size = "md", height }, ref) {
   const emoji = size === "sm" ? "text-4xl" : size === "lg" ? "text-7xl" : "text-5xl";
 
@@ -177,7 +177,7 @@ export function CaseReel({
   const [phase, setPhase] = useState<"idle" | "spinning" | "landed">("idle");
 
   // Tile dimensions
-  const tileH = size === "sm" ? 96 : size === "lg" ? 150 : 120;
+  const tileH = size === "xs" ? 72 : size === "sm" ? 96 : size === "lg" ? 150 : 120;
   const gap = 14;
   const step = tileH + gap;
   const STRIP_LEN = 80;
