@@ -554,35 +554,35 @@ export default function CaseBattleRoom() {
           return (
             <div
               key={slot}
-              className={`flex min-w-0 flex-col rounded-2xl border-2 ${ts.bg} p-3 transition ${
+              className={`flex min-w-0 flex-col rounded-2xl border-2 ${ts.bg} p-2 sm:p-3 transition ${
                 isWinnerTeam
                   ? "border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.55)]"
                   : `${ts.border} shadow-[0_0_18px_-6px_currentColor] ${ts.label}`
               }`}
             >
               {/* Player header */}
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex min-w-0 items-center gap-2">
-                  <PlayerAvatar avatar={p?.avatar} size={32} ring />
+              <div className="flex items-center justify-between gap-1.5">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <PlayerAvatar avatar={p?.avatar} size={isMobile ? 24 : 32} ring />
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1 truncate text-sm font-bold">
+                    <div className="flex items-center gap-1 truncate text-[11px] sm:text-sm font-bold">
                       <span className="truncate">{p?.display_name ?? "Empty"}</span>
                       {p?.is_bot && <Bot className="h-3 w-3 shrink-0 text-muted-foreground" />}
                       {isWinnerTeam && <Crown className="h-3 w-3 shrink-0 text-amber-400" />}
                     </div>
                     <div className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider ${ts.chip}`}>
                       <span className={`h-1.5 w-1.5 rounded-full ${ts.dot}`} />
-                      Team {(p?.team ?? slot) + 1}
+                      T{(p?.team ?? slot) + 1}
                     </div>
                   </div>
                 </div>
-                <div className="inline-flex shrink-0 items-center gap-1 text-xs font-black text-primary">
+                <div className="inline-flex shrink-0 items-center gap-1 text-[10px] sm:text-xs font-black text-primary">
                   <MizrahiCoin size={10} /> {formatCoins(totalSoFar)}
                 </div>
               </div>
 
               {/* Reel */}
-              <div className="mt-3">
+              <div className="mt-2 sm:mt-3">
                 {spinningRound && poolForSpin.length ? (
                   <CaseReel
                     pool={poolForSpin}
@@ -595,10 +595,10 @@ export default function CaseBattleRoom() {
                     }}
                     spinKey={`${slot}-${spinningRound.id}`}
                     durationMs={battle.fast ? 1600 : 4200}
-                    size={slots <= 2 ? "md" : "sm"}
+                    size={isMobile ? "xs" : slots <= 2 ? "md" : "sm"}
                   />
                 ) : (
-                  <div className="flex h-[256px] items-center justify-center rounded-2xl border border-dashed border-border bg-background/40 text-xs text-muted-foreground">
+                  <div className={`flex ${isMobile ? "h-[180px]" : "h-[256px]"} items-center justify-center rounded-2xl border border-dashed border-border bg-background/40 text-xs text-muted-foreground`}>
                     {battle.status === "waiting" ? "Waiting..." : "Get ready..."}
                   </div>
                 )}
