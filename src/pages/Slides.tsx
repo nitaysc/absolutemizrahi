@@ -113,7 +113,9 @@ export default function Slides() {
       _game: "slides",
       _bet_amount: bet,
       _won: won,
-      _multiplier: targetAtBet,
+      // place_bet treats multiplier as total return multiple; add stake back so
+      // a 3x target pays +3x profit (e.g. 30 -> +90) as expected in Slides.
+      _multiplier: targetAtBet + 1,
       _details: { target: targetAtBet, landed, variant: "slides" },
     });
 
