@@ -140,8 +140,17 @@ export default function Cases() {
                   className="flex aspect-[3/4] w-full flex-col items-center justify-between text-left"
                   aria-label={`See ${c.name} odds`}
                 >
-                  <div className="text-7xl drop-shadow-[0_0_20px_hsl(var(--primary)/0.6)]">
-                    {c.image ?? "🎁"}
+                  <div className="flex h-32 w-full items-center justify-center text-7xl drop-shadow-[0_0_20px_hsl(var(--primary)/0.6)]">
+                    {c.image && /^https?:\/\//i.test(c.image) ? (
+                      <img
+                        src={c.image}
+                        alt={c.name}
+                        className="h-full w-full object-contain"
+                        loading="lazy"
+                      />
+                    ) : (
+                      c.image ?? "🎁"
+                    )}
                   </div>
                   <div className="w-full text-center">
                     <div className="truncate text-sm font-bold">{c.name}</div>
@@ -201,8 +210,16 @@ export default function Cases() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Opening</p>
-                  <h3 className="text-2xl font-black">
-                    <span className="mr-2 text-3xl">{openedCase.image ?? "🎁"}</span>
+                  <h3 className="flex items-center gap-2 text-2xl font-black">
+                    {openedCase.image && /^https?:\/\//i.test(openedCase.image) ? (
+                      <img
+                        src={openedCase.image}
+                        alt={openedCase.name}
+                        className="h-9 w-9 rounded-md object-cover"
+                      />
+                    ) : (
+                      <span className="text-3xl">{openedCase.image ?? "🎁"}</span>
+                    )}
                     {openedCase.name}
                   </h3>
                 </div>
@@ -245,7 +262,11 @@ export default function Cases() {
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     {results.map((r, i) => (
                       <div key={i} className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5">
-                        <span className="text-lg">{r.image ?? "🎁"}</span>
+                        {r.image && /^https?:\/\//i.test(r.image) ? (
+                          <img src={r.image} alt={r.name} className="h-5 w-5 rounded object-cover" />
+                        ) : (
+                          <span className="text-lg">{r.image ?? "🎁"}</span>
+                        )}
                         <span className={`text-xs font-bold uppercase ${RARITY_TEXT[r.rarity] ?? RARITY_TEXT.common}`}>
                           {r.rarity}
                         </span>
