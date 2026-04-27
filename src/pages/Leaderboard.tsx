@@ -31,14 +31,16 @@ export default function Leaderboard() {
         .order("coins", { ascending: false })
         .limit(100);
 
-      const { data: streakRows } = await supabase
-        .from("bets")
-        .select("user_id, created_at")
-        .order("created_at", { ascending: false })
-        .limit(5000);
+      const ids = (data ?? []).map((r) => r.id);
+      const { data: streakRows } = ids.length
+        ? await supabase.rpc("get_user_bet_days", {
+            _user_ids: ids,
+            _limit_per_user: 200,
+          })
+        : { data: [] as { user_id: string; created_at: string }[] };
 
       const byUser = new Map<string, string[]>();
-      for (const row of streakRows ?? []) {
+      for (const row of (streakRows ?? []) as { user_id: string; created_at: string }[]) {
         const list = byUser.get(row.user_id) ?? [];
         list.push(row.created_at);
         byUser.set(row.user_id, list);

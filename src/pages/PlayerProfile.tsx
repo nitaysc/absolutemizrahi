@@ -78,15 +78,15 @@ export default function PlayerProfile() {
   useEffect(() => {
     if (!data?.id) return;
     (async () => {
-      const { data: streakRows } = await supabase
-        .from("bets")
-        .select("created_at")
-        .eq("user_id", data.id)
-        .order("created_at", { ascending: false })
-        .limit(366);
+      // Use the public RPC so we can read other users' bet days
+      // (the bets table itself is RLS-locked to the row owner).
+      const { data: streakRows } = await supabase.rpc("get_user_bet_days", {
+        _user_ids: [data.id],
+        _limit_per_user: 200,
+      });
       setStreak(
         calculateDailyStreak(
-          (streakRows ?? []).map((r) => r.created_at),
+          (streakRows ?? []).map((r: { created_at: string }) => r.created_at),
           new Date(),
           getStreakTimezone(),
         ),
