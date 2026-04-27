@@ -8,6 +8,7 @@ import { formatCoins } from "@/lib/format";
 import { toast } from "sonner";
 import { Swords, Upload, Shield, Package, X } from "lucide-react";
 import { CaseReel, type ReelItem, type ReelResult } from "@/components/CaseReel";
+import { CaseDetailsModal } from "@/components/CaseDetailsModal";
 
 type Case = {
   id: string;
@@ -46,6 +47,7 @@ export default function Cases() {
   const [pool, setPool] = useState<ReelItem[]>([]);
   const [spinKey, setSpinKey] = useState(0);
   const [revealed, setRevealed] = useState(false);
+  const [detailsCase, setDetailsCase] = useState<Case | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -127,13 +129,15 @@ export default function Cases() {
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {cases.map((c) => (
-              <button
+              <div
                 key={c.id}
-                onClick={() => openSolo(c, 1)}
-                disabled={opening === c.id}
-                className="group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-card to-background p-4 text-left transition hover:-translate-y-1 hover:border-primary hover:shadow-[0_10px_30px_-5px_hsl(var(--primary)/0.6)]"
+                className="group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-card to-background p-4 transition hover:-translate-y-1 hover:border-primary hover:shadow-[0_10px_30px_-5px_hsl(var(--primary)/0.6)]"
               >
-                <div className="flex aspect-[3/4] flex-col items-center justify-between">
+                <button
+                  onClick={() => setDetailsCase(c)}
+                  className="flex aspect-[3/4] w-full flex-col items-center justify-between text-left"
+                  aria-label={`See ${c.name} odds`}
+                >
                   <div className="text-7xl drop-shadow-[0_0_20px_hsl(var(--primary)/0.6)]">
                     {c.image ?? "🎁"}
                   </div>
@@ -143,13 +147,28 @@ export default function Cases() {
                       <MizrahiCoin size={12} /> {formatCoins(c.price)}
                     </div>
                   </div>
+                </button>
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                  <button
+                    onClick={() => setDetailsCase(c)}
+                    className="rounded-full border border-border bg-background/60 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground"
+                  >
+                    Odds
+                  </button>
+                  <button
+                    onClick={() => openSolo(c, 1)}
+                    disabled={opening === c.id}
+                    className="rounded-full bg-primary py-1.5 text-[11px] font-black text-primary-foreground shadow-[0_0_10px_hsl(var(--primary)/0.5)] disabled:opacity-50"
+                  >
+                    Open
+                  </button>
                 </div>
                 {c.is_official && (
                   <div className="absolute left-2 top-2 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400">
                     OFFICIAL
                   </div>
                 )}
-              </button>
+              </div>
             ))}
             {cases.length === 0 && (
               <p className="col-span-full text-sm text-muted-foreground">No cases available yet.</p>
@@ -254,6 +273,16 @@ export default function Cases() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {detailsCase && (
+        <CaseDetailsModal
+          caseId={detailsCase.id}
+          caseName={detailsCase.name}
+          caseImage={detailsCase.image}
+          casePrice={detailsCase.price}
+          onClose={() => setDetailsCase(null)}
+        />
+      )}
     </div>
   );
 }
