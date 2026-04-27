@@ -9,6 +9,7 @@ import { formatCoins } from "@/lib/format";
 import { toast } from "sonner";
 import { Bot, Crown, Play, LogOut, Swords, X, RotateCcw, Pencil, Trophy, UserPlus } from "lucide-react";
 import { CaseReel, type ReelItem } from "@/components/CaseReel";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type Battle = {
   id: string;
@@ -81,6 +82,7 @@ export default function CaseBattleRoom() {
   const { id } = useParams();
   const { profile, refetch } = useUserProfile();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [battle, setBattle] = useState<Battle | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [bcases, setBcases] = useState<BattleCase[]>([]);
