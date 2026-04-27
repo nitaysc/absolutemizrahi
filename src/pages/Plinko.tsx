@@ -84,6 +84,8 @@ export default function Plinko() {
   // off this ref so each in-flight ball deducts EXACTLY its own stake — no
   // double-counting, no compounding from racing realtime/profile updates.
   const localBalanceRef = useRef(0);
+  // Have we initialized localBalanceRef from the server profile yet?
+  const initializedRef = useRef(false);
 
   function bucketTone(mult: number) {
     if (mult >= 41) return "bg-rose-500 text-white border-rose-300";
@@ -120,23 +122,15 @@ export default function Plinko() {
   const inFlightStakeRef = useRef(0);
 
   useEffect(() => {
-    // When the server tells us the latest balance (via fetch/realtime), trust
-    // it but subtract any stakes still in flight that the server hasn't seen
-    // settled yet. This keeps the displayed balance stable across the whole
-    // life of a ball: -bet on drop, +payout on settle, no extra jumps.
-    const serverCoins = profile?.coins ?? 0;
-    // setLocalCoins() also updates profile locally for optimistic UI. If we
-    // immediately subtract in-flight stakes again from that same optimistic
-    // value, each extra drop appears to "double charge" while balls are active.
-    // Ignore that echo and only reconcile when profile coins actually changed
-    // from a server-authoritative value.
-    if (
-      inFlightStakeRef.current > 0 &&
-      Math.abs(serverCoins - localBalanceRef.current) < 0.0001
-    ) {
-      return;
+    // Only seed our local balance from the profile on the FIRST snapshot.
+    // After that, we own the balance: each drop deducts its own stake exactly
+    // once, and each settle reconciles from the RPC's authoritative
+    // new_balance. Letting profile.coins repeatedly write back into the local
+    // ref caused racing realtime updates to double-charge in-flight balls.
+    if (profile && !initializedRef.current) {
+      localBalanceRef.current = Number(profile.coins ?? 0);
+      initializedRef.current = true;
     }
-    localBalanceRef.current = Math.max(0, serverCoins - inFlightStakeRef.current);
   }, [profile?.coins]);
 
   const settleBall = useCallback(async (b: Ball, landedBucket: number) => {
