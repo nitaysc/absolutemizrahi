@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { formatCoins } from "@/lib/format";
-import { BarChart3, RefreshCw, X } from "lucide-react";
+import { BarChart3, Eraser, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -85,6 +85,10 @@ export function LiveStatsWindow() {
   const [bets, setBets] = useState<BetRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [game, setGame] = useState<string>("all");
+  // IDs of bets the player has explicitly cleared from the panel. Server-side
+  // history is untouched — we just hide them locally and persist between
+  // realtime/polling refreshes so they don't pop back in.
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
   const dragControls = useDragControls();
   const winRef = useRef<HTMLDivElement | null>(null);
 
@@ -163,9 +167,25 @@ export function LiveStatsWindow() {
   }, [open, user?.id]);
 
   const filtered = useMemo(
-    () => (game === "all" ? bets : bets.filter((b) => b.game === game)),
-    [bets, game],
+    () =>
+      bets.filter(
+        (b) => !hiddenIds.has(b.id) && (game === "all" || b.game === game),
+      ),
+    [bets, game, hiddenIds],
   );
+  function clearCategory() {
+    // Wipe stats for the currently-selected category from this panel only.
+    const ids = bets
+      .filter((b) => game === "all" || b.game === game)
+      .map((b) => b.id);
+    if (ids.length === 0) return;
+    setHiddenIds((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) next.add(id);
+      return next;
+    });
+  }
+
   const stats = useMemo(() => {
     let wagered = 0,
       payout = 0,
@@ -264,11 +284,12 @@ export function LiveStatsWindow() {
               <div className="flex items-center gap-0.5">
                 <button
                   onPointerDown={(e) => e.stopPropagation()}
-                  onClick={load}
+                  onClick={clearCategory}
                   className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                  aria-label="Refresh"
+                  aria-label={`Clear ${game === "all" ? "all" : game} stats from this panel`}
+                  title={`Clear ${game === "all" ? "all" : game} stats from this panel`}
                 >
-                  <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+                  <Eraser className={`h-3.5 w-3.5 ${loading ? "animate-pulse" : ""}`} />
                 </button>
                 <button
                   onPointerDown={(e) => e.stopPropagation()}

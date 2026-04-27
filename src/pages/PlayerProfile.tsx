@@ -8,7 +8,7 @@ import { formatCoins } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ArrowLeft, UserPlus, UserCheck, UserX, Clock, Circle } from "lucide-react";
-import { calculateDailyStreak } from "@/lib/streak";
+import { calculateDailyStreak, getStreakTimezone } from "@/lib/streak";
 
 type Status = "none" | "pending_out" | "pending_in" | "accepted" | "self";
 
@@ -84,7 +84,13 @@ export default function PlayerProfile() {
         .eq("user_id", data.id)
         .order("created_at", { ascending: false })
         .limit(366);
-      setStreak(calculateDailyStreak((streakRows ?? []).map((r) => r.created_at)));
+      setStreak(
+        calculateDailyStreak(
+          (streakRows ?? []).map((r) => r.created_at),
+          new Date(),
+          getStreakTimezone(),
+        ),
+      );
     })();
   }, [data?.id]);
 

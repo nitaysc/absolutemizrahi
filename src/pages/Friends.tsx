@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Search, UserPlus, UserCheck, UserX, Circle, Users, Inbox } from "lucide-react";
+import { calculateDailyStreak, getStreakTimezone } from "@/lib/streak";
 
 type Friend = { id: string; username: string | null; avatar: string; coins: number };
 type Request = {
@@ -147,6 +148,48 @@ export default function Friends() {
   const friendIds = useMemo(() => new Set(friends.map((f) => f.id)), [friends]);
   const pendingInIds = useMemo(() => new Set(requests.map((r) => r.requester)), [requests]);
 
+  // Streaks for everyone we render — single batched query keyed off the
+  // union of friend / request / search-hit ids, kept fresh as that set changes.
+  const [streaks, setStreaks] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const ids = Array.from(
+      new Set<string>([
+        ...friends.map((f) => f.id),
+        ...requests.map((r) => r.requester),
+        ...hits.map((h) => h.id),
+      ]),
+    );
+    if (ids.length === 0) {
+      setStreaks({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("bets")
+        .select("user_id, created_at")
+        .in("user_id", ids)
+        .order("created_at", { ascending: false })
+        .limit(5000);
+      if (cancelled) return;
+      const tz = getStreakTimezone();
+      const byUserId = new Map<string, string[]>();
+      for (const row of data ?? []) {
+        const list = byUserId.get(row.user_id) ?? [];
+        list.push(row.created_at);
+        byUserId.set(row.user_id, list);
+      }
+      const next: Record<string, number> = {};
+      for (const id of ids) {
+        next[id] = calculateDailyStreak(byUserId.get(id) ?? [], new Date(), tz);
+      }
+      setStreaks(next);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [friends, requests, hits]);
+
   return (
     <div className="space-y-6">
       <header>
@@ -199,6 +242,9 @@ export default function Friends() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         <span className="truncate font-bold">{h.username ?? "anon"}</span>
+                        {streaks[h.id] > 0 && (
+                          <StreakBadge value={streaks[h.id]} />
+                        )}
                         {online && (
                           <Circle className="h-2 w-2 fill-[hsl(var(--success))] text-[hsl(var(--success))]" />
                         )}
@@ -264,7 +310,12 @@ export default function Friends() {
                 >
                   <PlayerAvatar avatar={r.avatar} size={40} ring />
                   <div className="min-w-0">
-                    <div className="truncate font-bold">{r.username ?? "anon"}</div>
+                    <div className="flex items-center gap-1.5 font-bold">
+                      <span className="truncate">{r.username ?? "anon"}</span>
+                      {streaks[r.requester] > 0 && (
+                        <StreakBadge value={streaks[r.requester]} />
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground">wants to be friends</div>
                   </div>
                 </button>
@@ -323,7 +374,10 @@ export default function Friends() {
                     onClick={() => f.username && navigate(`/u/${encodeURIComponent(f.username)}`)}
                     className="min-w-0 flex-1 text-left"
                   >
-                    <div className="truncate font-bold">{f.username ?? "anon"}</div>
+                    <div className="flex items-center gap-1.5 font-bold">
+                      <span className="truncate">{f.username ?? "anon"}</span>
+                      {streaks[f.id] > 0 && <StreakBadge value={streaks[f.id]} />}
+                    </div>
                     <div className="text-xs text-muted-foreground">
                       {online ? (
                         game ? (
@@ -358,5 +412,16 @@ export default function Friends() {
         )}
       </section>
     </div>
+  );
+}
+
+function StreakBadge({ value }: { value: number }) {
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-orange-400/40 bg-orange-500/15 px-1.5 py-0 text-[9px] font-black tabular-nums text-orange-300"
+      title={`${value} day daily-bet streak`}
+    >
+      🔥{value}
+    </span>
   );
 }
