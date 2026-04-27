@@ -69,7 +69,7 @@ export default function Inventory() {
     filter === "all" ? true : it.source === filter,
   );
   const grossTotal = filtered.reduce((s, it) => s + Number(it.value), 0);
-  const netTotal = Math.floor((grossTotal * 9500) / 10000);
+  const netTotal = grossTotal; // 100% sellback
 
   async function sellOne(id: string) {
     setBusy(id);
@@ -109,7 +109,7 @@ export default function Inventory() {
               <Package className="h-7 w-7 text-primary" /> INVENTORY
             </h1>
             <p className="text-sm text-muted-foreground">
-              Items you won. Sell anytime to convert to coins (5% house cut).
+              Items you won. Sell anytime for 100% of value, or upgrade them for a shot at bigger loot.
             </p>
           </div>
         </div>
@@ -133,7 +133,7 @@ export default function Inventory() {
         </div>
         <div className="rounded-2xl border border-primary/40 bg-primary/10 p-4">
           <div className="text-[10px] font-bold uppercase tracking-widest text-primary">
-            Net if sold (95%)
+            Sell value (100%)
           </div>
           <div className="mt-1 inline-flex items-center gap-1 text-2xl font-black text-primary">
             <MizrahiCoin size={18} /> {formatCoins(netTotal)}
@@ -156,7 +156,13 @@ export default function Inventory() {
             {k === "all" ? "All" : k === "solo" ? "Case opens" : "Battle wins"}
           </button>
         ))}
-        <div className="ml-auto">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Link
+            to="/upgrader"
+            className="inline-flex items-center gap-1.5 rounded-full border border-fuchsia-400/50 bg-fuchsia-500/15 px-4 py-2 text-xs font-black uppercase tracking-wider text-fuchsia-200 hover:bg-fuchsia-500/25"
+          >
+            ⚡ Upgrader
+          </Link>
           <button
             onClick={sellAll}
             disabled={!filtered.length || busy === "ALL"}
@@ -197,7 +203,7 @@ export default function Inventory() {
         <AnimatePresence initial={false}>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {filtered.map((it) => {
-              const sellPayout = Math.floor((Number(it.value) * 9500) / 10000);
+              const sellPayout = Number(it.value);
               return (
                 <motion.div
                   key={it.id}
