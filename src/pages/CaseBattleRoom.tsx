@@ -327,6 +327,23 @@ export default function CaseBattleRoom() {
     navigate(`/cases/battles/${data}`);
   }
 
+  async function quickSell() {
+    if (!battle) return;
+    setBusy(true);
+    const { data, error } = await supabase.rpc("sell_battle_inventory", {
+      _battle_id: battle.id,
+    });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    const amt = Number(data ?? 0);
+    if (amt > 0) {
+      toast.success(`Quick-sold for ${formatCoins(amt)} coins`);
+      refetch();
+    } else {
+      toast.info("Nothing to sell from this battle");
+    }
+  }
+
   function editBattle() {
     if (!battle || !caseIdList.length) return;
     const params = new URLSearchParams({
