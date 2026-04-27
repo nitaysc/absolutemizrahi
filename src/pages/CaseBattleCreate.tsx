@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
@@ -26,12 +26,23 @@ const TYPES = [
 
 export default function CaseBattleCreate() {
   const { profile, refetch } = useUserProfile();
+  const [searchParams] = useSearchParams();
   const [allCases, setAllCases] = useState<Case[]>([]);
-  const [picks, setPicks] = useState<Record<string, number>>({});
-  const [mode, setMode] = useState("1v1");
-  const [type, setType] = useState<"normal" | "crazy" | "group" | "terminal">("normal");
-  const [fillBots, setFillBots] = useState(false);
-  const [fast, setFast] = useState(false);
+  const [picks, setPicks] = useState<Record<string, number>>(() => {
+    const cs = searchParams.get("cases");
+    if (!cs) return {};
+    const out: Record<string, number> = {};
+    cs.split(",")
+      .filter(Boolean)
+      .forEach((id) => (out[id] = (out[id] ?? 0) + 1));
+    return out;
+  });
+  const [mode, setMode] = useState(searchParams.get("mode") ?? "1v1");
+  const [type, setType] = useState<"normal" | "crazy" | "group" | "terminal">(
+    (searchParams.get("type") as "normal" | "crazy" | "group" | "terminal") ?? "normal",
+  );
+  const [fillBots, setFillBots] = useState(searchParams.get("bots") === "1");
+  const [fast, setFast] = useState(searchParams.get("fast") === "1");
   const [isPrivate, setIsPrivate] = useState(false);
   const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
