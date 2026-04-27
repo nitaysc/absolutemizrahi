@@ -6,8 +6,24 @@ import { toast } from "sonner";
 import { BetControls } from "@/components/BetControls";
 import { Button } from "@/components/ui/button";
 import { formatCoins } from "@/lib/format";
-import { Target } from "lucide-react";
 import { motion } from "framer-motion";
+import {
+  Compass,
+  Gauge,
+  Plane,
+  Play,
+  Radar,
+  RotateCcw,
+  Shuffle,
+  Target,
+} from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Difficulty = "low" | "medium" | "high";
 
@@ -47,7 +63,10 @@ export default function Keno() {
     () => [...selected].filter((n) => drawn.has(n)).length,
     [selected, drawn],
   );
-  const multiplier = selected.size > 0 ? applyHouseEdge(DIFFICULTY_MULTIPLIERS[difficulty][hits] ?? 0) : 0;
+  const multiplier =
+    selected.size > 0
+      ? applyHouseEdge(DIFFICULTY_MULTIPLIERS[difficulty][hits] ?? 0)
+      : 0;
   const potentialProfit = Math.max(Math.floor(bet * multiplier) - bet, 0);
 
   function toggleNumber(n: number) {
@@ -69,7 +88,9 @@ export default function Keno() {
 
   function randomPick() {
     if (rolling) return;
-    const shuffled = [...BOARD_NUMBERS].sort(() => Math.random() - 0.5).slice(0, MAX_PICKS);
+    const shuffled = [...BOARD_NUMBERS]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, MAX_PICKS);
     setSelected(new Set(shuffled));
     setDrawn(new Set());
     setDrawnSequence([]);
@@ -77,7 +98,8 @@ export default function Keno() {
 
   async function placeBet() {
     if (!profile) return;
-    if (selected.size < 1 || selected.size > MAX_PICKS) return toast.error("Pick 1 to 10 numbers");
+    if (selected.size < 1 || selected.size > MAX_PICKS)
+      return toast.error("Pick 1 to 10 numbers");
     if (bet < 1) return toast.error("Bet at least 1 coin");
     if (bet > profile.coins) return toast.error("Not enough coins");
 
@@ -85,10 +107,14 @@ export default function Keno() {
     setDrawn(new Set());
     setDrawnSequence([]);
 
-    const draw = [...BOARD_NUMBERS].sort(() => Math.random() - 0.5).slice(0, drawCount);
+    const draw = [...BOARD_NUMBERS]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, drawCount);
     const drawSet = new Set(draw);
     const hitCount = [...selected].filter((n) => drawSet.has(n)).length;
-    const roundMultiplier = applyHouseEdge(DIFFICULTY_MULTIPLIERS[difficulty][hitCount] ?? 0);
+    const roundMultiplier = applyHouseEdge(
+      DIFFICULTY_MULTIPLIERS[difficulty][hitCount] ?? 0,
+    );
     const won = roundMultiplier > 1;
 
     const animateDraw = new Promise<void>((resolve) => {
@@ -127,98 +153,177 @@ export default function Keno() {
 
     const payout = Number(data?.[0]?.payout ?? 0);
     const profit = payout - bet;
-    if (profit > 0) toast.success(`Hit ${hitCount}! +${formatCoins(profit)} (${roundMultiplier.toFixed(2)}×)`);
+    if (profit > 0)
+      toast.success(
+        `Hit ${hitCount}! +${formatCoins(profit)} (${roundMultiplier.toFixed(2)}×)`,
+      );
     else toast.error(`Hit ${hitCount}. Better luck next draw.`);
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-[320px_1fr]">
-      <section className="rounded-3xl border border-border bg-card/70 p-4 backdrop-blur-xl">
-        <h1 className="flex items-center gap-2 text-2xl font-black">
-          <Target className="h-6 w-6 text-primary" /> KENO
-        </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-          Select up to 10 numbers and match the draw. Higher difficulty draws fewer numbers, but can pay more.
-        </p>
+    <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-b from-[#1a2f88] via-[#1f3ea7] to-[#10165f] p-4 text-primary-foreground shadow-[0_20px_60px_rgba(6,12,40,0.55)] sm:p-6">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.25),transparent_68%)]" />
+      <div className="pointer-events-none absolute -bottom-16 left-1/2 h-56 w-[120%] -translate-x-1/2 rounded-[100%] bg-[#090d43]/85" />
 
-        <div className="mt-4 space-y-4">
-          <BetControls bet={bet} setBet={setBet} disabled={rolling} />
-
-          <div>
-            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              Difficulty
-            </label>
-            <select
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value as Difficulty)}
-              disabled={rolling}
-              className="mt-2 h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"
-            >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
+      <div className="relative grid grid-cols-1 gap-4 xl:grid-cols-[360px_1fr]">
+        <section className="rounded-3xl border border-white/20 bg-[#0d1d67]/70 p-4 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="flex items-center gap-2 text-2xl font-black tracking-wide text-white">
+              <Plane className="h-6 w-6 text-cyan-300" /> SKY KENO
+            </h1>
+            <span className="rounded-full border border-cyan-300/30 bg-cyan-400/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-cyan-200">
+              live
+            </span>
           </div>
+          <p className="mt-2 text-sm text-blue-100/90">
+            Aviator-style cockpit with classic Keno mechanics. Pick up to 10 numbers
+            and launch for a higher multiplier.
+          </p>
 
-          <Button variant="secondary" onClick={randomPick} disabled={rolling} className="w-full">
-            Random Pick
-          </Button>
-          <Button variant="secondary" onClick={clearBoard} disabled={rolling} className="w-full">
-            Clear Table
-          </Button>
-          <Button onClick={placeBet} disabled={rolling || selected.size === 0} className="w-full text-base font-black">
-            {rolling ? "BETTING..." : "Bet"}
-          </Button>
+          <div className="mt-4 space-y-4">
+            <BetControls bet={bet} setBet={setBet} disabled={rolling} />
 
-          <div className="rounded-xl bg-background/50 p-3 text-sm">
-            <p className="font-semibold">Selected: {selected.size}/10</p>
-            <p className="text-muted-foreground">Drawn: {drawnSequence.length}/{drawCount}</p>
-            <p className="text-muted-foreground">Hits: {hits}</p>
-            <p className="text-muted-foreground">Current Multiplier: {multiplier.toFixed(2)}×</p>
-            <p className="font-semibold text-primary">Profit on win: +{formatCoins(potentialProfit)}</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-3xl border border-border bg-card/70 p-4 backdrop-blur-xl sm:p-6">
-        <div className="grid grid-cols-5 gap-2 sm:grid-cols-8 sm:gap-3">
-          {BOARD_NUMBERS.map((n) => {
-            const isSelected = selected.has(n);
-            const isDrawn = drawn.has(n);
-            const isHit = isSelected && isDrawn;
-
-            return (
-              <motion.button
-                key={n}
-                onClick={() => toggleNumber(n)}
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-blue-200/80">
+                Difficulty
+              </label>
+              <Select
+                value={difficulty}
+                onValueChange={(value) => setDifficulty(value as Difficulty)}
                 disabled={rolling}
-                whileTap={{ scale: 0.94 }}
-                animate={
-                  isHit
-                    ? { scale: [1, 1.14, 1], rotate: [0, -3, 3, 0] }
-                    : isDrawn
-                      ? { scale: [1, 1.08, 1] }
-                      : isSelected
-                        ? { scale: 1.03 }
-                        : { scale: 1 }
-                }
-                transition={{ duration: isHit ? 0.45 : 0.25, ease: "easeOut" }}
-                className={`aspect-square rounded-xl border text-xl font-black transition ${
-                  isHit
-                    ? "border-emerald-300 bg-emerald-500/35 text-emerald-100 shadow-[0_0_24px_rgba(16,185,129,0.55)]"
-                    : isSelected
-                      ? "border-primary bg-primary/25 text-primary"
-                    : isDrawn
-                        ? "border-amber-400 bg-amber-500/20 text-amber-100"
-                        : "border-border bg-background/60 text-foreground hover:border-primary/50"
-                }`}
               >
-                {n}
-              </motion.button>
-            );
-          })}
-        </div>
-      </section>
+                <SelectTrigger className="mt-2 h-11 rounded-xl border-white/25 bg-[#08134a]/90 text-base font-semibold text-white">
+                  <SelectValue placeholder="Select difficulty" />
+                </SelectTrigger>
+                <SelectContent className="border-white/20 bg-[#0d1956] text-white">
+                  <SelectItem value="low">Low turbulence</SelectItem>
+                  <SelectItem value="medium">Cruise</SelectItem>
+                  <SelectItem value="high">Storm</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="secondary"
+                onClick={randomPick}
+                disabled={rolling}
+                className="h-11 border border-white/15 bg-white/10 text-white hover:bg-white/20"
+              >
+                <Shuffle className="mr-2 h-4 w-4" /> Random
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={clearBoard}
+                disabled={rolling}
+                className="h-11 border border-white/15 bg-white/10 text-white hover:bg-white/20"
+              >
+                <RotateCcw className="mr-2 h-4 w-4" /> Reset
+              </Button>
+            </div>
+
+            <Button
+              onClick={placeBet}
+              disabled={rolling || selected.size === 0}
+              className="h-14 w-full rounded-2xl border border-cyan-200/50 bg-cyan-400/25 text-lg font-black tracking-wide text-white shadow-[0_0_25px_rgba(34,211,238,0.35)] hover:bg-cyan-300/35"
+            >
+              <Play className="mr-2 h-5 w-5" /> {rolling ? "LAUNCHING..." : "LAUNCH ROUND"}
+            </Button>
+
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="rounded-xl border border-white/15 bg-[#08124a]/75 p-3">
+                <p className="text-xs uppercase tracking-wider text-blue-200/75">Selected</p>
+                <p className="text-xl font-black text-white">{selected.size}/10</p>
+              </div>
+              <div className="rounded-xl border border-white/15 bg-[#08124a]/75 p-3">
+                <p className="text-xs uppercase tracking-wider text-blue-200/75">Drawn</p>
+                <p className="text-xl font-black text-white">{drawnSequence.length}/{drawCount}</p>
+              </div>
+              <div className="rounded-xl border border-white/15 bg-[#08124a]/75 p-3">
+                <p className="text-xs uppercase tracking-wider text-blue-200/75">Hits</p>
+                <p className="text-xl font-black text-emerald-300">{hits}</p>
+              </div>
+              <div className="rounded-xl border border-white/15 bg-[#08124a]/75 p-3">
+                <p className="text-xs uppercase tracking-wider text-blue-200/75">Multiplier</p>
+                <p className="text-xl font-black text-yellow-300">{multiplier.toFixed(2)}×</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-cyan-300/20 bg-cyan-400/10 p-3 text-sm font-semibold text-cyan-100">
+              Profit on win: <span className="text-white">+{formatCoins(potentialProfit)}</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-white/20 bg-[#0a1552]/65 p-4 backdrop-blur-sm sm:p-5">
+          <div className="mb-4 grid grid-cols-1 gap-2 text-white sm:grid-cols-3">
+            <div className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2">
+              <Gauge className="h-4 w-4 text-cyan-300" />
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-blue-200">Altitude</p>
+                <p className="text-sm font-bold">{drawnSequence.length * 120} m</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2">
+              <Compass className="h-4 w-4 text-cyan-300" />
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-blue-200">Distance</p>
+                <p className="text-sm font-bold">{selected.size * 8} km</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2">
+              <Radar className="h-4 w-4 text-cyan-300" />
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-blue-200">Target Lock</p>
+                <p className="text-sm font-bold">{Math.round((hits / Math.max(selected.size, 1)) * 100)}%</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-5 gap-2 sm:grid-cols-8 sm:gap-3">
+            {BOARD_NUMBERS.map((n) => {
+              const isSelected = selected.has(n);
+              const isDrawn = drawn.has(n);
+              const isHit = isSelected && isDrawn;
+
+              return (
+                <motion.button
+                  key={n}
+                  onClick={() => toggleNumber(n)}
+                  disabled={rolling}
+                  whileTap={{ scale: 0.94 }}
+                  animate={
+                    isHit
+                      ? { scale: [1, 1.14, 1], rotate: [0, -3, 3, 0] }
+                      : isDrawn
+                        ? { scale: [1, 1.08, 1] }
+                        : isSelected
+                          ? { scale: 1.03 }
+                          : { scale: 1 }
+                  }
+                  transition={{ duration: isHit ? 0.45 : 0.25, ease: "easeOut" }}
+                  className={`aspect-square rounded-xl border text-lg font-black transition sm:text-xl ${
+                    isHit
+                      ? "border-emerald-300 bg-emerald-500/35 text-emerald-100 shadow-[0_0_24px_rgba(16,185,129,0.55)]"
+                      : isSelected
+                        ? "border-cyan-300 bg-cyan-400/30 text-white"
+                        : isDrawn
+                          ? "border-amber-300 bg-amber-400/25 text-amber-100"
+                          : "border-white/15 bg-[#0a1658]/80 text-white hover:border-cyan-300/70"
+                  }`}
+                >
+                  {n}
+                </motion.button>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-bold uppercase tracking-wider text-blue-100">
+            <Target className="h-4 w-4 text-cyan-300" />
+            Draw order: {drawnSequence.length ? drawnSequence.join(" · ") : "Waiting for launch"}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
