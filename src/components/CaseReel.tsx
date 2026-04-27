@@ -355,10 +355,11 @@ export function CaseReel({
     const startedAt = performance.now();
     // Decide whether this spin gets the dramatic "almost stops on the wrong
     // tile" hesitation. Skip on stage-1 specials (they already feel resolved).
-    // Hesitation happens less often now (~12%), and when it does it feels
-    // like a slow drift onto a near-miss tile rather than parking exactly
-    // between two items.
-    const wantsHesitation = !(stage === 1 && hasSpecial) && Math.random() < 0.12;
+    // Sometimes (~15%) the reel doesn't land cleanly on a tile center —
+    // it can stop slightly before/after a neighbour and drift into place.
+    // This is now ONE continuous animation (no chained controls.start), so
+    // there's no teleport — just smooth keyframes.
+    const wantsHesitation = !(stage === 1 && hasSpecial) && Math.random() < 0.15;
     // Single smooth glide with a strong deceleration curve (csgo-style).
     // No bounce / overshoot — the reel must NEVER move after it stops, or
     // it looks like it changed which item you got.
@@ -375,34 +376,33 @@ export function CaseReel({
     };
 
     if (wantsHesitation) {
-      // Drift past the result and "near-miss" stop on a neighbour tile,
-      // pause briefly, then slowly drift back onto the real result.
-      // No wobble, no parking-between — just a smooth one-tile near-miss.
+      // Drift PAST the result by a random fraction of a tile (could be
+      // before or after, anywhere from 0.4 to 1.1 tiles), then very slowly
+      // creep back to the real result. ALL one keyframe sequence so the
+      // motion is perfectly continuous — no chained .then() that visually
+      // teleports.
       const dir = Math.random() < 0.5 ? 1 : -1;
-      // Stop ~85-95% of the way toward the neighbour (so it visibly lands
-      // on that tile, not in the middle).
-      const driftAmt = step * (0.85 + Math.random() * 0.10);
-      const nearMissOffset = offset + dir * driftAmt;
-      const phase1 = Math.max(2.0, (dur / 1000) * 0.88);
-      const settleDur = 0.85; // slow, smooth drift onto the real result
-      const holdMs = 240 + Math.random() * 180;
-
+      const overshoot = step * (0.4 + Math.random() * 0.7); // 0.4..1.1 tiles
+      const farPoint = offset + dir * overshoot;
+      const totalDur = (dur / 1000) + 0.9; // longer than a normal spin
+      // Times: 0 → 0.78 reach the overshoot point, hold until 0.85, slow
+      // creep back to real result by 1.0
       controls.start({
-        y: nearMissOffset,
-        transition: { duration: phase1, ease: [0.16, 0.84, 0.24, 1] },
+        y: [center - tileH / 2, farPoint, farPoint, offset],
+        transition: {
+          duration: totalDur,
+          times: [0, 0.78, 0.85, 1],
+          // Single ease for whole sequence — keyframes interpolate
+          // smoothly so the "hold" + "creep back" looks like one motion.
+          ease: [0.16, 0.84, 0.24, 1],
+        },
       }).then(() => {
-        setHesitating(true);
-        setTimeout(() => {
-          setHesitating(false);
-          controls.start({
-            y: offset,
-            transition: { duration: settleDur, ease: [0.33, 1, 0.45, 1] },
-          }).then(() => {
-            void startedAt;
-            finalLand();
-          });
-        }, holdMs);
+        void startedAt;
+        finalLand();
       });
+      // Show the chip during the slow-creep phase
+      setTimeout(() => setHesitating(true), totalDur * 1000 * 0.78);
+      setTimeout(() => setHesitating(false), totalDur * 1000 * 0.98);
     } else {
       controls.start({
         y: offset,
