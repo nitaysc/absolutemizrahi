@@ -7,7 +7,7 @@ import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { formatCoins } from "@/lib/format";
 import { toast } from "sonner";
-import { Bot, Crown, Play, LogOut, Swords, X, RotateCcw, Pencil, Trophy, UserPlus } from "lucide-react";
+import { Bot, Crown, Play, LogOut, Swords, X, RotateCcw, Pencil, Trophy, UserPlus, Package } from "lucide-react";
 import { CaseReel, type ReelItem } from "@/components/CaseReel";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -786,6 +786,9 @@ export default function CaseBattleRoom() {
                       </>
                     )}
                     .
+                    <div className="mt-1 text-[11px] font-bold text-amber-300">
+                      💎 Each winner's share lands in their inventory as items they can sell anytime.
+                    </div>
                   </div>
                 );
               })()}
@@ -802,6 +805,12 @@ export default function CaseBattleRoom() {
                   className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/70 px-4 py-2 text-sm font-bold text-foreground hover:border-primary/50"
                 >
                   <X className="h-4 w-4" /> Exit
+                </button>
+                <button
+                  onClick={() => navigate("/inventory")}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/50 bg-amber-500/15 px-4 py-2 text-sm font-black text-amber-200 hover:bg-amber-500/25"
+                >
+                  <Package className="h-4 w-4" /> Inventory
                 </button>
                 <button
                   onClick={recreate}
