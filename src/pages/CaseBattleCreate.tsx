@@ -45,6 +45,7 @@ export default function CaseBattleCreate() {
   const [fillBots, setFillBots] = useState(searchParams.get("bots") === "1");
   const [fast, setFast] = useState(searchParams.get("fast") === "1");
   const [isPrivate, setIsPrivate] = useState(false);
+  const [allowBorrow, setAllowBorrow] = useState(false);
   const [creating, setCreating] = useState(false);
   const [detailsCase, setDetailsCase] = useState<Case | null>(null);
   const navigate = useNavigate();
@@ -78,7 +79,8 @@ export default function CaseBattleCreate() {
 
   async function create() {
     if (totalCases === 0) return toast.error("Pick at least 1 case");
-    if (!profile || profile.coins < totalCost) return toast.error("Not enough coins");
+    if (!profile) return toast.error("Not logged in");
+    if (!allowBorrow && profile.coins < totalCost) return toast.error("Not enough coins");
     const ids: string[] = [];
     for (const [id, n] of Object.entries(picks)) for (let i = 0; i < n; i++) ids.push(id);
     setCreating(true);
@@ -89,6 +91,7 @@ export default function CaseBattleCreate() {
       _fill_with_bots: fillBots,
       _fast: fast,
       _private: isPrivate,
+      _allow_borrow: allowBorrow,
     });
     setCreating(false);
     if (error) return toast.error(error.message);
@@ -151,6 +154,12 @@ export default function CaseBattleCreate() {
           <Toggle label="Fill with Bots" value={fillBots} onChange={setFillBots} />
           <Toggle label="Fast Mode" value={fast} onChange={setFast} />
           <Toggle label="Private" value={isPrivate} onChange={setIsPrivate} />
+          <Toggle label="Allow Borrow" value={allowBorrow} onChange={setAllowBorrow} />
+          {allowBorrow && (
+            <p className="text-[10px] leading-tight text-muted-foreground">
+              Players short on coins can still join. Their loan is taken from their winnings (and balance, never below 0).
+            </p>
+          )}
         </div>
 
         <div className="rounded-xl border border-border bg-background p-3 text-sm">
