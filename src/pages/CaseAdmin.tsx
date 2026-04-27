@@ -6,6 +6,10 @@ import { Check, X, ChevronLeft, Eye } from "lucide-react";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { formatCoins } from "@/lib/format";
 
+function isUrl(s: string | null | undefined) {
+  return !!s && /^https?:\/\//i.test(s);
+}
+
 type CaseRow = {
   id: string;
   name: string;
@@ -121,7 +125,11 @@ export default function CaseAdmin() {
             <div key={c.id} className="rounded-2xl border border-border bg-card p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="text-3xl">{c.image ?? "🎁"}</span>
+                  {isUrl(c.image) ? (
+                    <img src={c.image!} alt={c.name} className="h-12 w-12 rounded-lg object-cover" />
+                  ) : (
+                    <span className="text-3xl">{c.image ?? "🎁"}</span>
+                  )}
                   <div>
                     <div className="font-bold">{c.name}</div>
                     <div className="text-xs text-muted-foreground">
@@ -168,7 +176,12 @@ export default function CaseAdmin() {
                   {its.map((i) => (
                     <div key={i.id} className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-1.5 text-sm">
                       <span>
-                        {i.image} <span className="font-bold">{i.name}</span>{" "}
+                        {isUrl(i.image) ? (
+                          <img src={i.image!} alt={i.name} className="mr-1 inline-block h-5 w-5 rounded object-cover align-middle" />
+                        ) : (
+                          <span className="mr-1">{i.image}</span>
+                        )}
+                        <span className="font-bold">{i.name}</span>{" "}
                         <span className="text-xs text-muted-foreground">[{i.rarity}]</span>
                       </span>
                       <span className="text-xs">
