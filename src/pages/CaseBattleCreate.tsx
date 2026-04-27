@@ -5,7 +5,8 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { formatCoins } from "@/lib/format";
 import { toast } from "sonner";
-import { ChevronLeft, Plus, Minus, Trash2 } from "lucide-react";
+import { ChevronLeft, Plus, Minus, Info } from "lucide-react";
+import { CaseDetailsModal } from "@/components/CaseDetailsModal";
 
 type Case = { id: string; name: string; image: string | null; price: number };
 
@@ -45,6 +46,7 @@ export default function CaseBattleCreate() {
   const [fast, setFast] = useState(searchParams.get("fast") === "1");
   const [isPrivate, setIsPrivate] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [detailsCase, setDetailsCase] = useState<Case | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -179,12 +181,38 @@ export default function CaseBattleCreate() {
             return (
               <div
                 key={c.id}
-                className={`rounded-2xl border bg-background p-3 text-center transition ${
+                className={`relative rounded-2xl border bg-background p-3 text-center transition ${
                   n > 0 ? "border-primary shadow-[0_0_15px_hsl(var(--primary)/0.4)]" : "border-border"
                 }`}
               >
-                <div className="text-5xl">{c.image ?? "🎁"}</div>
-                <div className="mt-1 truncate text-sm font-bold">{c.name}</div>
+                <button
+                  type="button"
+                  onClick={() => setDetailsCase(c)}
+                  className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full border border-border bg-card/80 px-2 py-0.5 text-[10px] font-bold text-muted-foreground hover:border-primary hover:text-primary"
+                  title="See contents & odds"
+                >
+                  <Info className="h-3 w-3" /> Info
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDetailsCase(c)}
+                  className="block w-full"
+                  aria-label={`View ${c.name} contents`}
+                >
+                  <div className="flex h-20 w-full items-center justify-center text-5xl">
+                    {c.image && /^https?:\/\//i.test(c.image) ? (
+                      <img
+                        src={c.image}
+                        alt={c.name}
+                        className="h-full w-full object-contain"
+                        loading="lazy"
+                      />
+                    ) : (
+                      c.image ?? "🎁"
+                    )}
+                  </div>
+                  <div className="mt-1 truncate text-sm font-bold">{c.name}</div>
+                </button>
                 <div className="inline-flex items-center gap-1 text-xs text-primary">
                   <MizrahiCoin size={10} /> {formatCoins(c.price)}
                 </div>
@@ -208,6 +236,16 @@ export default function CaseBattleCreate() {
           })}
         </div>
       </main>
+
+      {detailsCase && (
+        <CaseDetailsModal
+          caseId={detailsCase.id}
+          caseName={detailsCase.name}
+          caseImage={detailsCase.image}
+          casePrice={detailsCase.price}
+          onClose={() => setDetailsCase(null)}
+        />
+      )}
     </div>
   );
 }
