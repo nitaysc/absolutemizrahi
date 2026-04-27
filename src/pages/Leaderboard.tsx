@@ -6,7 +6,7 @@ import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { formatCoins } from "@/lib/format";
 import { Trophy } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { calculateDailyStreak } from "@/lib/streak";
+import { calculateDailyStreak, getStreakTimezone } from "@/lib/streak";
 
 interface Row {
   id: string;
@@ -24,6 +24,7 @@ export default function Leaderboard() {
 
   useEffect(() => {
     (async () => {
+      const tz = getStreakTimezone();
       const { data } = await supabase
         .from("profiles")
         .select("id, username, coins, total_won")
@@ -49,7 +50,7 @@ export default function Leaderboard() {
           username: r.username,
           coins: Number(r.coins ?? 0),
           total_won: Number(r.total_won ?? 0),
-          streak: calculateDailyStreak(byUser.get(r.id) ?? []),
+          streak: calculateDailyStreak(byUser.get(r.id) ?? [], new Date(), tz),
         })),
       );
       setLoading(false);
@@ -135,7 +136,17 @@ function LeaderboardList({
                   {i + 1}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-bold">{r.username ?? "anon"}</div>
+                  <div className="flex items-center gap-1.5 truncate font-bold">
+                    <span className="truncate">{r.username ?? "anon"}</span>
+                    {r.streak > 0 && (
+                      <span
+                        className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-orange-400/40 bg-orange-500/15 px-1.5 py-0 text-[9px] font-black tabular-nums text-orange-300"
+                        title={`${r.streak} day daily-bet streak`}
+                      >
+                        🔥{r.streak}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs text-muted-foreground">
                     {mode === "coins" ? `Won ${formatCoins(r.total_won)}` : `${r.streak} day streak`}
                   </div>
