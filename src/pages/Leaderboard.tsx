@@ -5,12 +5,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { formatCoins } from "@/lib/format";
 import { Trophy } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { calculateDailyStreak } from "@/lib/streak";
 
 interface Row {
   id: string;
   username: string | null;
   coins: number;
   total_won: number;
+  streak: number;
 }
 
 export default function Leaderboard() {
@@ -25,18 +28,39 @@ export default function Leaderboard() {
         .from("profiles")
         .select("id, username, coins, total_won")
         .order("coins", { ascending: false })
-        .limit(50);
+        .limit(100);
+
+      const { data: streakRows } = await supabase
+        .from("bets")
+        .select("user_id, created_at")
+        .order("created_at", { ascending: false })
+        .limit(5000);
+
+      const byUser = new Map<string, string[]>();
+      for (const row of streakRows ?? []) {
+        const list = byUser.get(row.user_id) ?? [];
+        list.push(row.created_at);
+        byUser.set(row.user_id, list);
+      }
+
       setRows(
         (data ?? []).map((r) => ({
           id: r.id,
           username: r.username,
           coins: Number(r.coins ?? 0),
           total_won: Number(r.total_won ?? 0),
+          streak: calculateDailyStreak(byUser.get(r.id) ?? []),
         })),
       );
       setLoading(false);
     })();
   }, []);
+
+  const byCoins = [...rows].sort((a, b) => b.coins - a.coins).slice(0, 50);
+  const byStreak = [...rows]
+    .filter((r) => r.streak > 0)
+    .sort((a, b) => b.streak - a.streak || b.coins - a.coins)
+    .slice(0, 50);
 
   return (
     <div className="space-y-6">
@@ -51,9 +75,40 @@ export default function Leaderboard() {
       {loading ? (
         <div className="text-center text-muted-foreground">Loading...</div>
       ) : (
+        <Tabs defaultValue="coins" className="space-y-3">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="coins">Coins</TabsTrigger>
+            <TabsTrigger value="streak">Streak</TabsTrigger>
+          </TabsList>
+          <LeaderboardList rows={byCoins} userId={user?.id} navigate={navigate} mode="coins" />
+          <LeaderboardList rows={byStreak} userId={user?.id} navigate={navigate} mode="streak" />
+        </Tabs>
+      )}
+    </div>
+  );
+}
+
+function LeaderboardList({
+  rows,
+  userId,
+  navigate,
+  mode,
+}: {
+  rows: Row[];
+  userId?: string;
+  navigate: ReturnType<typeof useNavigate>;
+  mode: "coins" | "streak";
+}) {
+  return (
+    <TabsContent value={mode} className="space-y-2">
+      {rows.length === 0 ? (
+        <div className="rounded-2xl border border-border bg-card/40 p-6 text-center text-sm text-muted-foreground">
+          No active streaks yet.
+        </div>
+      ) : (
         <ul className="space-y-2">
           {rows.map((r, i) => {
-            const isMe = r.id === user?.id;
+            const isMe = r.id === userId;
             return (
               <li
                 key={r.id}
@@ -82,18 +137,22 @@ export default function Leaderboard() {
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-bold">{r.username ?? "anon"}</div>
                   <div className="text-xs text-muted-foreground">
-                    Won {formatCoins(r.total_won)}
+                    {mode === "coins" ? `Won ${formatCoins(r.total_won)}` : `${r.streak} day streak`}
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 font-black tabular-nums">
-                  <MizrahiCoin size={16} />
-                  {formatCoins(r.coins)}
-                </div>
+                {mode === "coins" ? (
+                  <div className="flex items-center gap-1.5 font-black tabular-nums">
+                    <MizrahiCoin size={16} />
+                    {formatCoins(r.coins)}
+                  </div>
+                ) : (
+                  <div className="font-black tabular-nums text-primary">{r.streak}🔥</div>
+                )}
               </li>
             );
           })}
         </ul>
       )}
-    </div>
+    </TabsContent>
   );
 }

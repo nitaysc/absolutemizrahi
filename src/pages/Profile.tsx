@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { AVATAR_OPTIONS } from "@/lib/avatars";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { calculateDailyStreak } from "@/lib/streak";
 
 interface Bet {
   id: string;
@@ -25,6 +26,7 @@ export default function Profile() {
   const { profile, refetch, setLocalCoins } = useUserProfile();
   const [name, setName] = useState("");
   const [bets, setBets] = useState<Bet[]>([]);
+  const [streak, setStreak] = useState(0);
   const [code, setCode] = useState("");
   const [redeeming, setRedeeming] = useState(false);
   const [grantTo, setGrantTo] = useState("");
@@ -81,13 +83,23 @@ export default function Profile() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase
-        .from("bets")
-        .select("id, game, bet_amount, payout, multiplier, won, created_at")
-        .order("created_at", { ascending: false })
-        .limit(20);
+      const [recentRes, streakRes] = await Promise.all([
+        supabase
+          .from("bets")
+          .select("id, game, bet_amount, payout, multiplier, won, created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(20),
+        supabase
+          .from("bets")
+          .select("created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(366),
+      ]);
+
       setBets(
-        (data ?? []).map((b) => ({
+        (recentRes.data ?? []).map((b) => ({
           id: b.id,
           game: b.game,
           bet_amount: Number(b.bet_amount),
@@ -96,6 +108,10 @@ export default function Profile() {
           won: b.won,
           created_at: b.created_at,
         })),
+      );
+
+      setStreak(
+        calculateDailyStreak((streakRes.data ?? []).map((r) => r.created_at)),
       );
     })();
   }, [user, profile?.coins]);
@@ -357,9 +373,10 @@ export default function Profile() {
         </section>
       )}
 
-      <section className="grid grid-cols-3 gap-3">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Balance" value={formatCoins(profile?.coins ?? 0)} coin />
         <Stat label="Wagered" value={formatCoins(profile?.total_wagered ?? 0)} coin />
+        <Stat label="Streak" value={`${streak} day${streak === 1 ? "" : "s"}`} />
         <Stat
           label="Profit"
           value={`${profit >= 0 ? "+" : ""}${formatCoins(profit)}`}
@@ -367,6 +384,9 @@ export default function Profile() {
           tone={profit >= 0 ? "good" : "bad"}
         />
       </section>
+      <p className="-mt-3 text-xs text-muted-foreground">
+        Streak rule: log in and place at least one bet each day. Miss a day and it resets.
+      </p>
 
       <section>
         <h2 className="mb-2 text-sm font-bold uppercase tracking-widest text-muted-foreground">Recent bets</h2>
