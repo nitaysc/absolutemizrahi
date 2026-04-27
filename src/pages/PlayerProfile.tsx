@@ -8,6 +8,7 @@ import { formatCoins } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ArrowLeft, UserPlus, UserCheck, UserX, Clock, Circle } from "lucide-react";
+import { calculateDailyStreak } from "@/lib/streak";
 
 type Status = "none" | "pending_out" | "pending_in" | "accepted" | "self";
 
@@ -40,6 +41,7 @@ export default function PlayerProfile() {
   const [data, setData] = useState<ProfileRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [streak, setStreak] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -72,6 +74,19 @@ export default function PlayerProfile() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!data?.id) return;
+    (async () => {
+      const { data: streakRows } = await supabase
+        .from("bets")
+        .select("created_at")
+        .eq("user_id", data.id)
+        .order("created_at", { ascending: false })
+        .limit(366);
+      setStreak(calculateDailyStreak((streakRows ?? []).map((r) => r.created_at)));
+    })();
+  }, [data?.id]);
 
   const profit = (data?.total_won ?? 0) - (data?.total_wagered ?? 0);
   const presence = data ? byUser[data.id] : undefined;
@@ -155,10 +170,11 @@ export default function PlayerProfile() {
           <FriendActions status={data.friendship_status} busy={busy} act={act} />
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
           <Stat label="Balance" value={formatCoins(data.coins)} coin />
           <Stat label="Wagered" value={formatCoins(data.total_wagered)} coin />
           <Stat label="Won" value={formatCoins(data.total_won)} coin />
+          <Stat label="Streak" value={`${streak} day${streak === 1 ? "" : "s"}`} />
           <Stat
             label="Profit"
             value={`${profit >= 0 ? "+" : ""}${formatCoins(profit)}`}
