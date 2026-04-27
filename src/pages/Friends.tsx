@@ -310,7 +310,12 @@ export default function Friends() {
                 >
                   <PlayerAvatar avatar={r.avatar} size={40} ring />
                   <div className="min-w-0">
-                    <div className="truncate font-bold">{r.username ?? "anon"}</div>
+                    <div className="flex items-center gap-1.5 font-bold">
+                      <span className="truncate">{r.username ?? "anon"}</span>
+                      {streaks[r.requester] > 0 && (
+                        <StreakBadge value={streaks[r.requester]} />
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground">wants to be friends</div>
                   </div>
                 </button>
@@ -369,7 +374,10 @@ export default function Friends() {
                     onClick={() => f.username && navigate(`/u/${encodeURIComponent(f.username)}`)}
                     className="min-w-0 flex-1 text-left"
                   >
-                    <div className="truncate font-bold">{f.username ?? "anon"}</div>
+                    <div className="flex items-center gap-1.5 font-bold">
+                      <span className="truncate">{f.username ?? "anon"}</span>
+                      {streaks[f.id] > 0 && <StreakBadge value={streaks[f.id]} />}
+                    </div>
                     <div className="text-xs text-muted-foreground">
                       {online ? (
                         game ? (
