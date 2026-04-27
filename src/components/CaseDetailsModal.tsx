@@ -23,6 +23,27 @@ const RARITY_BG: Record<string, string> = {
   mythic: "from-rose-500/40 to-pink-950/65 border-rose-300/90",
 };
 
+function isUrl(s: string | null | undefined) {
+  return !!s && /^https?:\/\//i.test(s);
+}
+
+function ImgOrEmoji({
+  src,
+  alt,
+  className,
+  fallbackClass,
+}: {
+  src: string | null | undefined;
+  alt: string;
+  className?: string;
+  fallbackClass?: string;
+}) {
+  if (isUrl(src)) {
+    return <img src={src!} alt={alt} className={className} loading="lazy" />;
+  }
+  return <span className={fallbackClass ?? className}>{src ?? "🎁"}</span>;
+}
+
 export function CaseDetailsModal({
   caseId,
   caseName,
@@ -74,7 +95,14 @@ export function CaseDetailsModal({
         >
           <div className="flex items-center justify-between border-b border-border p-4">
             <div className="flex items-center gap-3">
-              <div className="text-4xl">{caseImage ?? "🎁"}</div>
+              <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl">
+                <ImgOrEmoji
+                  src={caseImage}
+                  alt={caseName}
+                  className="h-full w-full object-contain"
+                  fallbackClass="text-4xl"
+                />
+              </div>
               <div>
                 <h3 className="text-lg font-black">{caseName}</h3>
                 <div className="inline-flex items-center gap-1 text-xs font-bold text-primary">
@@ -123,7 +151,14 @@ export function CaseDetailsModal({
                         RARITY_BG[it.rarity] ?? RARITY_BG.common
                       } p-3 text-center`}
                     >
-                      <div className="text-4xl">{it.image ?? "🎁"}</div>
+                      <div className="flex h-12 items-center justify-center">
+                        <ImgOrEmoji
+                          src={it.image}
+                          alt={it.name}
+                          className="max-h-12 w-auto object-contain"
+                          fallbackClass="text-4xl"
+                        />
+                      </div>
                       <div className="mt-1 truncate text-xs font-bold">{it.name}</div>
                       <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-black">
                         <MizrahiCoin size={8} /> {formatCoins(it.value)}

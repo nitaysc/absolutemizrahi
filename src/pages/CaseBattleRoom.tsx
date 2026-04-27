@@ -167,7 +167,9 @@ export default function CaseBattleRoom() {
     // individually based on whether ANY lane in that round has a special spin.
     const total = battle.rounds_total;
     const baseSpin = battle.fast ? 1600 : 4200; // matches CaseReel durationMs
-    const specialExtra = battle.fast ? 1700 : 3300; // 0.7s gap + ~stage-2 spin
+    // Stage-2 of a special spin is min 1800ms (see CaseReel) + ~700ms gap.
+    // Add a buffer so the second spin fully finishes before we advance.
+    const specialExtra = battle.fast ? 2700 : 3600;
     const tail = battle.fast ? 600 : 1200;
     const timeouts: ReturnType<typeof setTimeout>[] = [];
     const roundHasSpecial = (idx: number) =>
