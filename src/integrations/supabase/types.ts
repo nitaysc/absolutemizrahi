@@ -403,6 +403,7 @@ export type Database = {
       cases: {
         Row: {
           approved_at: string | null
+          cover_image: string | null
           created_at: string
           creator_id: string | null
           id: string
@@ -417,6 +418,7 @@ export type Database = {
         }
         Insert: {
           approved_at?: string | null
+          cover_image?: string | null
           created_at?: string
           creator_id?: string | null
           id?: string
@@ -431,6 +433,7 @@ export type Database = {
         }
         Update: {
           approved_at?: string | null
+          cover_image?: string | null
           created_at?: string
           creator_id?: string | null
           id?: string
