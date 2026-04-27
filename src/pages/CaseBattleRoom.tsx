@@ -119,35 +119,61 @@ export default function CaseBattleRoom() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // Drive synchronized round-by-round reveal
+  // Drive synchronized round-by-round reveal.
+  // Uses a single ref-based flag so we only run the animation ONCE per battle
+  // (otherwise re-renders from realtime updates would keep restarting it).
+  const animRunRef = useRef<string | null>(null);
   useEffect(() => {
     if (!battle) return;
     if (battle.status === "waiting") {
       setCurrentSpin(-1);
       setRevealComplete(false);
+      animRunRef.current = null;
       return;
     }
     if (battle.status !== "finished") return;
     if (!rounds.length || !battle.rounds_total) return;
+    // Only animate ONCE per battle id. If the user re-opens a finished battle,
+    // skip animation and reveal everything immediately.
+    if (animRunRef.current === battle.id) return;
+    animRunRef.current = battle.id;
+
+    // If the battle finished more than 30s ago, treat it as "already played" and
+    // skip the animation — that prevents the room feeling "stuck" when revisiting.
+    const finishedSecs =
+      battle.status === "finished" && (battle as any).finished_at
+        ? (Date.now() - new Date((battle as any).finished_at).getTime()) / 1000
+        : 0;
+    if (finishedSecs > 30) {
+      setCurrentSpin(battle.rounds_total - 1);
+      setRevealComplete(true);
+      return;
+    }
 
     setRevealComplete(false);
-    setCurrentSpin(-1);
-    const stepMs = battle.fast ? 2400 : 6200; // match reel duration + small pad
+    setCurrentSpin(0);
+    const stepMs = battle.fast ? 2400 : 6200;
     const total = battle.rounds_total;
     let i = 0;
-    setCurrentSpin(0);
-    const t = setInterval(() => {
+    const intervalId = setInterval(() => {
       i++;
       if (i >= total) {
-        clearInterval(t);
-        // After last spin lands, flip revealComplete
+        clearInterval(intervalId);
         setTimeout(() => setRevealComplete(true), battle.fast ? 1900 : 5400);
         return;
       }
       setCurrentSpin(i);
     }, stepMs);
-    return () => clearInterval(t);
-  }, [battle?.status, battle?.rounds_total, battle?.fast, rounds.length]);
+    // Failsafe: always flip revealComplete by max(total*step + 6s) so UI never sticks
+    const failSafe = setTimeout(
+      () => setRevealComplete(true),
+      stepMs * total + (battle.fast ? 2500 : 7000)
+    );
+    return () => {
+      clearInterval(intervalId);
+      clearTimeout(failSafe);
+    };
+  }, [battle?.status, battle?.rounds_total, battle?.fast, battle?.id, rounds.length]);
 
   const isHost = battle?.host_id === profile?.id;
   const inBattle = !!players.find((p) => p.user_id === profile?.id);
