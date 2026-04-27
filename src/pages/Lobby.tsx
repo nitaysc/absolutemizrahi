@@ -61,6 +61,7 @@ export default function Lobby() {
     { to: "/roulette", key: "roulette", title: "ROULETTE", img: rouletteImg },
     { to: "/keno", key: "keno", title: "KENO", img: kenoImg },
     { to: "/slide", key: "slide", title: "SLIDE", img: pumpImg },
+    { to: "/slides", key: "slides", title: "SLIDES", img: pumpImg },
   ];
 
   return (

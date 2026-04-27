@@ -192,10 +192,10 @@ export default function Keno() {
                 onValueChange={(value) => setDifficulty(value as Difficulty)}
                 disabled={rolling}
               >
-                <SelectTrigger className="mt-2 h-10 rounded-xl border-border bg-background/60 text-sm font-semibold">
+                <SelectTrigger className="mt-1 font-bold">
                   <SelectValue placeholder="Select difficulty" />
                 </SelectTrigger>
-                <SelectContent className="border-border bg-popover">
+                <SelectContent>
                   <SelectItem value="low">Low turbulence</SelectItem>
                   <SelectItem value="medium">Cruise</SelectItem>
                   <SelectItem value="high">Storm</SelectItem>

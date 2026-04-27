@@ -24,6 +24,7 @@ import Moles from "./pages/Moles";
 import Roulette from "./pages/Roulette";
 import Keno from "./pages/Keno";
 import Slide from "./pages/Slide";
+import Slides from "./pages/Slides";
 import ChessLobby from "./pages/ChessLobby";
 import ChessGame from "./pages/Chess";
 import Leaderboard from "./pages/Leaderboard";
@@ -78,6 +79,7 @@ const App = () => (
             <Route path="/roulette" element={<Roulette />} />
             <Route path="/keno" element={<Keno />} />
             <Route path="/slide" element={<Slide />} />
+            <Route path="/slides" element={<Slides />} />
             <Route path="/chess" element={<ChessLobby />} />
             <Route path="/chess/:gameId" element={<ChessGame />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
