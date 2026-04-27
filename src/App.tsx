@@ -32,6 +32,12 @@ import Profile from "./pages/Profile";
 import Friends from "./pages/Friends";
 import PlayerProfile from "./pages/PlayerProfile";
 import Prediction from "./pages/Prediction";
+import Cases from "./pages/Cases";
+import CaseBattles from "./pages/CaseBattles";
+import CaseBattleCreate from "./pages/CaseBattleCreate";
+import CaseBattleRoom from "./pages/CaseBattleRoom";
+import CaseUpload from "./pages/CaseUpload";
+import CaseAdmin from "./pages/CaseAdmin";
 import NotFound from "./pages/NotFound";
 
 function Protected({ children }: { children: React.ReactNode }) {
@@ -87,6 +93,12 @@ const App = () => (
             <Route path="/friends" element={<Friends />} />
             <Route path="/u/:username" element={<PlayerProfile />} />
             <Route path="/prediction" element={<Prediction />} />
+            <Route path="/cases" element={<Cases />} />
+            <Route path="/cases/upload" element={<CaseUpload />} />
+            <Route path="/cases/admin" element={<CaseAdmin />} />
+            <Route path="/cases/battles" element={<CaseBattles />} />
+            <Route path="/cases/battles/new" element={<CaseBattleCreate />} />
+            <Route path="/cases/battles/:id" element={<CaseBattleRoom />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
