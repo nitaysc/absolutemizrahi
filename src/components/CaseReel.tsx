@@ -177,7 +177,7 @@ export function CaseReel({
   const [phase, setPhase] = useState<"idle" | "spinning" | "landed">("idle");
 
   // Tile dimensions
-  const tileH = size === "sm" ? 96 : size === "lg" ? 150 : 120;
+  const tileH = size === "xs" ? 72 : size === "sm" ? 96 : size === "lg" ? 150 : 120;
   const gap = 14;
   const step = tileH + gap;
   const STRIP_LEN = 80;
