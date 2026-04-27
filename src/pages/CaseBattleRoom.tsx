@@ -156,23 +156,36 @@ export default function CaseBattleRoom() {
     setRevealComplete(false);
     setCurrentSpin(0);
     // Step length accounts for potential 2-stage special spins (Empire/Duel),
-    // which add ~3.6-4s of follow-up animation on top of the base spin.
-    const stepMs = battle.fast ? 3200 : 9800;
+    // which add ~3s of follow-up animation on top of the base spin.
+    const stepMs = battle.fast ? 2400 : 6500;
     const total = battle.rounds_total;
     let i = 0;
     const intervalId = setInterval(() => {
       i++;
       if (i >= total) {
         clearInterval(intervalId);
-        setTimeout(() => setRevealComplete(true), battle.fast ? 2400 : 6800);
+        // Wait just long enough for the LAST reel to actually land before
+        // revealing winner & refetching balance. Final reel duration ≈ 5.2s,
+        // plus ~1.2s extra for special-spin stage 2 if it triggers.
+        setTimeout(
+          () => {
+            setRevealComplete(true);
+            refetch();
+          },
+          battle.fast ? 2000 : 5400,
+        );
         return;
       }
       setCurrentSpin(i);
     }, stepMs);
-    // Failsafe: always flip revealComplete by max(total*step + 6s) so UI never sticks
+    // Failsafe: always flip revealComplete + refetch by max(total*step + buffer)
+    // so UI never sticks.
     const failSafe = setTimeout(
-      () => setRevealComplete(true),
-      stepMs * total + (battle.fast ? 2500 : 7000)
+      () => {
+        setRevealComplete(true);
+        refetch();
+      },
+      stepMs * total + (battle.fast ? 2200 : 6000),
     );
     return () => {
       clearInterval(intervalId);
