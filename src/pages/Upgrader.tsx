@@ -45,6 +45,7 @@ function ItemImg({ src, name, size = 14 }: { src: string | null; name: string; s
 }
 
 export default function Upgrader() {
+  const SPIN_DURATION_SEC = 2.8;
   const { profile, refetch } = useUserProfile();
   const [inv, setInv] = useState<InventoryItem[]>([]);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
@@ -60,6 +61,7 @@ export default function Upgrader() {
     target: CatalogItem;
   }>(null);
   const [spinning, setSpinning] = useState(false);
+  const [wheelRotation, setWheelRotation] = useState(0);
 
   async function load() {
     const [{ data: invData }, { data: catData }] = await Promise.all([
@@ -140,14 +142,17 @@ export default function Upgrader() {
       setSpinning(false);
       return toast.error(error.message);
     }
-    // small dramatic delay for the spinner
-    await new Promise((r) => setTimeout(r, 1800));
     const row = Array.isArray(data) ? data[0] : data;
     const won = !!row?.won;
+    const roll = Number(row?.roll ?? 0);
+    const normalizedRoll = Math.min(0.9999, Math.max(0, roll));
+    const landingRotation = (1 - normalizedRoll) * 360;
+    setWheelRotation((prev) => prev + 360 * 5 + landingRotation);
+    await new Promise((r) => setTimeout(r, SPIN_DURATION_SEC * 1000));
     setResult({
       won,
       chance: Number(row?.chance ?? chance),
-      roll: Number(row?.roll ?? 0),
+      roll,
       target,
     });
     setSpinning(false);
@@ -228,11 +233,11 @@ export default function Upgrader() {
           {/* Wheel */}
           <div className="relative mx-auto h-44 w-44 select-none">
             <motion.div
-              animate={spinning ? { rotate: 1440 } : { rotate: 0 }}
-              transition={{ duration: 1.8, ease: "easeOut" }}
+              animate={{ rotate: wheelRotation }}
+              transition={{ duration: SPIN_DURATION_SEC, ease: "easeOut" }}
               className="absolute inset-0 rounded-full border-[6px] border-fuchsia-400/40"
               style={{
-                background: `conic-gradient(hsl(var(--primary)) 0 ${chance * 360}deg, hsl(var(--muted)) ${chance * 360}deg 360deg)`,
+                background: `conic-gradient(from -90deg, hsl(var(--primary)) 0 ${chance * 360}deg, hsl(var(--muted)) ${chance * 360}deg 360deg)`,
               }}
             />
             <div className="absolute inset-3 flex flex-col items-center justify-center rounded-full bg-background/95">
