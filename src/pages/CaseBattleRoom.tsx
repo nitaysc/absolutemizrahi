@@ -538,6 +538,134 @@ export default function CaseBattleRoom() {
           );
         })}
       </div>
+
+      {/* Winner end screen */}
+      <AnimatePresence>
+        {showFinishedUI && battle.winner_team !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35 }}
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-background/85 p-4 backdrop-blur-2xl"
+          >
+            {/* Glow background */}
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,hsl(var(--primary)/0.35),transparent_60%)]" />
+
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 180, damping: 18 }}
+              className="relative z-10 w-full max-w-3xl space-y-6 rounded-3xl border border-primary/40 bg-card/80 p-6 shadow-[0_0_60px_-10px_hsl(var(--primary)/0.7)] sm:p-8"
+            >
+              {/* Title */}
+              <div className="text-center">
+                <motion.p
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground"
+                >
+                  Battle complete
+                </motion.p>
+                <motion.h2
+                  initial={{ scale: 0.85, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 220, damping: 14 }}
+                  className="mt-2 bg-gradient-to-r from-amber-300 via-primary to-fuchsia-400 bg-clip-text text-3xl font-black italic tracking-wide text-transparent drop-shadow-[0_0_20px_hsl(var(--primary)/0.5)] sm:text-4xl"
+                >
+                  THE BATTLE HAS ENDED
+                </motion.h2>
+                <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 text-xs font-bold uppercase text-primary">
+                  <Swords className="h-3 w-3" />
+                  {battle.mode} · {battle.type}
+                </div>
+              </div>
+
+              {/* Winner cards */}
+              <div className="flex flex-wrap items-stretch justify-center gap-3">
+                {players
+                  .filter((p) => p.team === battle.winner_team)
+                  .map((p, i) => {
+                    const winners = players.filter((pp) => pp.team === battle.winner_team);
+                    const humanWinners = winners.filter((pp) => !pp.is_bot).length;
+                    const share = Math.floor(
+                      (battle.pot_payout ?? 0) / Math.max(1, humanWinners || winners.length),
+                    );
+                    return (
+                      <motion.div
+                        key={p.id}
+                        initial={{ scale: 0.6, opacity: 0, y: 30 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        transition={{
+                          delay: 0.35 + i * 0.12,
+                          type: "spring",
+                          stiffness: 200,
+                          damping: 14,
+                        }}
+                        className="relative w-44 overflow-hidden rounded-2xl border-2 border-amber-400/70 bg-gradient-to-b from-amber-400/15 via-primary/10 to-fuchsia-500/15 p-4 text-center shadow-[0_0_30px_rgba(245,158,11,0.45)]"
+                      >
+                        {/* WINNER chip */}
+                        <div className="mx-auto mb-2 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-fuchsia-500 px-3 py-0.5 text-[10px] font-black uppercase tracking-widest text-background shadow-[0_0_15px_rgba(245,158,11,0.6)]">
+                          <Trophy className="h-3 w-3" /> Winner
+                        </div>
+                        <div className="relative mx-auto mb-2 h-16 w-16">
+                          <motion.div
+                            animate={{ scale: [1, 1.06, 1] }}
+                            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                            className="absolute inset-0 rounded-full bg-amber-400/30 blur-xl"
+                          />
+                          <div className="relative">
+                            <PlayerAvatar avatar={p.avatar} size={64} ring />
+                          </div>
+                          <Crown className="absolute -top-2 left-1/2 h-5 w-5 -translate-x-1/2 text-amber-300 drop-shadow-[0_0_6px_rgba(245,158,11,0.9)]" />
+                        </div>
+                        <div className="flex items-center justify-center gap-1 truncate text-sm font-black">
+                          <span className="truncate">{p.display_name}</span>
+                          {p.is_bot && <Bot className="h-3 w-3 shrink-0 text-muted-foreground" />}
+                        </div>
+                        <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-background/60 px-2 py-0.5 text-sm font-black text-amber-300">
+                          <MizrahiCoin size={12} /> {formatCoins(share)}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+              </div>
+
+              {/* Action buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="flex flex-wrap items-center justify-center gap-2 pt-2"
+              >
+                <button
+                  onClick={() => navigate("/cases/battles")}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/70 px-4 py-2 text-sm font-bold text-foreground hover:border-primary/50"
+                >
+                  <X className="h-4 w-4" /> Exit
+                </button>
+                <button
+                  onClick={recreate}
+                  disabled={busy}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-primary px-5 py-2 text-sm font-black text-primary-foreground shadow-[0_0_20px_hsl(var(--primary)/0.6)] disabled:opacity-50"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Recreate for {formatCoins(battle.per_player_cost)}
+                </button>
+                {isHost && (
+                  <button
+                    onClick={editBattle}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-fuchsia-400/50 bg-fuchsia-500/15 px-4 py-2 text-sm font-bold text-fuchsia-200 hover:bg-fuchsia-500/25"
+                  >
+                    <Pencil className="h-4 w-4" /> Edit Battle
+                  </button>
+                )}
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
