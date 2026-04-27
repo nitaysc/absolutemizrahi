@@ -17,6 +17,7 @@ const HOUSE_EDGE = 0.99;
 const CARD_W = 88; // px including gap
 const STRIP_LEN = 80;
 const LANDING_INDEX = 60; // where the marker stops in the strip
+const SLIDE_DURATION_SEC = 3.6;
 
 function rollMultiplier() {
   // Inverse-CDF style multiplier with house edge — same shape as Limbo
@@ -88,26 +89,32 @@ export default function Slides() {
     setRolling(true);
     setResult(null);
 
+    const targetAtBet = target;
     const landed = rollMultiplier();
     const nextStrip = buildStrip(landed);
     setStrip(nextStrip);
 
-    // Start strip far to the right then slide left to the landing card
+    // Start strip far to the right then slide left to the landing card.
+    // Add a tiny overshoot before settling to make it feel smoother.
     const startX = trackW + CARD_W * 4;
     const endX = trackW / 2 - LANDING_INDEX * CARD_W - CARD_W / 2;
     controls.set({ x: startX });
     await controls.start({
-      x: endX,
-      transition: { duration: 2.2, ease: [0.16, 1, 0.3, 1] },
+      x: [startX, endX + CARD_W * 0.35, endX],
+      transition: {
+        duration: SLIDE_DURATION_SEC,
+        ease: [0.1, 0.85, 0.2, 1],
+        times: [0, 0.92, 1],
+      },
     });
 
-    const won = landed >= target;
+    const won = landed >= targetAtBet;
     const { data, error } = await supabase.rpc("place_bet", {
       _game: "slides",
       _bet_amount: bet,
       _won: won,
-      _multiplier: target,
-      _details: { target, landed, variant: "slides" },
+      _multiplier: targetAtBet,
+      _details: { target: targetAtBet, landed, variant: "slides" },
     });
 
     setRolling(false);
@@ -119,7 +126,7 @@ export default function Slides() {
 
     const payout = Number(data?.[0]?.payout ?? 0);
     const profit = won ? Math.max(payout - bet, 0) : -bet;
-    if (won) toast.success(`Slides hit! +${formatCoins(profit)} (${landed.toFixed(2)}×)`);
+    if (won) toast.success(`Slides hit! +${formatCoins(profit)} (${landed.toFixed(2)}× vs ${targetAtBet.toFixed(2)}×)`);
     else toast.error(`Slipped at ${landed.toFixed(2)}×`);
   }
 
