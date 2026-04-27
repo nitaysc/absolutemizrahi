@@ -85,7 +85,9 @@ export default function Cases() {
     const items = (data ?? []) as RolledItem[];
     setResults(items);
     setSpinKey((k) => k + 1);
-    refetch();
+    // NOTE: do NOT refetch the balance here, otherwise the user sees their
+    // coins go up before the reel finishes — leaking the result. We refetch
+    // after the final reel lands (in the onComplete callback below).
   }
 
   function closeOpening() {
@@ -219,7 +221,14 @@ export default function Cases() {
                     spinKey={`${spinKey}-${i}`}
                     durationMs={5500 + i * 250}
                     size="md"
-                    onComplete={i === results.length - 1 ? () => setRevealed(true) : undefined}
+                    onComplete={
+                      i === results.length - 1
+                        ? () => {
+                            setRevealed(true);
+                            refetch();
+                          }
+                        : undefined
+                    }
                   />
                 ))}
               </div>
@@ -247,10 +256,10 @@ export default function Cases() {
                     ))}
                   </div>
                   <div className="mt-3 text-center">
-                    <span className="text-xs text-muted-foreground">Total payout (95%): </span>
+                    <span className="text-xs text-muted-foreground">Total payout: </span>
                     <span className="inline-flex items-center gap-1 font-black text-primary">
                       <MizrahiCoin size={12} />
-                      {formatCoins(Math.floor(results.reduce((s, r) => s + r.value, 0) * 0.95))}
+                      {formatCoins(results.reduce((s, r) => s + r.value, 0))}
                     </span>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-2">
