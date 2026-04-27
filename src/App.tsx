@@ -22,6 +22,7 @@ import Snakes from "./pages/Snakes";
 import Wordle from "./pages/Wordle";
 import Moles from "./pages/Moles";
 import Roulette from "./pages/Roulette";
+import Keno from "./pages/Keno";
 import ChessLobby from "./pages/ChessLobby";
 import ChessGame from "./pages/Chess";
 import Leaderboard from "./pages/Leaderboard";
@@ -74,6 +75,7 @@ const App = () => (
             <Route path="/wordle" element={<Wordle />} />
             <Route path="/moles" element={<Moles />} />
             <Route path="/roulette" element={<Roulette />} />
+            <Route path="/keno" element={<Keno />} />
             <Route path="/chess" element={<ChessLobby />} />
             <Route path="/chess/:gameId" element={<ChessGame />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
