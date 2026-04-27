@@ -355,7 +355,10 @@ export function CaseReel({
     const startedAt = performance.now();
     // Decide whether this spin gets the dramatic "almost stops on the wrong
     // tile" hesitation. Skip on stage-1 specials (they already feel resolved).
-    const wantsHesitation = !(stage === 1 && hasSpecial) && Math.random() < 0.28;
+    // Hesitation happens less often now (~12%), and when it does it feels
+    // like a slow drift onto a near-miss tile rather than parking exactly
+    // between two items.
+    const wantsHesitation = !(stage === 1 && hasSpecial) && Math.random() < 0.12;
     // Single smooth glide with a strong deceleration curve (csgo-style).
     // No bounce / overshoot — the reel must NEVER move after it stops, or
     // it looks like it changed which item you got.
@@ -372,41 +375,28 @@ export function CaseReel({
     };
 
     if (wantsHesitation) {
-      // Decelerate and stop BETWEEN the real result tile and one of its
-      // neighbours — biased ~55-75% of the way toward the neighbour so the
-      // marker sits visibly on the line between two items. Hover there with
-      // a tiny wobble ("which one will it pick?") then creep onto the real
-      // result tile.
+      // Drift past the result and "near-miss" stop on a neighbour tile,
+      // pause briefly, then slowly drift back onto the real result.
+      // No wobble, no parking-between — just a smooth one-tile near-miss.
       const dir = Math.random() < 0.5 ? 1 : -1;
-      // 0.55..0.75 of a full step toward the neighbour. >0.5 means the
-      // marker is closer to the OTHER item than to the real one.
-      const biasAmt = step * (0.55 + Math.random() * 0.20);
-      const betweenOffset = offset + dir * biasAmt;
-      // Wobble a touch around that point so it really looks undecided.
-      const wobbleA = betweenOffset + dir * step * 0.04;
-      const wobbleB = betweenOffset - dir * step * 0.04;
-      const phase1 = Math.max(1.8, (dur / 1000) * 0.82);
-      const wobbleDur = 0.18;
-      const settleDur = 0.55;
-      const holdMs = 280 + Math.random() * 220;
+      // Stop ~85-95% of the way toward the neighbour (so it visibly lands
+      // on that tile, not in the middle).
+      const driftAmt = step * (0.85 + Math.random() * 0.10);
+      const nearMissOffset = offset + dir * driftAmt;
+      const phase1 = Math.max(2.0, (dur / 1000) * 0.88);
+      const settleDur = 0.85; // slow, smooth drift onto the real result
+      const holdMs = 240 + Math.random() * 180;
 
       controls.start({
-        y: betweenOffset,
+        y: nearMissOffset,
         transition: { duration: phase1, ease: [0.16, 0.84, 0.24, 1] },
       }).then(() => {
         setHesitating(true);
-        // Subtle wobble while hovering between the two tiles
-        controls.start({
-          y: [betweenOffset, wobbleA, wobbleB, betweenOffset],
-          transition: { duration: wobbleDur * 2, ease: "easeInOut", times: [0, 0.33, 0.66, 1] },
-        });
         setTimeout(() => {
           setHesitating(false);
-          // Smooth creep into the actual result — slow ease-out so it
-          // visibly "picks" the right tile rather than teleporting.
           controls.start({
             y: offset,
-            transition: { duration: settleDur, ease: [0.22, 1, 0.36, 1] },
+            transition: { duration: settleDur, ease: [0.33, 1, 0.45, 1] },
           }).then(() => {
             void startedAt;
             finalLand();
