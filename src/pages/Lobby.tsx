@@ -22,6 +22,7 @@ import snakesImg from "@/assets/games/snakes.jpg";
 import molesImg from "@/assets/games/moles.jpg";
 import chessImg from "@/assets/games/chess.jpg";
 import pumpImg from "@/assets/games/pump.jpg";
+import rouletteImg from "@/assets/games/roulette.jpg";
 
 export default function Lobby() {
   const { profile, refetch } = useUserProfile();
@@ -56,6 +57,7 @@ export default function Lobby() {
     { to: "/moles", key: "moles", title: "MOLES", img: molesImg },
     { to: "/chess", key: "chess", title: "CHESS", img: chessImg },
     { to: "/pump", key: "pump", title: "PUMP", img: pumpImg },
+    { to: "/roulette", key: "roulette", title: "ROULETTE", img: rouletteImg },
   ];
 
   return (

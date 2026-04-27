@@ -43,6 +43,7 @@ const GAMES = [
   "pump",
   "dragontower",
   "snakes",
+  "roulette",
 ];
 const POS_KEY = "liveStats:pos:v1";
 const OPEN_KEY = "liveStats:open:v1";
