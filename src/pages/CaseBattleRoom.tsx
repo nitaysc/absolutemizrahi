@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { formatCoins } from "@/lib/format";
 import { toast } from "sonner";
 import { Bot, Crown, Play, LogOut, Swords } from "lucide-react";
@@ -68,7 +69,10 @@ export default function CaseBattleRoom() {
   const [rounds, setRounds] = useState<Round[]>([]);
   const [caseMeta, setCaseMeta] = useState<Record<string, { name: string; image: string | null }>>({});
   const [itemPools, setItemPools] = useState<Record<string, ReelItem[]>>({});
-  const [revealCount, setRevealCount] = useState(0);
+  // Index of round currently spinning across all lanes (-1 = idle)
+  const [currentSpin, setCurrentSpin] = useState(-1);
+  // True after the last round's reels have all visually landed
+  const [revealComplete, setRevealComplete] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function refreshAll() {
@@ -115,39 +119,38 @@ export default function CaseBattleRoom() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // Reveal rounds one-by-one for animation — paced to match the reel spin
+  // Drive synchronized round-by-round reveal
   useEffect(() => {
-    if (!battle || battle.status !== "finished") {
-      setRevealCount(rounds.length > 0 ? rounds.length : 0);
+    if (!battle) return;
+    if (battle.status === "waiting") {
+      setCurrentSpin(-1);
+      setRevealComplete(false);
       return;
     }
-    setRevealCount(0);
-    const stepMs = battle.fast ? 2200 : 6000;
+    if (battle.status !== "finished") return;
+    if (!rounds.length || !battle.rounds_total) return;
+
+    setRevealComplete(false);
+    setCurrentSpin(-1);
+    const stepMs = battle.fast ? 2400 : 6200; // match reel duration + small pad
     const total = battle.rounds_total;
-    const kickOff = setTimeout(() => setRevealCount(1), 250);
-    let i = 1;
+    let i = 0;
+    setCurrentSpin(0);
     const t = setInterval(() => {
       i++;
-      setRevealCount(i);
-      if (i >= total) clearInterval(t);
+      if (i >= total) {
+        clearInterval(t);
+        // After last spin lands, flip revealComplete
+        setTimeout(() => setRevealComplete(true), battle.fast ? 1900 : 5400);
+        return;
+      }
+      setCurrentSpin(i);
     }, stepMs);
-    return () => {
-      clearInterval(t);
-      clearTimeout(kickOff);
-    };
+    return () => clearInterval(t);
   }, [battle?.status, battle?.rounds_total, battle?.fast, rounds.length]);
 
   const isHost = battle?.host_id === profile?.id;
   const inBattle = !!players.find((p) => p.user_id === profile?.id);
-  const teams = useMemo(() => {
-    if (!battle) return [];
-    const t: Player[][] = [];
-    const teamCount = battle.player_slots / battle.team_size;
-    for (let i = 0; i < teamCount; i++) {
-      t.push(players.filter((p) => p.team === i).sort((a, b) => a.slot - b.slot));
-    }
-    return t;
-  }, [battle, players]);
 
   async function join() {
     setBusy(true);
@@ -174,8 +177,12 @@ export default function CaseBattleRoom() {
 
   if (!battle) return <p className="text-muted-foreground">Loading battle...</p>;
 
-  const currentReveal = Math.min(revealCount, battle.rounds_total);
-  const currentBcase = bcases[currentReveal - 1] ?? bcases[0];
+  const showFinishedUI = battle.status === "finished" && revealComplete;
+  const visibleSpinIdx = currentSpin; // round currently spinning across all lanes
+  const visibleCase = bcases[visibleSpinIdx] ?? bcases[0];
+
+  // Lane width tuned so 2-6 fit the row nicely on desktop
+  const slots = battle.player_slots;
 
   return (
     <div className="space-y-4">
@@ -188,7 +195,7 @@ export default function CaseBattleRoom() {
             {battle.type}
           </span>
           <span className="text-xs text-muted-foreground">
-            Round {Math.min(currentReveal, battle.rounds_total)} / {battle.rounds_total}
+            Round {Math.max(0, Math.min(visibleSpinIdx + 1, battle.rounds_total))} / {battle.rounds_total}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -229,32 +236,32 @@ export default function CaseBattleRoom() {
         </div>
       </header>
 
-      {/* Case row */}
+      {/* Case track */}
       <div className="rounded-3xl border border-border bg-card/70 p-4">
         <div className="mb-3 flex items-center justify-between">
           <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            Cases ({battle.rounds_total} rounds)
+            Cases · {battle.rounds_total} rounds
           </div>
-          {currentBcase && battle.status !== "waiting" && (
+          {visibleCase && battle.status !== "waiting" && (
             <div className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
-              <span className="text-base">{caseMeta[currentBcase.case_id]?.image ?? "🎁"}</span>
-              {caseMeta[currentBcase.case_id]?.name ?? "Case"}
+              <span className="text-base">{caseMeta[visibleCase.case_id]?.image ?? "🎁"}</span>
+              {caseMeta[visibleCase.case_id]?.name ?? "Case"}
             </div>
           )}
         </div>
-        <div className="flex gap-2 overflow-x-auto">
+        <div className="flex gap-2 overflow-x-auto pb-1">
           {bcases.map((bc, i) => {
             const meta = caseMeta[bc.case_id];
-            const active = i === currentReveal - 1 && battle.status !== "waiting";
-            const done = i < currentReveal - 1 || battle.status === "finished";
+            const active = i === visibleSpinIdx && battle.status !== "waiting";
+            const done = i < visibleSpinIdx;
             return (
               <div
                 key={bc.id}
                 className={`flex min-w-[60px] flex-col items-center rounded-xl border p-2 text-center transition ${
                   active
-                    ? "border-primary bg-primary/15 shadow-[0_0_15px_hsl(var(--primary)/0.5)]"
+                    ? "scale-110 border-primary bg-primary/15 shadow-[0_0_15px_hsl(var(--primary)/0.5)]"
                     : done
-                    ? "border-border opacity-50"
+                    ? "border-border opacity-40"
                     : "border-border"
                 }`}
               >
@@ -266,50 +273,60 @@ export default function CaseBattleRoom() {
         </div>
       </div>
 
-      {/* Players */}
-      <div className={`grid gap-3 ${battle.player_slots === 2 ? "md:grid-cols-2" : battle.player_slots === 3 ? "md:grid-cols-3" : battle.player_slots === 4 ? "md:grid-cols-4" : "md:grid-cols-3 lg:grid-cols-6"}`}>
-        {Array.from({ length: battle.player_slots }).map((_, slot) => {
+      {/* Lanes — Empire-Drop style side-by-side */}
+      <div
+        className="grid gap-3"
+        style={{
+          gridTemplateColumns: `repeat(${slots}, minmax(0, 1fr))`,
+        }}
+      >
+        {Array.from({ length: slots }).map((_, slot) => {
           const p = players.find((pp) => pp.slot === slot);
           const playerRounds = rounds
             .filter((r) => r.player_slot === slot)
             .sort((a, b) => a.round_index - b.round_index);
-          const spinningIdx = currentReveal - 1;
-          const spinningRound = playerRounds.find((r) => r.round_index === spinningIdx);
-          const completedRounds = playerRounds.filter((r) => r.round_index < spinningIdx);
-          const totalSoFar = playerRounds
-            .filter((r) => r.round_index < currentReveal)
-            .reduce((s, r) => s + r.item_value, 0);
+
+          const spinningRound = playerRounds.find((r) => r.round_index === visibleSpinIdx);
+          const completedRounds = playerRounds.filter((r) => r.round_index < visibleSpinIdx);
+          const totalSoFar =
+            completedRounds.reduce((s, r) => s + r.item_value, 0) +
+            (revealComplete && spinningRound ? spinningRound.item_value : 0);
           const poolForSpin = spinningRound ? itemPools[spinningRound.case_id] ?? [] : [];
+
+          // Only reveal team winner glow after every reel has landed
           const isWinnerTeam =
-            battle.status === "finished" &&
-            currentReveal >= battle.rounds_total &&
-            p &&
-            battle.winner_team === p.team;
+            showFinishedUI && p && battle.winner_team === p.team;
+
           return (
             <div
               key={slot}
-              className={`flex flex-col rounded-2xl border bg-card p-3 ${
-                isWinnerTeam ? "border-amber-400 shadow-[0_0_25px_hsl(45,100%,60%,0.5)]" : "border-border"
+              className={`flex min-w-0 flex-col rounded-2xl border bg-card/70 p-3 transition ${
+                isWinnerTeam
+                  ? "border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.55)]"
+                  : "border-border"
               }`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">{p?.avatar ?? "❓"}</span>
-                  <div>
-                    <div className="flex items-center gap-1 text-sm font-bold">
-                      {p?.display_name ?? "Empty slot"}
-                      {p?.is_bot && <Bot className="h-3 w-3 text-muted-foreground" />}
-                      {isWinnerTeam && <Crown className="h-3 w-3 text-amber-400" />}
+              {/* Player header */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <PlayerAvatar avatar={p?.avatar} size={32} ring />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1 truncate text-sm font-bold">
+                      <span className="truncate">{p?.display_name ?? "Empty"}</span>
+                      {p?.is_bot && <Bot className="h-3 w-3 shrink-0 text-muted-foreground" />}
+                      {isWinnerTeam && <Crown className="h-3 w-3 shrink-0 text-amber-400" />}
                     </div>
-                    <div className="text-[10px] text-muted-foreground">Team {(p?.team ?? slot) + 1}</div>
+                    <div className="text-[10px] text-muted-foreground">
+                      Team {(p?.team ?? slot) + 1}
+                    </div>
                   </div>
                 </div>
-                <div className="inline-flex items-center gap-1 text-xs font-black text-primary">
+                <div className="inline-flex shrink-0 items-center gap-1 text-xs font-black text-primary">
                   <MizrahiCoin size={10} /> {formatCoins(totalSoFar)}
                 </div>
               </div>
 
-              {/* Empire-Drop style horizontal reel */}
+              {/* Reel */}
               <div className="mt-3">
                 {spinningRound && poolForSpin.length ? (
                   <CaseReel
@@ -323,16 +340,23 @@ export default function CaseBattleRoom() {
                     }}
                     spinKey={`${slot}-${spinningRound.id}`}
                     durationMs={battle.fast ? 1800 : 5200}
-                    size="sm"
+                    size={slots <= 2 ? "md" : "sm"}
+                    preBadge={
+                      spinningRound.special_spin === "empire"
+                        ? "empire"
+                        : spinningRound.special_spin === "duel"
+                        ? "duel"
+                        : null
+                    }
                   />
                 ) : (
-                  <div className="flex h-[128px] items-center justify-center rounded-2xl border border-border bg-background/50 text-xs text-muted-foreground">
-                    {battle.status === "waiting" ? "Waiting for start..." : "Get ready..."}
+                  <div className="flex h-[256px] items-center justify-center rounded-2xl border border-dashed border-border bg-background/40 text-xs text-muted-foreground">
+                    {battle.status === "waiting" ? "Waiting..." : "Get ready..."}
                   </div>
                 )}
               </div>
 
-              {/* Past round chips */}
+              {/* Past rounds chips */}
               {completedRounds.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {completedRounds.map((r) => (
@@ -351,9 +375,9 @@ export default function CaseBattleRoom() {
               )}
 
               {/* Winner badge */}
-              {battle.status === "finished" && currentReveal >= battle.rounds_total && isWinnerTeam && (
+              {isWinnerTeam && (
                 <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
+                  initial={{ scale: 0.85, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: "spring", stiffness: 200, damping: 14 }}
                   className="mt-2 rounded-lg bg-amber-500/15 p-2 text-center text-xs font-black text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.5)]"
