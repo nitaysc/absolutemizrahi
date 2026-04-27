@@ -372,23 +372,41 @@ export function CaseReel({
     };
 
     if (wantsHesitation) {
-      // Spin to a tile ~1 step BEFORE the real result, hold for a beat
-      // ("lock-in"), then nudge forward to the actual landed tile.
-      const fakeOffset = offset + step * (Math.random() < 0.5 ? 1 : -1);
-      const phase1 = Math.max(1.6, (dur / 1000) * 0.78);
-      const phase2 = 0.45;
-      const holdMs = 360 + Math.random() * 220;
+      // Decelerate and stop BETWEEN the real result tile and one of its
+      // neighbours — biased ~55-75% of the way toward the neighbour so the
+      // marker sits visibly on the line between two items. Hover there with
+      // a tiny wobble ("which one will it pick?") then creep onto the real
+      // result tile.
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      // 0.55..0.75 of a full step toward the neighbour. >0.5 means the
+      // marker is closer to the OTHER item than to the real one.
+      const biasAmt = step * (0.55 + Math.random() * 0.20);
+      const betweenOffset = offset + dir * biasAmt;
+      // Wobble a touch around that point so it really looks undecided.
+      const wobbleA = betweenOffset + dir * step * 0.04;
+      const wobbleB = betweenOffset - dir * step * 0.04;
+      const phase1 = Math.max(1.8, (dur / 1000) * 0.82);
+      const wobbleDur = 0.18;
+      const settleDur = 0.55;
+      const holdMs = 280 + Math.random() * 220;
+
       controls.start({
-        y: fakeOffset,
+        y: betweenOffset,
         transition: { duration: phase1, ease: [0.16, 0.84, 0.24, 1] },
       }).then(() => {
         setHesitating(true);
-        playReelLand();
+        // Subtle wobble while hovering between the two tiles
+        controls.start({
+          y: [betweenOffset, wobbleA, wobbleB, betweenOffset],
+          transition: { duration: wobbleDur * 2, ease: "easeInOut", times: [0, 0.33, 0.66, 1] },
+        });
         setTimeout(() => {
           setHesitating(false);
+          // Smooth creep into the actual result — slow ease-out so it
+          // visibly "picks" the right tile rather than teleporting.
           controls.start({
             y: offset,
-            transition: { duration: phase2, ease: [0.4, 0, 0.2, 1] },
+            transition: { duration: settleDur, ease: [0.22, 1, 0.36, 1] },
           }).then(() => {
             void startedAt;
             finalLand();
