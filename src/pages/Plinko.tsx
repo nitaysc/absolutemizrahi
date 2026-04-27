@@ -259,7 +259,10 @@ export default function Plinko() {
         }
 
         if (b.y >= floorY) {
-          const landedBucket = Math.max(0, Math.min(BUCKETS - 1, Math.round((b.x - SIDE_PAD) / COL)));
+          // Always settle to the precomputed bucket for this ball. The physics
+          // path is visual, but payout must stay deterministic per drop and not
+          // drift because of tiny floating-point differences at the floor.
+          const landedBucket = b.bucket;
           b.x = bucketX(landedBucket);
           b.done = true;
           const landedMultiplier = b.payoutTable[landedBucket] ?? 0;
