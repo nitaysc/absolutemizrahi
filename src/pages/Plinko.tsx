@@ -112,7 +112,10 @@ export default function Plinko() {
   const floorY = TOP_PAD + (ROWS + 1) * ROW_H;
 
   useEffect(() => {
-    serverBalanceRef.current = profile?.coins ?? 0;
+    // `profile.coins` also reflects optimistic local updates from
+    // `setLocalCoins(...)`. Add back currently reserved stakes so this ref
+    // tracks the underlying server balance and we don't double-reserve.
+    serverBalanceRef.current = (profile?.coins ?? 0) + reservedStakeRef.current;
   }, [profile?.coins]);
 
   const settleBall = useCallback(async (b: Ball, landedBucket: number) => {
