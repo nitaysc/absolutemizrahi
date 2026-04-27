@@ -393,8 +393,8 @@ export default function CaseBattleRoom() {
                   <UserPlus className="h-3 w-3" /> Call Bot
                 </button>
               )}
-              {battle.fill_with_bots && autoStartIn !== null && autoStartIn > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-3 py-1.5 text-sm font-black text-amber-300">
+              {autoStartIn !== null && autoStartIn > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-3 py-1.5 text-sm font-black text-amber-300 animate-pulse">
                   Auto-start in {autoStartIn}s
                 </span>
               )}
