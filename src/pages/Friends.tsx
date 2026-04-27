@@ -165,16 +165,15 @@ export default function Friends() {
     }
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("bets")
-        .select("user_id, created_at")
-        .in("user_id", ids)
-        .order("created_at", { ascending: false })
-        .limit(5000);
+      // Public RPC — bets table SELECT is restricted to the row owner via RLS.
+      const { data } = await supabase.rpc("get_user_bet_days", {
+        _user_ids: ids,
+        _limit_per_user: 200,
+      });
       if (cancelled) return;
       const tz = getStreakTimezone();
       const byUserId = new Map<string, string[]>();
-      for (const row of data ?? []) {
+      for (const row of (data ?? []) as { user_id: string; created_at: string }[]) {
         const list = byUserId.get(row.user_id) ?? [];
         list.push(row.created_at);
         byUserId.set(row.user_id, list);
