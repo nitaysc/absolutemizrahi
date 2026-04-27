@@ -292,7 +292,9 @@ export default function CaseAdmin() {
                       item={i}
                       totalW={totalW}
                       editing={editing === c.id}
-                      onSave={(patch) => saveItem(i, patch)}
+                      onSave={async (patch) => {
+                        await saveItem(i, patch);
+                      }}
                       onDelete={() => deleteItem(i)}
                     />
                   ))}
