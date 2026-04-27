@@ -273,11 +273,17 @@ export default function Cases() {
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     {results.map((r, i) => (
                       <div key={i} className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5">
-                        {r.image && /^https?:\/\//i.test(r.image) ? (
-                          <img src={r.image} alt={r.name} className="h-5 w-5 rounded object-cover" />
-                        ) : (
-                          <span className="text-lg">{r.image ?? "🎁"}</span>
-                        )}
+                        {(() => {
+                          const nameIsUrl = r.name && /^https?:\/\//i.test(r.name);
+                          const src = r.image && /^https?:\/\//i.test(r.image)
+                            ? r.image
+                            : (nameIsUrl ? r.name : null);
+                          return src ? (
+                            <img src={src} alt="item" className="h-5 w-5 rounded object-cover" />
+                          ) : (
+                            <span className="text-lg">{r.image ?? "🎁"}</span>
+                          );
+                        })()}
                         <span className={`text-xs font-bold uppercase ${RARITY_TEXT[r.rarity] ?? RARITY_TEXT.common}`}>
                           {r.rarity}
                         </span>
