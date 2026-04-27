@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { motion, useAnimationControls } from "framer-motion";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { formatCoins } from "@/lib/format";
@@ -53,15 +53,17 @@ type Props = {
   preBadge?: "empire" | "duel" | null;
 };
 
-function ItemCard({ item, size = "md", height }: { item: ReelItem; size?: "sm" | "md" | "lg"; height: number }) {
-  const emoji = size === "sm" ? "text-4xl" : size === "lg" ? "text-7xl" : "text-5xl";
-  return (
-    <div
-      className={`relative w-full overflow-hidden rounded-xl border-2 bg-gradient-to-b ${
-        RARITY_BG[item.rarity] ?? RARITY_BG.common
-      } ${RARITY_GLOW[item.rarity] ?? RARITY_GLOW.common}`}
-      style={{ height }}
-    >
+const ItemCard = forwardRef<HTMLDivElement, { item: ReelItem; size?: "sm" | "md" | "lg"; height: number }>(
+  function ItemCard({ item, size = "md", height }, ref) {
+    const emoji = size === "sm" ? "text-4xl" : size === "lg" ? "text-7xl" : "text-5xl";
+    return (
+      <div
+        ref={ref}
+        className={`relative w-full overflow-hidden rounded-xl border-2 bg-gradient-to-b ${
+          RARITY_BG[item.rarity] ?? RARITY_BG.common
+        } ${RARITY_GLOW[item.rarity] ?? RARITY_GLOW.common}`}
+        style={{ height }}
+      >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(255,255,255,0.18),transparent_60%)]" />
       <div className="flex h-full flex-col items-center justify-center gap-1 p-2">
         <div className={`${emoji} drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]`}>
@@ -73,10 +75,11 @@ function ItemCard({ item, size = "md", height }: { item: ReelItem; size?: "sm" |
         <div className="inline-flex items-center gap-1 rounded-full bg-black/40 px-1.5 py-0.5 text-[10px] font-black text-white/90">
           <MizrahiCoin size={8} /> {formatCoins(item.value)}
         </div>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
+);
 
 /**
  * Vertical Empire-Drop / CSGO style rolling reel.
@@ -104,14 +107,30 @@ export function CaseReel({
   const STRIP_LEN = 80;
   const LANDING_INDEX = 65;
 
-  // Build a strip with the planted result at LANDING_INDEX
+  // Build a strip with the planted result at LANDING_INDEX, with intentional
+  // "bait" high-value items placed near the landing position so the reel feels
+  // tense and teases good loot before settling.
   const strip = useMemo(() => {
     if (!pool.length) return [] as ReelItem[];
     const arr: ReelItem[] = [];
+    // Pre-sort pool by value to identify top-tier "bait" items
+    const sortedDesc = [...pool].sort((a, b) => b.value - a.value);
+    const topItems = sortedDesc.slice(0, Math.max(1, Math.ceil(pool.length * 0.2)));
     for (let i = 0; i < STRIP_LEN; i++) {
       arr.push(pool[Math.floor(Math.random() * pool.length)]);
     }
+    // Plant result at landing index
     if (result) arr[LANDING_INDEX] = result;
+    // Place 1-2 bait high-tier items near the landing index to tease
+    const baitOffsets = [-3, -1, 2, 4];
+    baitOffsets.forEach((off, idx) => {
+      const pos = LANDING_INDEX + off;
+      if (pos < 0 || pos >= STRIP_LEN || pos === LANDING_INDEX) return;
+      // Skip some so it's not always — feels organic
+      if (Math.random() < 0.45) {
+        arr[pos] = topItems[idx % topItems.length];
+      }
+    });
     return arr;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spinKey, pool.length]);
