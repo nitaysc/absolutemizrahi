@@ -99,6 +99,7 @@ const App = () => (
             <Route path="/cases/upload" element={<CaseUpload />} />
             <Route path="/cases/admin" element={<CaseAdmin />} />
             <Route path="/inventory" element={<Inventory />} />
+            <Route path="/upgrader" element={<Upgrader />} />
             <Route path="/cases/battles" element={<CaseBattles />} />
             <Route path="/cases/battles/new" element={<CaseBattleCreate />} />
             <Route path="/cases/battles/:id" element={<CaseBattleRoom />} />
