@@ -7,10 +7,13 @@ import { BetControls } from "@/components/BetControls";
 import { Button } from "@/components/ui/button";
 import { formatCoins } from "@/lib/format";
 import { Target } from "lucide-react";
+import { motion } from "framer-motion";
 
 type Difficulty = "low" | "medium" | "high";
 
 const BOARD_NUMBERS = Array.from({ length: 40 }, (_, i) => i + 1);
+const DRAW_COUNT = 10;
+const DRAW_REVEAL_MS = 120;
 
 const DIFFICULTY_MULTIPLIERS: Record<Difficulty, number[]> = {
   low: [0, 0, 0.6, 1.1, 1.8, 3, 5, 8, 12, 18, 26],
@@ -25,6 +28,7 @@ export default function Keno() {
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [drawn, setDrawn] = useState<Set<number>>(new Set());
+  const [drawnSequence, setDrawnSequence] = useState<number[]>([]);
   const [rolling, setRolling] = useState(false);
 
   const hits = useMemo(
@@ -48,13 +52,15 @@ export default function Keno() {
     if (rolling) return;
     setSelected(new Set());
     setDrawn(new Set());
+    setDrawnSequence([]);
   }
 
   function randomPick() {
     if (rolling) return;
-    const shuffled = [...BOARD_NUMBERS].sort(() => Math.random() - 0.5).slice(0, 10);
+    const shuffled = [...BOARD_NUMBERS].sort(() => Math.random() - 0.5).slice(0, DRAW_COUNT);
     setSelected(new Set(shuffled));
     setDrawn(new Set());
+    setDrawnSequence([]);
   }
 
   async function placeBet() {
@@ -64,13 +70,30 @@ export default function Keno() {
     if (bet > profile.coins) return toast.error("Not enough coins");
 
     setRolling(true);
-    const draw = [...BOARD_NUMBERS].sort(() => Math.random() - 0.5).slice(0, 10);
+    setDrawn(new Set());
+    setDrawnSequence([]);
+
+    const draw = [...BOARD_NUMBERS].sort(() => Math.random() - 0.5).slice(0, DRAW_COUNT);
     const drawSet = new Set(draw);
     const hitCount = [...selected].filter((n) => drawSet.has(n)).length;
     const roundMultiplier = DIFFICULTY_MULTIPLIERS[difficulty][hitCount] ?? 0;
     const won = roundMultiplier > 1;
 
-    const { data, error } = await supabase.rpc("place_bet", {
+    const animateDraw = new Promise<void>((resolve) => {
+      draw.forEach((num, index) => {
+        setTimeout(() => {
+          setDrawn((prev) => {
+            const next = new Set(prev);
+            next.add(num);
+            return next;
+          });
+          setDrawnSequence((prev) => [...prev, num]);
+          if (index === draw.length - 1) resolve();
+        }, (index + 1) * DRAW_REVEAL_MS);
+      });
+    });
+
+    const betPromise = supabase.rpc("place_bet", {
       _game: "keno",
       _bet_amount: bet,
       _won: won,
@@ -83,10 +106,11 @@ export default function Keno() {
       },
     });
 
+    await animateDraw;
+    const { data, error } = await betPromise;
     setRolling(false);
     if (error) return toast.error(error.message);
 
-    setDrawn(drawSet);
     if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
 
     const payout = Number(data?.[0]?.payout ?? 0);
@@ -134,6 +158,7 @@ export default function Keno() {
 
           <div className="rounded-xl bg-background/50 p-3 text-sm">
             <p className="font-semibold">Selected: {selected.size}/10</p>
+            <p className="text-muted-foreground">Drawn: {drawnSequence.length}/{DRAW_COUNT}</p>
             <p className="text-muted-foreground">Hits: {hits}</p>
             <p className="text-muted-foreground">Current Multiplier: {multiplier.toFixed(2)}×</p>
             <p className="font-semibold text-primary">Profit on win: +{formatCoins(potentialProfit)}</p>
@@ -149,22 +174,33 @@ export default function Keno() {
             const isHit = isSelected && isDrawn;
 
             return (
-              <button
+              <motion.button
                 key={n}
                 onClick={() => toggleNumber(n)}
                 disabled={rolling}
+                whileTap={{ scale: 0.94 }}
+                animate={
+                  isHit
+                    ? { scale: [1, 1.14, 1], rotate: [0, -3, 3, 0] }
+                    : isDrawn
+                      ? { scale: [1, 1.08, 1] }
+                      : isSelected
+                        ? { scale: 1.03 }
+                        : { scale: 1 }
+                }
+                transition={{ duration: isHit ? 0.45 : 0.25, ease: "easeOut" }}
                 className={`aspect-square rounded-xl border text-xl font-black transition ${
                   isHit
-                    ? "border-emerald-400 bg-emerald-500/30 text-emerald-200"
+                    ? "border-emerald-300 bg-emerald-500/35 text-emerald-100 shadow-[0_0_24px_rgba(16,185,129,0.55)]"
                     : isSelected
                       ? "border-primary bg-primary/25 text-primary"
-                      : isDrawn
+                    : isDrawn
                         ? "border-amber-400 bg-amber-500/20 text-amber-100"
                         : "border-border bg-background/60 text-foreground hover:border-primary/50"
                 }`}
               >
                 {n}
-              </button>
+              </motion.button>
             );
           })}
         </div>
