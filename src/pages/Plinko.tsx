@@ -125,6 +125,17 @@ export default function Plinko() {
     // settled yet. This keeps the displayed balance stable across the whole
     // life of a ball: -bet on drop, +payout on settle, no extra jumps.
     const serverCoins = profile?.coins ?? 0;
+    // setLocalCoins() also updates profile locally for optimistic UI. If we
+    // immediately subtract in-flight stakes again from that same optimistic
+    // value, each extra drop appears to "double charge" while balls are active.
+    // Ignore that echo and only reconcile when profile coins actually changed
+    // from a server-authoritative value.
+    if (
+      inFlightStakeRef.current > 0 &&
+      Math.abs(serverCoins - localBalanceRef.current) < 0.0001
+    ) {
+      return;
+    }
     localBalanceRef.current = Math.max(0, serverCoins - inFlightStakeRef.current);
   }, [profile?.coins]);
 
