@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
 import { formatCoins } from "@/lib/format";
-import { Spade, Users, Clock } from "lucide-react";
+import { Spade, Users, Clock, Trophy } from "lucide-react";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 
 type Card = { s: "S" | "H" | "D" | "C"; r: string };
@@ -66,50 +66,49 @@ function handValue(hand: Card[]): number {
   return v;
 }
 
-function PlayingCard({ card, hidden, idx, small }: { card?: Card; hidden?: boolean; idx: number; small?: boolean }) {
-  const sz = small
-    ? "h-16 w-12 p-1"
-    : "h-24 w-16 p-1.5 sm:h-28 sm:w-20 sm:p-2";
-  const rankSz = small ? "text-sm" : "text-base sm:text-lg";
-  const suitSz = small ? "text-xl" : "text-2xl sm:text-3xl";
+function PlayingCard({
+  card,
+  hidden,
+  idx,
+  size = "md",
+}: {
+  card?: Card;
+  hidden?: boolean;
+  idx: number;
+  size?: "sm" | "md" | "lg";
+}) {
+  const sz =
+    size === "sm"
+      ? "h-14 w-10 p-1 text-xs"
+      : size === "lg"
+        ? "h-28 w-20 p-2 text-base sm:h-32 sm:w-24 sm:text-lg"
+        : "h-24 w-16 p-1.5 text-sm sm:h-28 sm:w-20 sm:p-2 sm:text-base";
+  const suitSz =
+    size === "sm" ? "text-xl" : size === "lg" ? "text-3xl sm:text-4xl" : "text-2xl sm:text-3xl";
+  if (hidden || !card) {
+    return (
+      <motion.div
+        initial={{ y: -30, opacity: 0, rotateY: 90 }}
+        animate={{ y: 0, opacity: 1, rotateY: 0 }}
+        transition={{ delay: idx * 0.06, type: "spring", stiffness: 240, damping: 22 }}
+        className={`flex items-center justify-center rounded-lg border-2 border-primary/40 bg-gradient-to-br from-primary/30 to-primary/10 shadow-lg ${sz}`}
+      >
+        <Spade className="h-1/2 w-1/2 text-primary/60" />
+      </motion.div>
+    );
+  }
   return (
     <motion.div
-      initial={{ y: -40, opacity: 0, rotateY: 90 }}
+      initial={{ y: -30, opacity: 0, rotateY: 90 }}
       animate={{ y: 0, opacity: 1, rotateY: 0 }}
-      transition={{ delay: idx * 0.06, type: "spring", stiffness: 240, damping: 20 }}
-      className={`relative flex flex-col items-center justify-between rounded-xl border-2 shadow-xl ${sz} ${
-        hidden
-          ? "border-primary/40 bg-gradient-to-br from-primary/30 to-primary/10"
-          : "border-border bg-card"
+      transition={{ delay: idx * 0.06, type: "spring", stiffness: 240, damping: 22 }}
+      className={`flex flex-col items-center justify-between rounded-lg border-2 border-border bg-white shadow-xl ${sz} ${
+        isRed(card.s) ? "text-red-600" : "text-black"
       }`}
     >
-      {hidden || !card ? (
-        <div className="flex h-full w-full items-center justify-center">
-          <Spade className={small ? "h-5 w-5 text-primary/60" : "h-7 w-7 text-primary/60"} />
-        </div>
-      ) : (
-        <>
-          <div
-            className={`self-start font-black leading-none ${rankSz} ${
-              isRed(card.s) ? "text-red-500" : "text-foreground"
-            }`}
-          >
-            {card.r}
-          </div>
-          <div
-            className={`${suitSz} ${isRed(card.s) ? "text-red-500" : "text-foreground"}`}
-          >
-            {SUIT_CHAR[card.s]}
-          </div>
-          <div
-            className={`self-end rotate-180 font-black leading-none ${rankSz} ${
-              isRed(card.s) ? "text-red-500" : "text-foreground"
-            }`}
-          >
-            {card.r}
-          </div>
-        </>
-      )}
+      <div className="self-start font-black leading-none">{card.r}</div>
+      <div className={`leading-none ${suitSz}`}>{SUIT_CHAR[card.s]}</div>
+      <div className="self-end rotate-180 font-black leading-none">{card.r}</div>
     </motion.div>
   );
 }
@@ -123,6 +122,8 @@ export default function Blackjack() {
   const [state, setState] = useState<TableState | null>(null);
   const [now, setNow] = useState(Date.now());
   const lastResultRound = useRef<number>(-1);
+  const [winBanner, setWinBanner] = useState<{ id: number; profit: number; bj: boolean } | null>(null);
+  const winIdRef = useRef(0);
 
   // Refresh state from server (also rolls timers)
   async function refresh() {
@@ -165,9 +166,19 @@ export default function Blackjack() {
     setLocalCoins((profile?.coins ?? 0) + mySeat.total_payout);
     const totalBet = mySeat.hands.reduce((a, h) => a + h.bet, 0);
     const profit = mySeat.total_payout - totalBet;
-    if (profit > 0) toast.success(`+${formatCoins(profit)}`);
-    else if (profit === 0 && mySeat.total_payout > 0) toast("Push — bet returned");
-    else toast.error(`-${formatCoins(-profit)}`);
+    if (profit > 0) {
+      toast.success(`+${formatCoins(profit)}`);
+      const bj = mySeat.hands.some((h) => h.status === "blackjack");
+      const id = ++winIdRef.current;
+      setWinBanner({ id, profit, bj });
+      window.setTimeout(() => {
+        setWinBanner((cur) => (cur && cur.id === id ? null : cur));
+      }, 3000);
+    } else if (profit === 0 && mySeat.total_payout > 0) {
+      toast("Push — bet returned");
+    } else {
+      toast.error(`-${formatCoins(-profit)}`);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.round_seq, mySeat?.settled]);
 
@@ -246,23 +257,40 @@ export default function Blackjack() {
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_320px] sm:gap-4">
       {/* Table */}
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-emerald-950/60 via-card/80 to-emerald-900/40 p-3 backdrop-blur-xl sm:rounded-3xl sm:p-5">
+      <div className="relative overflow-hidden rounded-2xl border-[6px] border-amber-900/70 bg-gradient-to-br from-emerald-800 via-emerald-900 to-emerald-950 p-3 shadow-[inset_0_0_60px_rgba(0,0,0,0.55),0_20px_40px_rgba(0,0,0,0.4)] sm:rounded-[32px] sm:p-5">
+        {/* Winner banner */}
+        <AnimatePresence>
+          {winBanner && (
+            <motion.div
+              key={winBanner.id}
+              initial={{ opacity: 0, scale: 0.8, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.85, y: -10 }}
+              transition={{ type: "spring", stiffness: 260, damping: 22 }}
+              className="pointer-events-none absolute inset-x-0 top-3 z-20 mx-auto flex w-fit items-center gap-2 rounded-2xl border-2 border-amber-300/70 bg-gradient-to-br from-amber-400/95 via-amber-500/95 to-amber-600/95 px-5 py-2 text-sm font-black uppercase tracking-widest text-black shadow-[0_0_40px_rgba(252,211,77,0.55)]"
+            >
+              <Trophy className="h-4 w-4" />
+              {winBanner.bj ? "BLACKJACK · " : ""}+{formatCoins(winBanner.profit)}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Dealer */}
         <div className="mb-3 sm:mb-5">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            <span className="rounded-full bg-black/40 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-amber-200/90 ring-1 ring-amber-300/30">
               Dealer
             </span>
             {state.dealer.length > 0 && (
-              <span className="rounded-md bg-background/60 px-2 py-0.5 text-xs font-black tabular-nums">
+              <span className="rounded-md bg-black/50 px-2 py-0.5 text-xs font-black tabular-nums text-amber-100 ring-1 ring-amber-300/30">
                 {dealerHidden ? `${dealerVal}+?` : dealerVal}
               </span>
             )}
           </div>
-          <div className="flex min-h-[6rem] flex-wrap justify-center gap-2 sm:min-h-[7rem]">
+          <div className="flex min-h-[7rem] flex-wrap justify-center gap-2 sm:min-h-[8rem]">
             <AnimatePresence>
               {state.dealer.length === 0 && (
-                <div className="flex items-center text-xs text-muted-foreground">
+                <div className="flex items-center text-xs text-amber-100/60">
                   {state.status === "betting" ? "Waiting for bets…" : "Dealing…"}
                 </div>
               )}
@@ -272,13 +300,21 @@ export default function Blackjack() {
                   card={c}
                   hidden={dealerHidden && i === 1}
                   idx={i}
+                  size="lg"
                 />
               ))}
             </AnimatePresence>
           </div>
         </div>
 
-        <div className="my-3 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+        {/* Felt arc separator */}
+        <div className="my-3 flex items-center justify-center">
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-amber-300/30 to-transparent" />
+          <span className="mx-3 whitespace-nowrap rounded-full bg-black/30 px-3 py-0.5 text-[9px] font-black uppercase tracking-widest text-amber-200/80 ring-1 ring-amber-300/20">
+            Players
+          </span>
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-amber-300/30 to-transparent" />
+        </div>
 
         {/* Seats */}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
