@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Check, X, ChevronLeft, Eye, Pencil, Trash2, Save } from "lucide-react";
+import { Check, X, ChevronLeft, Eye, Pencil, Trash2, Save, Plus } from "lucide-react";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { formatCoins } from "@/lib/format";
 
@@ -142,6 +142,27 @@ export default function CaseAdmin() {
       ...prev,
       [it.case_id]: (prev[it.case_id] ?? []).filter((x) => x.id !== it.id),
     }));
+  }
+
+  async function addItem(caseId: string) {
+    const { data, error } = await supabase
+      .from("case_items")
+      .insert({
+        case_id: caseId,
+        name: "New Item",
+        image: "🎁",
+        value: 100,
+        weight: 10,
+        rarity: "common",
+      })
+      .select("*")
+      .single();
+    if (error || !data) return toast.error(error?.message ?? "Failed to add item");
+    setItems((prev) => ({
+      ...prev,
+      [caseId]: [...(prev[caseId] ?? []), data as ItemRow],
+    }));
+    setOpen(caseId);
   }
 
   async function deleteCase(c: CaseRow) {
@@ -298,6 +319,14 @@ export default function CaseAdmin() {
                       onDelete={() => deleteItem(i)}
                     />
                   ))}
+                  {editing === c.id && (
+                    <button
+                      onClick={() => addItem(c.id)}
+                      className="mt-1 inline-flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-emerald-500/50 bg-emerald-500/5 px-3 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-500/10"
+                    >
+                      <Plus className="h-3 w-3" /> Add new item to this case
+                    </button>
+                  )}
                 </div>
               )}
             </div>
