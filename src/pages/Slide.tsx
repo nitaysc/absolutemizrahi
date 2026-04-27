@@ -5,6 +5,7 @@ import { useTrackGame } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BetControls } from "@/components/BetControls";
+import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel";
 import { NumberField } from "@/components/NumberField";
 import { Button } from "@/components/ui/button";
 import { formatCoins } from "@/lib/format";
@@ -42,6 +43,7 @@ function makeLanes() {
 export default function Slide() {
   useTrackGame("slide");
   const { profile, setLocalCoins } = useUserProfile();
+  const [mode, setMode] = useState<"manual" | "auto">("manual");
   const [bet, setBet] = useState(10);
   const [target, setTarget] = useState(2);
   const [rolling, setRolling] = useState(false);
@@ -53,11 +55,21 @@ export default function Slide() {
   const potentialPayout = Math.floor(bet * target);
   const winChance = useMemo(() => (target > 1 ? +((HOUSE_EDGE * 100) / target).toFixed(2) : 0), [target]);
 
-  async function playRound() {
-    if (!profile) return;
-    if (bet < 1) return toast.error("Bet at least 1 coin");
-    if (bet > profile.coins) return toast.error("Not enough coins");
-    if (target < 1.01 || target > 200) return toast.error("Target must be 1.01 – 200");
+  async function playRound(betOverride?: number): Promise<AutoBetRoundResult | null> {
+    if (!profile) return null;
+    const stake = betOverride ?? bet;
+    if (stake < 1) {
+      toast.error("Bet at least 1 coin");
+      return null;
+    }
+    if (stake > profile.coins) {
+      toast.error("Not enough coins");
+      return null;
+    }
+    if (target < 1.01 || target > 200) {
+      toast.error("Target must be 1.01 – 200");
+      return null;
+    }
 
     setRolling(true);
     setActiveLane(null);
@@ -75,7 +87,7 @@ export default function Slide() {
 
     const { data, error } = await supabase.rpc("place_bet", {
       _game: "slide",
-      _bet_amount: bet,
+      _bet_amount: stake,
       _won: won,
       // place_bet treats multiplier as total return multiple; add stake back so
       // a 3x target pays +3x profit (e.g. 30 -> +90) in Slide too.
@@ -84,16 +96,20 @@ export default function Slide() {
     });
 
     setRolling(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return null;
+    }
 
     if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
     const payout = Number(data?.[0]?.payout ?? 0);
-    const profit = won ? Math.max(payout - bet, 0) : -bet;
+    const profit = won ? Math.max(payout - stake, 0) : -stake;
 
     setHistory((h) => [{ result: landed, won }, ...h].slice(0, 10));
 
     if (won) toast.success(`Slide hit! +${formatCoins(profit)} (${landed.toFixed(2)}×)`);
     else toast.error(`Slipped at ${landed.toFixed(2)}×`);
+    return { won, profit };
   }
 
   return (
@@ -124,6 +140,7 @@ export default function Slide() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[320px_1fr]">
         <aside className="rounded-3xl border border-border bg-card/70 p-4 backdrop-blur-xl">
           <div className="space-y-3">
+            <ModeTabs mode={mode} onChange={setMode} />
             <BetControls bet={bet} setBet={setBet} disabled={rolling} />
 
             <div>
@@ -150,13 +167,17 @@ export default function Slide() {
               </div>
             </div>
 
-            <Button
-              onClick={playRound}
-              disabled={rolling}
-              className="h-12 w-full text-base font-black tracking-wide"
-            >
-              {rolling ? "SLIDING..." : "BET (NEXT ROUND)"}
-            </Button>
+            {mode === "manual" ? (
+              <Button
+                onClick={() => playRound()}
+                disabled={rolling}
+                className="h-12 w-full text-base font-black tracking-wide"
+              >
+                {rolling ? "SLIDING..." : "BET (NEXT ROUND)"}
+              </Button>
+            ) : (
+              <AutoBetPanel bet={bet} setBet={setBet} onBet={playRound} intervalMs={350} />
+            )}
           </div>
         </aside>
 
@@ -209,6 +230,24 @@ export default function Slide() {
           </div>
         </section>
       </div>
+    </div>
+  );
+}
+
+function ModeTabs({ mode, onChange }: { mode: "manual" | "auto"; onChange: (m: "manual" | "auto") => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-1 rounded-full bg-background/60 p-1">
+      {(["manual", "auto"] as const).map((m) => (
+        <button
+          key={m}
+          onClick={() => onChange(m)}
+          className={`rounded-full py-1.5 text-xs font-bold uppercase tracking-widest transition ${
+            mode === m ? "bg-card text-foreground shadow" : "text-muted-foreground"
+          }`}
+        >
+          {m}
+        </button>
+      ))}
     </div>
   );
 }
