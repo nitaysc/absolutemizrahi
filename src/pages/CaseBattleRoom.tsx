@@ -430,7 +430,7 @@ export default function CaseBattleRoom() {
                       special_spin: spinningRound.special_spin,
                     }}
                     spinKey={`${slot}-${spinningRound.id}`}
-                    durationMs={battle.fast ? 1800 : 5200}
+                    durationMs={battle.fast ? 1600 : 4200}
                     size={slots <= 2 ? "md" : "sm"}
                   />
                 ) : (
