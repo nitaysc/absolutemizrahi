@@ -60,6 +60,13 @@ const RARITY_TEXT: Record<string, string> = {
   mythic: "text-rose-400",
 };
 
+function ImgOrEmoji({ src, alt, className }: { src: string | null | undefined; alt: string; className?: string }) {
+  if (src && /^https?:\/\//i.test(src)) {
+    return <img src={src} alt={alt} className={className} loading="lazy" />;
+  }
+  return <span className={className}>{src ?? "🎁"}</span>;
+}
+
 export default function CaseBattleRoom() {
   const { id } = useParams();
   const { profile, refetch } = useUserProfile();
@@ -156,23 +163,36 @@ export default function CaseBattleRoom() {
     setRevealComplete(false);
     setCurrentSpin(0);
     // Step length accounts for potential 2-stage special spins (Empire/Duel),
-    // which add ~3.6-4s of follow-up animation on top of the base spin.
-    const stepMs = battle.fast ? 3200 : 9800;
+    // which add ~3s of follow-up animation on top of the base spin.
+    const stepMs = battle.fast ? 2400 : 6500;
     const total = battle.rounds_total;
     let i = 0;
     const intervalId = setInterval(() => {
       i++;
       if (i >= total) {
         clearInterval(intervalId);
-        setTimeout(() => setRevealComplete(true), battle.fast ? 2400 : 6800);
+        // Wait just long enough for the LAST reel to actually land before
+        // revealing winner & refetching balance. Final reel duration ≈ 5.2s,
+        // plus ~1.2s extra for special-spin stage 2 if it triggers.
+        setTimeout(
+          () => {
+            setRevealComplete(true);
+            refetch();
+          },
+          battle.fast ? 2000 : 5400,
+        );
         return;
       }
       setCurrentSpin(i);
     }, stepMs);
-    // Failsafe: always flip revealComplete by max(total*step + 6s) so UI never sticks
+    // Failsafe: always flip revealComplete + refetch by max(total*step + buffer)
+    // so UI never sticks.
     const failSafe = setTimeout(
-      () => setRevealComplete(true),
-      stepMs * total + (battle.fast ? 2500 : 7000)
+      () => {
+        setRevealComplete(true);
+        refetch();
+      },
+      stepMs * total + (battle.fast ? 2200 : 6000),
     );
     return () => {
       clearInterval(intervalId);
@@ -322,7 +342,11 @@ export default function CaseBattleRoom() {
           </div>
           {visibleCase && battle.status !== "waiting" && (
             <div className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
-              <span className="text-base">{caseMeta[visibleCase.case_id]?.image ?? "🎁"}</span>
+              <ImgOrEmoji
+                src={caseMeta[visibleCase.case_id]?.image}
+                alt={caseMeta[visibleCase.case_id]?.name ?? "case"}
+                className="h-5 w-5 object-contain text-base"
+              />
               {caseMeta[visibleCase.case_id]?.name ?? "Case"}
             </div>
           )}
@@ -343,7 +367,9 @@ export default function CaseBattleRoom() {
                     : "border-border"
                 }`}
               >
-                <div className="text-2xl">{meta?.image ?? "🎁"}</div>
+                <div className="flex h-8 w-8 items-center justify-center text-2xl">
+                  <ImgOrEmoji src={meta?.image} alt={meta?.name ?? "case"} className="h-8 w-8 object-contain text-2xl" />
+                </div>
                 <div className="text-[10px] font-bold">{i + 1}</div>
               </div>
             );
@@ -417,7 +443,7 @@ export default function CaseBattleRoom() {
                       special_spin: spinningRound.special_spin,
                     }}
                     spinKey={`${slot}-${spinningRound.id}`}
-                    durationMs={battle.fast ? 1800 : 5200}
+                    durationMs={battle.fast ? 1600 : 4200}
                     size={slots <= 2 ? "md" : "sm"}
                   />
                 ) : (

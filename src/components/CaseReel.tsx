@@ -4,6 +4,8 @@ import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { formatCoins } from "@/lib/format";
 import { Sparkles, Swords } from "lucide-react";
 import { playReelTick, playReelLand } from "@/lib/sfx";
+import empireSpinImg from "@/assets/empire-spin.png";
+import duelSpinImg from "@/assets/duel-spin.png";
 
 export type ReelItem = {
   name: string;
@@ -70,29 +72,18 @@ const ItemCard = forwardRef<
         ref={ref}
         className={`relative w-full overflow-hidden rounded-xl border-2 ${
           isEmpire
-            ? "border-amber-300/80 bg-gradient-to-b from-amber-400/40 to-orange-950/70 shadow-[0_0_38px_rgba(245,158,11,0.85)]"
-            : "border-fuchsia-300/80 bg-gradient-to-b from-fuchsia-500/40 to-purple-950/75 shadow-[0_0_38px_rgba(217,70,239,0.85)]"
+            ? "border-fuchsia-300/80 bg-gradient-to-b from-fuchsia-500/40 to-purple-950/85 shadow-[0_0_38px_rgba(217,70,239,0.85)]"
+            : "border-amber-300/80 bg-gradient-to-b from-amber-400/40 to-orange-950/85 shadow-[0_0_38px_rgba(245,158,11,0.85)]"
         }`}
         style={{ height }}
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(255,255,255,0.25),transparent_60%)]" />
-        <div className="flex h-full flex-col items-center justify-center gap-1 p-2">
-          {isEmpire ? (
-            <Sparkles className={`${size === "sm" ? "h-7 w-7" : "h-10 w-10"} text-amber-200 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]`} />
-          ) : (
-            <Swords className={`${size === "sm" ? "h-7 w-7" : "h-10 w-10"} text-fuchsia-100 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]`} />
-          )}
-          <div
-            className={`text-center text-[10px] font-black uppercase tracking-widest ${
-              isEmpire ? "text-amber-200" : "text-fuchsia-100"
-            }`}
-          >
-            {isEmpire ? "Empire Spin" : "Duel Spin"}
-          </div>
-          <div className="text-[9px] font-bold uppercase opacity-80 text-white/80">
-            {isEmpire ? "Reroll" : "50/50"}
-          </div>
-        </div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,0.18),transparent_65%)]" />
+        <img
+          src={isEmpire ? empireSpinImg : duelSpinImg}
+          alt={isEmpire ? "Empire Spin" : "Duel Spin"}
+          className="absolute inset-0 h-full w-full object-contain p-1 drop-shadow-[0_2px_10px_rgba(0,0,0,0.7)]"
+          draggable={false}
+        />
       </div>
     );
   }
@@ -107,9 +98,18 @@ const ItemCard = forwardRef<
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(255,255,255,0.18),transparent_60%)]" />
       <div className="flex h-full flex-col items-center justify-center gap-1 p-2">
-        <div className={`${emoji} drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]`}>
-          {item.image ?? "🎁"}
-        </div>
+        {item.image && /^https?:\/\//i.test(item.image) ? (
+          <img
+            src={item.image}
+            alt={item.name}
+            className="max-h-[60%] w-auto object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]"
+            draggable={false}
+          />
+        ) : (
+          <div className={`${emoji} drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]`}>
+            {item.image ?? "🎁"}
+          </div>
+        )}
         <div
           className={`w-full truncate text-center text-[10px] font-bold uppercase tracking-wide ${
             RARITY_TEXT[item.rarity] ?? "text-slate-200"
