@@ -14,6 +14,145 @@ export type Database = {
   }
   public: {
     Tables: {
+      battle_cases: {
+        Row: {
+          battle_id: string
+          case_id: string
+          id: string
+          position: number
+          qty: number
+        }
+        Insert: {
+          battle_id: string
+          case_id: string
+          id?: string
+          position: number
+          qty?: number
+        }
+        Update: {
+          battle_id?: string
+          case_id?: string
+          id?: string
+          position?: number
+          qty?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_cases_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "case_battles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_cases_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_players: {
+        Row: {
+          avatar: string
+          battle_id: string
+          display_name: string
+          id: string
+          is_bot: boolean
+          joined_at: string
+          slot: number
+          team: number
+          total_winnings: number
+          user_id: string | null
+        }
+        Insert: {
+          avatar?: string
+          battle_id: string
+          display_name: string
+          id?: string
+          is_bot?: boolean
+          joined_at?: string
+          slot: number
+          team?: number
+          total_winnings?: number
+          user_id?: string | null
+        }
+        Update: {
+          avatar?: string
+          battle_id?: string
+          display_name?: string
+          id?: string
+          is_bot?: boolean
+          joined_at?: string
+          slot?: number
+          team?: number
+          total_winnings?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_players_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "case_battles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_rounds: {
+        Row: {
+          battle_id: string
+          case_id: string
+          created_at: string
+          id: string
+          item_id: string
+          item_image: string | null
+          item_name: string
+          item_value: number
+          player_slot: number
+          rarity: string
+          round_index: number
+          special_spin: string
+        }
+        Insert: {
+          battle_id: string
+          case_id: string
+          created_at?: string
+          id?: string
+          item_id: string
+          item_image?: string | null
+          item_name: string
+          item_value: number
+          player_slot: number
+          rarity?: string
+          round_index: number
+          special_spin?: string
+        }
+        Update: {
+          battle_id?: string
+          case_id?: string
+          created_at?: string
+          id?: string
+          item_id?: string
+          item_image?: string | null
+          item_name?: string
+          item_value?: number
+          player_slot?: number
+          rarity?: string
+          round_index?: number
+          special_spin?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_rounds_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "case_battles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bets: {
         Row: {
           bet_amount: number
@@ -145,6 +284,164 @@ export type Database = {
           seats?: number
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      case_battles: {
+        Row: {
+          created_at: string
+          current_round: number
+          fast: boolean
+          fill_with_bots: boolean
+          finished_at: string | null
+          host_id: string
+          house_edge_bps: number
+          id: string
+          is_private: boolean
+          mode: string
+          per_player_cost: number
+          player_slots: number
+          pot_payout: number | null
+          rounds_total: number
+          started_at: string | null
+          status: string
+          team_size: number
+          total_cost: number
+          type: string
+          winner_team: number | null
+          winner_user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          current_round?: number
+          fast?: boolean
+          fill_with_bots?: boolean
+          finished_at?: string | null
+          host_id: string
+          house_edge_bps?: number
+          id?: string
+          is_private?: boolean
+          mode: string
+          per_player_cost: number
+          player_slots: number
+          pot_payout?: number | null
+          rounds_total: number
+          started_at?: string | null
+          status?: string
+          team_size?: number
+          total_cost: number
+          type?: string
+          winner_team?: number | null
+          winner_user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          current_round?: number
+          fast?: boolean
+          fill_with_bots?: boolean
+          finished_at?: string | null
+          host_id?: string
+          house_edge_bps?: number
+          id?: string
+          is_private?: boolean
+          mode?: string
+          per_player_cost?: number
+          player_slots?: number
+          pot_payout?: number | null
+          rounds_total?: number
+          started_at?: string | null
+          status?: string
+          team_size?: number
+          total_cost?: number
+          type?: string
+          winner_team?: number | null
+          winner_user_id?: string | null
+        }
+        Relationships: []
+      }
+      case_items: {
+        Row: {
+          case_id: string
+          created_at: string
+          id: string
+          image: string | null
+          name: string
+          rarity: string
+          value: number
+          weight: number
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          id?: string
+          image?: string | null
+          name: string
+          rarity?: string
+          value: number
+          weight: number
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          id?: string
+          image?: string | null
+          name?: string
+          rarity?: string
+          value?: number
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_items_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cases: {
+        Row: {
+          approved_at: string | null
+          created_at: string
+          creator_id: string | null
+          id: string
+          image: string | null
+          is_official: boolean
+          name: string
+          price: number
+          rejection_reason: string | null
+          status: string
+          total_opened: number
+          total_wagered: number
+        }
+        Insert: {
+          approved_at?: string | null
+          created_at?: string
+          creator_id?: string | null
+          id?: string
+          image?: string | null
+          is_official?: boolean
+          name: string
+          price: number
+          rejection_reason?: string | null
+          status?: string
+          total_opened?: number
+          total_wagered?: number
+        }
+        Update: {
+          approved_at?: string | null
+          created_at?: string
+          creator_id?: string | null
+          id?: string
+          image?: string | null
+          is_official?: boolean
+          name?: string
+          price?: number
+          rejection_reason?: string | null
+          status?: string
+          total_opened?: number
+          total_wagered?: number
         }
         Relationships: []
       }
@@ -580,11 +877,50 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      _roll_case_item: {
+        Args: { _case_id: string }
+        Returns: {
+          image: string
+          item_id: string
+          name: string
+          rarity: string
+          value: number
+          weight: number
+        }[]
+      }
+      _slots_for_mode: {
+        Args: { _mode: string }
+        Returns: {
+          slots: number
+          team_size: number
+        }[]
+      }
       admin_grant_coins: {
         Args: { _amount: number; _recipient_username: string }
         Returns: {
@@ -593,6 +929,7 @@ export type Database = {
           recipient_username: string
         }[]
       }
+      approve_case: { Args: { _case_id: string }; Returns: undefined }
       bj_action: { Args: { _action: string; _table_id: string }; Returns: Json }
       bj_advance: { Args: { _table_id: string }; Returns: undefined }
       bj_double: {
@@ -767,6 +1104,17 @@ export type Database = {
           start_at: string
         }[]
       }
+      create_case_battle: {
+        Args: {
+          _case_ids: string[]
+          _fast: boolean
+          _fill_with_bots: boolean
+          _mode: string
+          _private: boolean
+          _type: string
+        }
+        Returns: string
+      }
       dragontower_abandon: {
         Args: never
         Returns: {
@@ -834,6 +1182,16 @@ export type Database = {
           user_id: string
         }[]
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: never; Returns: boolean }
+      join_case_battle: { Args: { _battle_id: string }; Returns: undefined }
+      leave_case_battle: { Args: { _battle_id: string }; Returns: undefined }
       list_friend_requests: {
         Args: never
         Returns: {
@@ -882,6 +1240,16 @@ export type Database = {
         Args: { _bet_amount: number; _mines: number }
         Returns: {
           new_balance: number
+        }[]
+      }
+      open_case_solo: {
+        Args: { _case_id: string; _count: number }
+        Returns: {
+          image: string
+          item_id: string
+          name: string
+          rarity: string
+          value: number
         }[]
       }
       place_bet: {
@@ -951,6 +1319,10 @@ export type Database = {
           new_balance: number
         }[]
       }
+      reject_case: {
+        Args: { _case_id: string; _reason: string }
+        Returns: undefined
+      }
       search_players: {
         Args: { _q: string }
         Returns: {
@@ -962,6 +1334,7 @@ export type Database = {
           username: string
         }[]
       }
+      start_case_battle: { Args: { _battle_id: string }; Returns: undefined }
       transfer_coins: {
         Args: { _amount: number; _recipient_username: string }
         Returns: {
@@ -979,7 +1352,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1106,6 +1479,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const

@@ -3,9 +3,9 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { usePresence } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
-import { Gift, TrendingUp } from "lucide-react";
+import { Gift, TrendingUp, Package, Swords, Upload } from "lucide-react";
 import { formatCoins } from "@/lib/format";
 import mizrahi from "@/assets/absolute-mizrahi.gif";
 import diceImg from "@/assets/games/dice.jpg";
@@ -30,6 +30,19 @@ export default function Lobby() {
   const { profile, refetch } = useUserProfile();
   const { counts: playing, total } = usePresence();
   const [claiming, setClaiming] = useState(false);
+  const [cases, setCases] = useState<{ id: string; name: string; image: string | null; price: number }[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("cases")
+        .select("id,name,image,price")
+        .eq("status", "approved")
+        .order("price")
+        .limit(8);
+      setCases(data ?? []);
+    })();
+  }, []);
 
   const canClaim =
     !profile?.last_daily_bonus ||
@@ -141,6 +154,49 @@ export default function Lobby() {
               </Link>
             );
           })}
+        </div>
+      </section>
+
+      {/* Mizrahi Cases */}
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground">
+            <Package className="h-4 w-4" /> Mizrahi Cases
+          </h2>
+          <div className="flex gap-2">
+            <Link
+              to="/cases/battles"
+              className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground"
+            >
+              <Swords className="h-3 w-3" /> Battles
+            </Link>
+            <Link
+              to="/cases/upload"
+              className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-bold"
+            >
+              <Upload className="h-3 w-3" /> Upload
+            </Link>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+          {cases.map((c) => (
+            <Link key={c.id} to="/cases" className="group block">
+              <div className="relative flex aspect-[3/4] flex-col items-center justify-between overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-card to-background p-4 shadow-lg transition-transform duration-200 group-hover:-translate-y-1 group-hover:border-primary group-hover:shadow-[0_10px_30px_-5px_hsl(var(--primary)/0.5)]">
+                <div className="text-7xl drop-shadow-[0_0_20px_hsl(var(--primary)/0.6)]">
+                  {c.image ?? "🎁"}
+                </div>
+                <div className="w-full text-center">
+                  <div className="truncate text-sm font-bold">{c.name}</div>
+                  <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-primary/15 px-3 py-0.5 text-xs font-black text-primary">
+                    <MizrahiCoin size={10} /> {formatCoins(c.price)}
+                  </div>
+                </div>
+              </div>
+            </Link>
+          ))}
+          {cases.length === 0 && (
+            <p className="col-span-full text-sm text-muted-foreground">Loading cases...</p>
+          )}
         </div>
       </section>
     </div>
