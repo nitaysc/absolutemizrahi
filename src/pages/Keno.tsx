@@ -7,16 +7,7 @@ import { BetControls } from "@/components/BetControls";
 import { Button } from "@/components/ui/button";
 import { formatCoins } from "@/lib/format";
 import { motion } from "framer-motion";
-import {
-  Compass,
-  Gauge,
-  Plane,
-  Play,
-  Radar,
-  RotateCcw,
-  Shuffle,
-  Target,
-} from "lucide-react";
+import { Dices, Play, RotateCcw, Shuffle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -29,7 +20,7 @@ type Difficulty = "low" | "medium" | "high";
 
 const BOARD_NUMBERS = Array.from({ length: 40 }, (_, i) => i + 1);
 const MAX_PICKS = 10;
-const DRAW_REVEAL_MS = 120;
+const DRAW_REVEAL_MS = 110;
 const HOUSE_EDGE = 0.01;
 
 const DIFFICULTY_MULTIPLIERS: Record<Difficulty, number[]> = {
@@ -68,6 +59,17 @@ export default function Keno() {
       ? applyHouseEdge(DIFFICULTY_MULTIPLIERS[difficulty][hits] ?? 0)
       : 0;
   const potentialProfit = Math.max(Math.floor(bet * multiplier) - bet, 0);
+
+  // Show the full payout table for the current pick count + difficulty
+  // so players can see exactly what each hit count is worth.
+  const payoutTable = useMemo(() => {
+    const table = DIFFICULTY_MULTIPLIERS[difficulty];
+    const picks = Math.max(selected.size, 1);
+    return Array.from({ length: picks + 1 }, (_, k) => ({
+      hits: k,
+      multiplier: applyHouseEdge(table[k] ?? 0),
+    })).filter((row) => row.hits > 0 || row.multiplier > 0);
+  }, [difficulty, selected.size]);
 
   function toggleNumber(n: number) {
     if (rolling) return;
@@ -161,26 +163,19 @@ export default function Keno() {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-border bg-card/70 p-4 text-foreground shadow-[0_20px_60px_rgba(6,12,40,0.35)] backdrop-blur-xl sm:p-6">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.15),transparent_68%)]" />
-      <div className="pointer-events-none absolute -bottom-16 left-1/2 h-56 w-[120%] -translate-x-1/2 rounded-[100%] bg-background/70" />
+    <div className="space-y-4">
+      <header>
+        <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">
+          <Dices className="h-6 w-6 text-primary sm:h-7 sm:w-7" /> KENO
+        </h1>
+        <p className="text-xs text-muted-foreground sm:text-sm">
+          Pick up to 10 numbers. The more hits, the bigger the payout.
+        </p>
+      </header>
 
-      <div className="relative grid grid-cols-1 gap-4 xl:grid-cols-[360px_1fr]">
-        <section className="rounded-3xl border border-border bg-background/40 p-4 backdrop-blur-sm">
-          <div className="flex items-center justify-between gap-3">
-            <h1 className="flex items-center gap-2 text-2xl font-black tracking-wide">
-              <Plane className="h-6 w-6 text-primary" /> SKY KENO
-            </h1>
-            <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-primary">
-              live
-            </span>
-          </div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Aviator-style cockpit with classic Keno mechanics. Pick up to 10 numbers
-            and launch for a higher multiplier.
-          </p>
-
-          <div className="mt-4 space-y-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[320px_1fr]">
+        <aside className="rounded-3xl border border-border bg-card/70 p-4 backdrop-blur-xl">
+          <div className="space-y-3">
             <BetControls bet={bet} setBet={setBet} disabled={rolling} />
 
             <div>
@@ -196,9 +191,9 @@ export default function Keno() {
                   <SelectValue placeholder="Select difficulty" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Low turbulence</SelectItem>
-                  <SelectItem value="medium">Cruise</SelectItem>
-                  <SelectItem value="high">Storm</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -208,79 +203,62 @@ export default function Keno() {
                 variant="secondary"
                 onClick={randomPick}
                 disabled={rolling}
-                className="h-11 border border-border bg-background/60 hover:bg-muted"
+                className="h-10"
               >
-                <Shuffle className="mr-2 h-4 w-4" /> Random
+                <Shuffle className="mr-1.5 h-4 w-4" /> Random
               </Button>
               <Button
                 variant="secondary"
                 onClick={clearBoard}
                 disabled={rolling}
-                className="h-11 border border-border bg-background/60 hover:bg-muted"
+                className="h-10"
               >
-                <RotateCcw className="mr-2 h-4 w-4" /> Reset
+                <RotateCcw className="mr-1.5 h-4 w-4" /> Clear
               </Button>
             </div>
 
             <Button
               onClick={placeBet}
               disabled={rolling || selected.size === 0}
-              className="h-14 w-full rounded-2xl text-lg font-black tracking-wide shadow-[0_0_25px_hsl(var(--primary)/0.35)]"
+              className="h-12 w-full text-base font-black"
             >
-              <Play className="mr-2 h-5 w-5" /> {rolling ? "LAUNCHING..." : "LAUNCH ROUND"}
+              <Play className="mr-2 h-4 w-4" /> {rolling ? "DRAWING..." : "BET"}
             </Button>
 
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="rounded-xl border border-border bg-background/60 p-3">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Selected</p>
-                <p className="text-xl font-black">{selected.size}/10</p>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-xl border border-border bg-background/50 p-2">
+                <p className="text-muted-foreground">Picks</p>
+                <p className="text-sm font-black">{selected.size}/10</p>
               </div>
-              <div className="rounded-xl border border-border bg-background/60 p-3">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Drawn</p>
-                <p className="text-xl font-black">{drawnSequence.length}/{drawCount}</p>
+              <div className="rounded-xl border border-border bg-background/50 p-2">
+                <p className="text-muted-foreground">Drawn</p>
+                <p className="text-sm font-black">
+                  {drawnSequence.length}/{drawCount}
+                </p>
               </div>
-              <div className="rounded-xl border border-border bg-background/60 p-3">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Hits</p>
-                <p className="text-xl font-black text-[hsl(var(--success))]">{hits}</p>
+              <div className="rounded-xl border border-border bg-background/50 p-2">
+                <p className="text-muted-foreground">Hits</p>
+                <p className="text-sm font-black text-[hsl(var(--success))]">
+                  {hits}
+                </p>
               </div>
-              <div className="rounded-xl border border-border bg-background/60 p-3">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Multiplier</p>
-                <p className="text-xl font-black text-primary">{multiplier.toFixed(2)}×</p>
+              <div className="rounded-xl border border-border bg-background/50 p-2">
+                <p className="text-muted-foreground">Multiplier</p>
+                <p className="text-sm font-black text-primary">
+                  {multiplier.toFixed(2)}×
+                </p>
               </div>
             </div>
 
-            <div className="rounded-xl border border-primary/25 bg-primary/10 p-3 text-sm font-semibold text-foreground">
-              Profit on win: <span className="font-black">+{formatCoins(potentialProfit)}</span>
+            <div className="rounded-xl border border-primary/25 bg-primary/10 p-2.5 text-xs font-semibold">
+              Profit on win:{" "}
+              <span className="font-black">+{formatCoins(potentialProfit)}</span>
             </div>
           </div>
-        </section>
+        </aside>
 
-        <section className="rounded-3xl border border-border bg-background/35 p-4 backdrop-blur-sm sm:p-5">
-          <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background/50 px-3 py-2">
-              <Gauge className="h-4 w-4 text-primary" />
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Altitude</p>
-                <p className="text-sm font-bold">{drawnSequence.length * 120} m</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background/50 px-3 py-2">
-              <Compass className="h-4 w-4 text-primary" />
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Distance</p>
-                <p className="text-sm font-bold">{selected.size * 8} km</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background/50 px-3 py-2">
-              <Radar className="h-4 w-4 text-primary" />
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Target Lock</p>
-                <p className="text-sm font-bold">{Math.round((hits / Math.max(selected.size, 1)) * 100)}%</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-5 gap-2 sm:grid-cols-8 sm:gap-3">
+        <section className="rounded-3xl border border-border bg-card/70 p-4 backdrop-blur-xl sm:p-5">
+          <div className="grid grid-cols-5 gap-2 sm:grid-cols-8 sm:gap-2.5">
             {BOARD_NUMBERS.map((n) => {
               const isSelected = selected.has(n);
               const isDrawn = drawn.has(n);
@@ -294,22 +272,22 @@ export default function Keno() {
                   whileTap={{ scale: 0.94 }}
                   animate={
                     isHit
-                      ? { scale: [1, 1.14, 1], rotate: [0, -3, 3, 0] }
+                      ? { scale: [1, 1.14, 1] }
                       : isDrawn
-                        ? { scale: [1, 1.08, 1] }
+                        ? { scale: [1, 1.06, 1] }
                         : isSelected
-                          ? { scale: 1.03 }
+                          ? { scale: 1.02 }
                           : { scale: 1 }
                   }
-                  transition={{ duration: isHit ? 0.45 : 0.25, ease: "easeOut" }}
-                  className={`aspect-square rounded-xl border text-lg font-black transition sm:text-xl ${
+                  transition={{ duration: isHit ? 0.45 : 0.2, ease: "easeOut" }}
+                  className={`aspect-square rounded-xl border text-base font-black tabular-nums transition sm:text-lg ${
                     isHit
-                      ? "border-emerald-300 bg-emerald-500/35 text-emerald-100 shadow-[0_0_24px_rgba(16,185,129,0.55)]"
+                      ? "border-[hsl(var(--success))] bg-[hsl(var(--success))]/25 text-[hsl(var(--success))] shadow-[0_0_22px_hsl(var(--success)/0.45)]"
                       : isSelected
-                        ? "border-cyan-300 bg-cyan-400/30 text-white"
+                        ? "border-primary bg-primary/20 text-foreground"
                         : isDrawn
-                          ? "border-amber-300 bg-amber-400/25 text-amber-100"
-                          : "border-border bg-background/60 hover:border-primary/70"
+                          ? "border-destructive/60 bg-destructive/15 text-destructive"
+                          : "border-border bg-background/60 hover:border-primary/60"
                   }`}
                 >
                   {n}
@@ -318,9 +296,30 @@ export default function Keno() {
             })}
           </div>
 
-          <div className="mt-4 flex items-center gap-2 rounded-xl border border-border bg-background/50 px-3 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            <Target className="h-4 w-4 text-primary" />
-            Draw order: {drawnSequence.length ? drawnSequence.join(" · ") : "Waiting for launch"}
+          {/* Payout table */}
+          <div className="mt-4 rounded-2xl border border-border bg-background/40 p-3">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Payout table — {selected.size || 1} pick{selected.size === 1 ? "" : "s"}
+            </p>
+            <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6 md:grid-cols-8">
+              {payoutTable.map((row) => (
+                <div
+                  key={row.hits}
+                  className={`rounded-lg border px-2 py-1.5 text-center ${
+                    row.hits === hits && drawnSequence.length > 0
+                      ? "border-primary bg-primary/20"
+                      : "border-border bg-background/60"
+                  }`}
+                >
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground">
+                    {row.hits}×
+                  </p>
+                  <p className="text-xs font-black tabular-nums">
+                    {row.multiplier.toFixed(2)}×
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       </div>
