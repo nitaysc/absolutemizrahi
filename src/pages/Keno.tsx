@@ -12,14 +12,19 @@ import { motion } from "framer-motion";
 type Difficulty = "low" | "medium" | "high";
 
 const BOARD_NUMBERS = Array.from({ length: 40 }, (_, i) => i + 1);
-const DRAW_COUNT = 10;
+const MAX_PICKS = 10;
 const DRAW_REVEAL_MS = 120;
 const HOUSE_EDGE = 0.01;
 
 const DIFFICULTY_MULTIPLIERS: Record<Difficulty, number[]> = {
-  low: [0, 0, 0.6, 1.1, 1.8, 3, 5, 8, 12, 18, 26],
-  medium: [0, 0, 0.3, 1.4, 2.4, 4.2, 8, 13, 20, 32, 48],
-  high: [0, 0, 0, 1.8, 3.2, 6, 12, 22, 40, 65, 100],
+  low: [0, 0, 0.55, 1, 1.65, 2.6, 4, 6.2, 9.5, 14, 20],
+  medium: [0, 0, 0.25, 1.25, 2.1, 3.5, 6.7, 11, 17, 27, 40],
+  high: [0, 0, 0, 1.45, 2.5, 4.8, 9.5, 17.5, 32, 52, 80],
+};
+const DRAW_COUNT_BY_DIFFICULTY: Record<Difficulty, number> = {
+  low: 12,
+  medium: 10,
+  high: 8,
 };
 
 function applyHouseEdge(multiplier: number) {
@@ -36,6 +41,7 @@ export default function Keno() {
   const [drawn, setDrawn] = useState<Set<number>>(new Set());
   const [drawnSequence, setDrawnSequence] = useState<number[]>([]);
   const [rolling, setRolling] = useState(false);
+  const drawCount = DRAW_COUNT_BY_DIFFICULTY[difficulty];
 
   const hits = useMemo(
     () => [...selected].filter((n) => drawn.has(n)).length,
@@ -49,7 +55,7 @@ export default function Keno() {
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(n)) next.delete(n);
-      else if (next.size < 10) next.add(n);
+      else if (next.size < MAX_PICKS) next.add(n);
       return next;
     });
   }
@@ -63,7 +69,7 @@ export default function Keno() {
 
   function randomPick() {
     if (rolling) return;
-    const shuffled = [...BOARD_NUMBERS].sort(() => Math.random() - 0.5).slice(0, DRAW_COUNT);
+    const shuffled = [...BOARD_NUMBERS].sort(() => Math.random() - 0.5).slice(0, MAX_PICKS);
     setSelected(new Set(shuffled));
     setDrawn(new Set());
     setDrawnSequence([]);
@@ -71,7 +77,7 @@ export default function Keno() {
 
   async function placeBet() {
     if (!profile) return;
-    if (selected.size < 1 || selected.size > 10) return toast.error("Pick 1 to 10 numbers");
+    if (selected.size < 1 || selected.size > MAX_PICKS) return toast.error("Pick 1 to 10 numbers");
     if (bet < 1) return toast.error("Bet at least 1 coin");
     if (bet > profile.coins) return toast.error("Not enough coins");
 
@@ -79,7 +85,7 @@ export default function Keno() {
     setDrawn(new Set());
     setDrawnSequence([]);
 
-    const draw = [...BOARD_NUMBERS].sort(() => Math.random() - 0.5).slice(0, DRAW_COUNT);
+    const draw = [...BOARD_NUMBERS].sort(() => Math.random() - 0.5).slice(0, drawCount);
     const drawSet = new Set(draw);
     const hitCount = [...selected].filter((n) => drawSet.has(n)).length;
     const roundMultiplier = applyHouseEdge(DIFFICULTY_MULTIPLIERS[difficulty][hitCount] ?? 0);
@@ -131,8 +137,8 @@ export default function Keno() {
         <h1 className="flex items-center gap-2 text-2xl font-black">
           <Target className="h-6 w-6 text-primary" /> KENO
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Select up to 10 numbers and match the draw. Payouts include a 1% house edge.
+            <p className="mt-1 text-sm text-muted-foreground">
+          Select up to 10 numbers and match the draw. Higher difficulty draws fewer numbers, but can pay more.
         </p>
 
         <div className="mt-4 space-y-4">
@@ -166,7 +172,7 @@ export default function Keno() {
 
           <div className="rounded-xl bg-background/50 p-3 text-sm">
             <p className="font-semibold">Selected: {selected.size}/10</p>
-            <p className="text-muted-foreground">Drawn: {drawnSequence.length}/{DRAW_COUNT}</p>
+            <p className="text-muted-foreground">Drawn: {drawnSequence.length}/{drawCount}</p>
             <p className="text-muted-foreground">Hits: {hits}</p>
             <p className="text-muted-foreground">Current Multiplier: {multiplier.toFixed(2)}×</p>
             <p className="font-semibold text-primary">Profit on win: +{formatCoins(potentialProfit)}</p>
