@@ -51,15 +51,19 @@ export default function Cases() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("cases")
-        .select("id,name,image,price,is_official,total_opened")
-        .eq("status", "approved")
-        .order("price");
-      setCases((data ?? []) as Case[]);
-      setLoading(false);
       const { data: adm } = await supabase.rpc("is_admin");
       setIsAdmin(!!adm);
+      // Admins see every case; everyone else sees approved + their own pending.
+      let q = supabase
+        .from("cases")
+        .select("id,name,image,price,is_official,total_opened,status,creator_id")
+        .order("price");
+      if (!adm) {
+        q = q.in("status", ["approved", "pending"]);
+      }
+      const { data } = await q;
+      setCases((data ?? []) as Case[]);
+      setLoading(false);
     })();
   }, []);
 
