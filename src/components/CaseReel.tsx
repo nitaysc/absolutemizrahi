@@ -134,15 +134,15 @@ export function CaseReel({
     const offset = -(targetCenter - center);
     const axis = orientation === "horizontal" ? "x" : "y";
 
-    controls.set({ [axis]: orientation === "horizontal" ? containerSize / 2 - itemPx / 2 : 0 });
+    controls.set({ [axis]: orientation === "horizontal" ? containerSize / 2 - itemPx / 2 : 0 } as any);
     controls
-      .start({
-        [axis]: offset,
-        transition: {
+      .start(
+        { [axis]: offset } as any,
+        {
           duration: durationMs / 1000,
           ease: [0.16, 0.84, 0.24, 1], // strong decel
-        },
-      })
+        } as any
+      )
       .then(() => {
         setPhase("landed");
         onComplete?.();
