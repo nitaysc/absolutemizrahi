@@ -57,6 +57,7 @@ export type Database = {
         Row: {
           avatar: string
           battle_id: string
+          borrowed: number
           display_name: string
           id: string
           is_bot: boolean
@@ -69,6 +70,7 @@ export type Database = {
         Insert: {
           avatar?: string
           battle_id: string
+          borrowed?: number
           display_name: string
           id?: string
           is_bot?: boolean
@@ -81,6 +83,7 @@ export type Database = {
         Update: {
           avatar?: string
           battle_id?: string
+          borrowed?: number
           display_name?: string
           id?: string
           is_bot?: boolean
@@ -289,6 +292,7 @@ export type Database = {
       }
       case_battles: {
         Row: {
+          allow_borrow: boolean
           created_at: string
           current_round: number
           fast: boolean
@@ -312,6 +316,7 @@ export type Database = {
           winner_user_id: string | null
         }
         Insert: {
+          allow_borrow?: boolean
           created_at?: string
           current_round?: number
           fast?: boolean
@@ -335,6 +340,7 @@ export type Database = {
           winner_user_id?: string | null
         }
         Update: {
+          allow_borrow?: boolean
           created_at?: string
           current_round?: number
           fast?: boolean
@@ -1157,17 +1163,30 @@ export type Database = {
           start_at: string
         }[]
       }
-      create_case_battle: {
-        Args: {
-          _case_ids: string[]
-          _fast: boolean
-          _fill_with_bots: boolean
-          _mode: string
-          _private: boolean
-          _type: string
-        }
-        Returns: string
-      }
+      create_case_battle:
+        | {
+            Args: {
+              _case_ids: string[]
+              _fast: boolean
+              _fill_with_bots: boolean
+              _mode: string
+              _private: boolean
+              _type: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _allow_borrow?: boolean
+              _case_ids: string[]
+              _fast: boolean
+              _fill_with_bots: boolean
+              _mode: string
+              _private: boolean
+              _type: string
+            }
+            Returns: string
+          }
       dragontower_abandon: {
         Args: never
         Returns: {
