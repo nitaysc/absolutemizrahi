@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { CaseDetailsModal } from "@/components/CaseDetailsModal";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { formatCoins } from "@/lib/format";
@@ -88,7 +89,8 @@ export default function CaseBattleRoom() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [bcases, setBcases] = useState<BattleCase[]>([]);
   const [rounds, setRounds] = useState<Round[]>([]);
-  const [caseMeta, setCaseMeta] = useState<Record<string, { name: string; image: string | null }>>({});
+  const [caseMeta, setCaseMeta] = useState<Record<string, { name: string; image: string | null; price: number }>>({});
+  const [detailsCaseId, setDetailsCaseId] = useState<string | null>(null);
   const [itemPools, setItemPools] = useState<Record<string, ReelItem[]>>({});
   // Index of round currently spinning across all lanes (-1 = idle)
   const [currentSpin, setCurrentSpin] = useState(-1);
@@ -117,11 +119,11 @@ export default function CaseBattleRoom() {
     if (bc && bc.length) {
       const ids = Array.from(new Set(bc.map((x) => x.case_id)));
       const [{ data: cs }, { data: items }] = await Promise.all([
-        supabase.from("cases").select("id,name,image").in("id", ids),
+        supabase.from("cases").select("id,name,image,price").in("id", ids),
         supabase.from("case_items").select("case_id,name,image,value,rarity").in("case_id", ids),
       ]);
-      const meta: Record<string, { name: string; image: string | null }> = {};
-      (cs ?? []).forEach((c: any) => (meta[c.id] = { name: c.name, image: c.image }));
+      const meta: Record<string, { name: string; image: string | null; price: number }> = {};
+      (cs ?? []).forEach((c: any) => (meta[c.id] = { name: c.name, image: c.image, price: Number(c.price ?? 0) }));
       setCaseMeta(meta);
       const pools: Record<string, ReelItem[]> = {};
       (items ?? []).forEach((it: any) => {
@@ -478,14 +480,19 @@ export default function CaseBattleRoom() {
             Cases · {battle.rounds_total} rounds
           </div>
           {visibleCase && battle.status !== "waiting" && (
-            <div className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+            <button
+              type="button"
+              onClick={() => setDetailsCaseId(visibleCase.case_id)}
+              className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-bold text-primary transition hover:bg-primary/20"
+              title="View case odds and top items"
+            >
               <ImgOrEmoji
                 src={caseMeta[visibleCase.case_id]?.image}
                 alt={caseMeta[visibleCase.case_id]?.name ?? "case"}
                 className="h-5 w-5 object-contain text-base"
               />
               {caseMeta[visibleCase.case_id]?.name ?? "Case"}
-            </div>
+            </button>
           )}
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1">
@@ -494,21 +501,24 @@ export default function CaseBattleRoom() {
             const active = i === visibleSpinIdx && battle.status !== "waiting";
             const done = i < visibleSpinIdx;
             return (
-              <div
+              <button
+                type="button"
                 key={bc.id}
+                onClick={() => setDetailsCaseId(bc.case_id)}
+                title={`View ${meta?.name ?? "case"} odds and top items`}
                 className={`flex min-w-[60px] flex-col items-center rounded-xl border p-2 text-center transition ${
                   active
                     ? "scale-110 border-primary bg-primary/15 shadow-[0_0_15px_hsl(var(--primary)/0.5)]"
                     : done
                     ? "border-border opacity-40"
                     : "border-border"
-                }`}
+                } hover:border-primary/60 hover:bg-primary/10`}
               >
                 <div className="flex h-8 w-8 items-center justify-center text-2xl">
                   <ImgOrEmoji src={meta?.image} alt={meta?.name ?? "case"} className="h-8 w-8 object-contain text-2xl" />
                 </div>
                 <div className="text-[10px] font-bold">{i + 1}</div>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -661,7 +671,11 @@ export default function CaseBattleRoom() {
                       className="inline-flex items-center gap-1 rounded-full border border-border bg-background/60 px-1.5 py-0.5 text-[10px]"
                       title={`${r.item_name} · ${r.rarity}`}
                     >
-                      <span>{r.item_image ?? "🎁"}</span>
+                      <ImgOrEmoji
+                        src={r.item_image}
+                        alt={r.item_name}
+                        className="h-3.5 w-3.5 object-contain text-[11px]"
+                      />
                       <span className={`font-bold ${RARITY_TEXT[r.rarity] ?? RARITY_TEXT.common}`}>
                         {formatCoins(r.item_value)}
                       </span>
@@ -896,6 +910,16 @@ export default function CaseBattleRoom() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {detailsCaseId && caseMeta[detailsCaseId] && (
+        <CaseDetailsModal
+          caseId={detailsCaseId}
+          caseName={caseMeta[detailsCaseId].name}
+          caseImage={caseMeta[detailsCaseId].image}
+          casePrice={caseMeta[detailsCaseId].price}
+          onClose={() => setDetailsCaseId(null)}
+        />
+      )}
     </div>
   );
 }
