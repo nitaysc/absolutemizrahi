@@ -8,7 +8,7 @@ import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { formatCoins } from "@/lib/format";
 import { toast } from "sonner";
-import { Bot, Crown, Play, LogOut, Swords, X, RotateCcw, Pencil, Trophy, UserPlus, Package, Coins } from "lucide-react";
+import { Bot, Crown, Play, LogOut, Swords, X, RotateCcw, Pencil, Trophy, UserPlus, Package, Coins, ChevronLeft, ChevronRight } from "lucide-react";
 import { CaseReel, type ReelItem } from "@/components/CaseReel";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -104,6 +104,22 @@ export default function CaseBattleRoom() {
   const prevPlayerCountRef = useRef<number>(0);
   // Borrow % chosen when joining (only used if host enabled allow_borrow)
   const [joinBorrowPct, setJoinBorrowPct] = useState(0);
+  // Ref + helpers for the horizontally-scrolling case track
+  const caseTrackRef = useRef<HTMLDivElement>(null);
+  const scrollTrack = (dir: -1 | 1) => {
+    const el = caseTrackRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * Math.max(180, el.clientWidth * 0.7), behavior: "smooth" });
+  };
+  // Keep the currently-spinning case visible in the horizontal track.
+  useEffect(() => {
+    const el = caseTrackRef.current;
+    if (!el) return;
+    const child = el.children[Math.max(0, currentSpin)] as HTMLElement | undefined;
+    if (child && "scrollIntoView" in child) {
+      child.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }
+  }, [currentSpin]);
 
   async function refreshAll() {
     const [{ data: b }, { data: p }, { data: bc }, { data: r }] = await Promise.all([
@@ -495,7 +511,28 @@ export default function CaseBattleRoom() {
             </button>
           )}
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="relative">
+          <button
+            type="button"
+            aria-label="Scroll cases left"
+            onClick={() => scrollTrack(-1)}
+            className="absolute left-0 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-card/90 p-1 shadow hover:bg-card sm:block"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="Scroll cases right"
+            onClick={() => scrollTrack(1)}
+            className="absolute right-0 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-card/90 p-1 shadow hover:bg-card sm:block"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <div
+            ref={caseTrackRef}
+            className="flex gap-2 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:thin] [scrollbar-color:hsl(var(--primary))_transparent] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-primary/60"
+            style={{ scrollSnapType: "x mandatory" }}
+          >
           {bcases.map((bc, i) => {
             const meta = caseMeta[bc.case_id];
             const active = i === visibleSpinIdx && battle.status !== "waiting";
@@ -506,7 +543,8 @@ export default function CaseBattleRoom() {
                 key={bc.id}
                 onClick={() => setDetailsCaseId(bc.case_id)}
                 title={`View ${meta?.name ?? "case"} odds and top items`}
-                className={`flex min-w-[60px] flex-col items-center rounded-xl border p-2 text-center transition ${
+                style={{ scrollSnapAlign: "start" }}
+                className={`flex min-w-[60px] shrink-0 flex-col items-center rounded-xl border p-2 text-center transition ${
                   active
                     ? "scale-110 border-primary bg-primary/15 shadow-[0_0_15px_hsl(var(--primary)/0.5)]"
                     : done
@@ -521,6 +559,7 @@ export default function CaseBattleRoom() {
               </button>
             );
           })}
+          </div>
         </div>
       </div>
 
@@ -654,6 +693,7 @@ export default function CaseBattleRoom() {
                     spinKey={`${slot}-${spinningRound.id}`}
                     durationMs={battle.fast ? 1600 : 4200}
                     size={isMobile ? "xs" : slots <= 2 ? "md" : "sm"}
+                    hideValuesUntilLanded
                   />
                 ) : (
                   <div className={`flex ${isMobile ? "h-[180px]" : "h-[256px]"} items-center justify-center rounded-2xl border border-dashed border-border bg-background/40 text-xs text-muted-foreground`}>

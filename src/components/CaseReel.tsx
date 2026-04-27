@@ -56,12 +56,18 @@ type Props = {
   onComplete?: () => void;
   /** Deprecated — Empire/Duel are now in-reel special tiles via result.special_spin */
   preBadge?: "empire" | "duel" | null;
+  /**
+   * Hide coin values on every tile until the reel lands. Used for case
+   * battles so players don't see what they're about to win during the spin.
+   * The landed tile reveals its value with a big pop.
+   */
+  hideValuesUntilLanded?: boolean;
 };
 
 const ItemCard = forwardRef<
   HTMLDivElement,
-  { item: ReelItem; size?: "xs" | "sm" | "md" | "lg"; height: number }
->(function ItemCard({ item, size = "md", height }, ref) {
+  { item: ReelItem; size?: "xs" | "sm" | "md" | "lg"; height: number; hideValue?: boolean }
+>(function ItemCard({ item, size = "md", height, hideValue }, ref) {
   const emoji = size === "sm" ? "text-4xl" : size === "lg" ? "text-7xl" : "text-5xl";
 
   // SPECIAL virtual tiles (Empire / Duel)
@@ -140,9 +146,15 @@ const ItemCard = forwardRef<
         >
           {item.name && /^https?:\/\//i.test(item.name) ? "Item" : item.name}
         </div>
-        <div className="inline-flex items-center gap-1 rounded-full bg-black/40 px-1.5 py-0.5 text-[10px] font-black text-white/90">
-          <MizrahiCoin size={8} /> {formatCoins(item.value)}
-        </div>
+        {hideValue ? (
+          <div className="inline-flex items-center gap-1 rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] font-black tracking-[0.2em] text-white/60">
+            <MizrahiCoin size={8} /> ???
+          </div>
+        ) : (
+          <div className="inline-flex items-center gap-1 rounded-full bg-black/40 px-1.5 py-0.5 text-[10px] font-black text-white/90">
+            <MizrahiCoin size={8} /> {formatCoins(item.value)}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -169,6 +181,7 @@ export function CaseReel({
   durationMs = 6400,
   size = "md",
   onComplete,
+  hideValuesUntilLanded = false,
 }: Props) {
   const controls = useAnimationControls();
   const yMotion = useMotionValue(0);
@@ -176,6 +189,10 @@ export function CaseReel({
   const [containerH, setContainerH] = useState(0);
   const [phase, setPhase] = useState<"idle" | "spinning" | "landed">("idle");
   const [specialHitFx, setSpecialHitFx] = useState<"empire" | "duel" | null>(null);
+  // Brief mid-spin "hesitation": the reel almost stops on a tile and then
+  // jumps to the real result. Empire-Drop style suspense. Triggered randomly
+  // (~25% of normal spins) and never on stage-1 of specials.
+  const [hesitating, setHesitating] = useState(false);
 
   // Tile dimensions
   const tileH = size === "xs" ? 72 : size === "sm" ? 96 : size === "lg" ? 150 : 120;
@@ -312,6 +329,7 @@ export function CaseReel({
   useEffect(() => {
     setStage(0);
     setSpecialHitFx(null);
+    setHesitating(false);
   }, [spinKey]);
 
   // Main animation effect — runs per stage
@@ -335,27 +353,57 @@ export function CaseReel({
 
     controls.set({ y: center - tileH / 2 });
     const startedAt = performance.now();
+    // Decide whether this spin gets the dramatic "almost stops on the wrong
+    // tile" hesitation. Skip on stage-1 specials (they already feel resolved).
+    const wantsHesitation = !(stage === 1 && hasSpecial) && Math.random() < 0.28;
     // Single smooth glide with a strong deceleration curve (csgo-style).
     // No bounce / overshoot — the reel must NEVER move after it stops, or
     // it looks like it changed which item you got.
-    const glide = controls.start({
-      y: offset,
-      transition: { duration: dur / 1000, ease: [0.16, 0.84, 0.24, 1] },
-    });
-    glide.then(() => {
-      void startedAt;
+    const finalLand = () => {
       playReelLand();
-      // If this was the first stage of a special spin, queue stage 2.
       if (stage === 0 && hasSpecial) {
         setSpecialHitFx(isEmpire ? "empire" : "duel");
         setTimeout(() => setSpecialHitFx(null), 900);
-        // brief beat before second spin
         setTimeout(() => setStage(1), 900);
       } else {
         setPhase("landed");
         onComplete?.();
       }
-    });
+    };
+
+    if (wantsHesitation) {
+      // Spin to a tile ~1 step BEFORE the real result, hold for a beat
+      // ("lock-in"), then nudge forward to the actual landed tile.
+      const fakeOffset = offset + step * (Math.random() < 0.5 ? 1 : -1);
+      const phase1 = Math.max(1.6, (dur / 1000) * 0.78);
+      const phase2 = 0.45;
+      const holdMs = 360 + Math.random() * 220;
+      controls.start({
+        y: fakeOffset,
+        transition: { duration: phase1, ease: [0.16, 0.84, 0.24, 1] },
+      }).then(() => {
+        setHesitating(true);
+        playReelLand();
+        setTimeout(() => {
+          setHesitating(false);
+          controls.start({
+            y: offset,
+            transition: { duration: phase2, ease: [0.4, 0, 0.2, 1] },
+          }).then(() => {
+            void startedAt;
+            finalLand();
+          });
+        }, holdMs);
+      });
+    } else {
+      controls.start({
+        y: offset,
+        transition: { duration: dur / 1000, ease: [0.16, 0.84, 0.24, 1] },
+      }).then(() => {
+        void startedAt;
+        finalLand();
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spinKey, containerH, strip.length, stage]);
 
@@ -436,9 +484,52 @@ export function CaseReel({
         className="absolute inset-x-2 top-0 flex flex-col"
       >
         {strip.map((it, i) => (
-          <ItemCard key={i} item={it} size={size} height={tileH} />
+          <ItemCard
+            key={i}
+            item={it}
+            size={size}
+            height={tileH}
+            hideValue={hideValuesUntilLanded && phase !== "landed"}
+          />
         ))}
       </motion.div>
+
+      {/* Hesitation "Locking..." chip — appears when the reel almost stops on the wrong tile */}
+      {hesitating && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          className="pointer-events-none absolute right-2 top-2 z-40 inline-flex items-center gap-1 rounded-full bg-amber-500/30 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-amber-100 backdrop-blur"
+        >
+          <Sparkles className="h-3 w-3 animate-pulse" /> Locking…
+        </motion.div>
+      )}
+
+      {/* Big pop reveal of the value when landed (only when values were hidden) */}
+      {phase === "landed" && hideValuesUntilLanded && result && (
+        <motion.div
+          initial={{ scale: 0.4, opacity: 0, y: 8 }}
+          animate={{ scale: [0.4, 1.25, 1], opacity: [0, 1, 1], y: [8, -4, 0] }}
+          transition={{ duration: 0.7, times: [0, 0.55, 1], ease: "easeOut" }}
+          className="pointer-events-none absolute inset-x-0 top-1/2 z-40 mt-1 flex -translate-y-1/2 items-center justify-center"
+        >
+          <div
+            className={`inline-flex items-center gap-1.5 rounded-full border-2 px-3 py-1 text-sm font-black shadow-[0_0_25px_rgba(255,215,0,0.55)] backdrop-blur ${
+              RARITY_TEXT[result.rarity] ?? "text-slate-100"
+            } border-current bg-background/70`}
+          >
+            <MizrahiCoin size={12} />
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.18 }}
+            >
+              +{formatCoins(result.value)}
+            </motion.span>
+          </div>
+        </motion.div>
+      )}
 
       {/* Stage 1 chip ("Reroll" / "Duel deciding") */}
       {stage === 1 && phase === "spinning" && (
