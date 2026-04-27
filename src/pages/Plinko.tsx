@@ -25,7 +25,7 @@ const PAYOUTS_BY_RISK: Record<Risk, number[]> = {
   // High risk: rebalanced for a real house edge. Spamming balls should not
   // print money long-term — center buckets pay much less than 1×, and the
   // jackpot edges are rarer to land than they are big.
-  high:   [170, 32, 11, 4, 1.7, 0.7, 0.3, 0.2, 0.2, 0.2, 0.2, 0.3, 0.7, 1.7, 4, 11, 32, 170].slice(0, 17) as number[],
+  high:   [170, 32, 11, 4, 1.5, 0.5, 0.3, 0.2, 0.2, 0.2, 0.3, 0.5, 1.5, 4, 11, 32, 170],
 };
 const BUCKETS = 17;
 
