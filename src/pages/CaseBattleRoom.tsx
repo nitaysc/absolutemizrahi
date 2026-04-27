@@ -162,40 +162,45 @@ export default function CaseBattleRoom() {
 
     setRevealComplete(false);
     setCurrentSpin(0);
-    // Step length accounts for potential 2-stage special spins (Empire/Duel),
-    // which add ~3s of follow-up animation on top of the base spin.
-    const stepMs = battle.fast ? 2400 : 6500;
+    // Per-round dynamic pacing: special spins (Empire/Duel) need extra time
+    // because they play a 2-stage animation. We schedule each round's advance
+    // individually based on whether ANY lane in that round has a special spin.
     const total = battle.rounds_total;
-    let i = 0;
-    const intervalId = setInterval(() => {
-      i++;
-      if (i >= total) {
-        clearInterval(intervalId);
-        // Wait just long enough for the LAST reel to actually land before
-        // revealing winner & refetching balance. Final reel duration ≈ 5.2s,
-        // plus ~1.2s extra for special-spin stage 2 if it triggers.
-        setTimeout(
-          () => {
+    const baseSpin = battle.fast ? 1600 : 4200; // matches CaseReel durationMs
+    const specialExtra = battle.fast ? 1700 : 3300; // 0.7s gap + ~stage-2 spin
+    const tail = battle.fast ? 600 : 1200;
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
+    const roundHasSpecial = (idx: number) =>
+      rounds.some(
+        (r) => r.round_index === idx && (r.special_spin === "empire" || r.special_spin === "duel"),
+      );
+    let elapsed = 0;
+    for (let i = 1; i <= total; i++) {
+      const prev = i - 1;
+      const dur = baseSpin + (roundHasSpecial(prev) ? specialExtra : 0) + tail;
+      elapsed += dur;
+      const at = elapsed;
+      if (i < total) {
+        timeouts.push(setTimeout(() => setCurrentSpin(i), at));
+      } else {
+        timeouts.push(
+          setTimeout(() => {
             setRevealComplete(true);
             refetch();
-          },
-          battle.fast ? 2000 : 5400,
+          }, at),
         );
-        return;
       }
-      setCurrentSpin(i);
-    }, stepMs);
-    // Failsafe: always flip revealComplete + refetch by max(total*step + buffer)
-    // so UI never sticks.
+    }
+    // Failsafe — never let the UI hang past elapsed + 4s
     const failSafe = setTimeout(
       () => {
         setRevealComplete(true);
         refetch();
       },
-      stepMs * total + (battle.fast ? 2200 : 6000),
+      elapsed + 4000,
     );
     return () => {
-      clearInterval(intervalId);
+      timeouts.forEach(clearTimeout);
       clearTimeout(failSafe);
     };
   }, [battle?.status, battle?.rounds_total, battle?.fast, battle?.id, rounds.length]);
