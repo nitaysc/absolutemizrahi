@@ -411,7 +411,7 @@ function ItemRowEditor({
       <div className="flex items-center gap-1">
         <button
           onClick={() =>
-            onSave({
+            void onSave({
               name: name.trim(),
               value: Math.max(0, Math.floor(value)),
               weight: Math.max(0.0001, Number(weight)),
