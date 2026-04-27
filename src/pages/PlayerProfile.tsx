@@ -139,6 +139,14 @@ export default function PlayerProfile() {
               <h1 className="truncate text-2xl font-black tracking-tight sm:text-3xl">
                 {data.username}
               </h1>
+              {streak > 0 && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full border border-orange-400/40 bg-orange-500/15 px-2 py-0.5 text-[10px] font-black tabular-nums text-orange-300"
+                  title={`${streak} day daily-bet streak`}
+                >
+                  🔥 {streak}d
+                </span>
+              )}
               <span
                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ${
                   isOnline
