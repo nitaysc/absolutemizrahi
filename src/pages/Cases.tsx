@@ -6,7 +6,8 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { formatCoins } from "@/lib/format";
 import { toast } from "sonner";
-import { Swords, Upload, Shield, Sparkles, Package } from "lucide-react";
+import { Swords, Upload, Shield, Package, X } from "lucide-react";
+import { CaseReel, type ReelItem, type ReelResult } from "@/components/CaseReel";
 
 type Case = {
   id: string;
@@ -25,13 +26,13 @@ type RolledItem = {
   rarity: string;
 };
 
-const RARITY_GLOW: Record<string, string> = {
-  common: "from-slate-500/40 to-slate-700/20 border-slate-500/40",
-  uncommon: "from-emerald-500/40 to-emerald-700/20 border-emerald-400/50",
-  rare: "from-sky-500/40 to-blue-700/20 border-sky-400/50",
-  epic: "from-fuchsia-500/40 to-purple-700/20 border-fuchsia-400/60",
-  legendary: "from-amber-500/50 to-orange-700/20 border-amber-400/70",
-  mythic: "from-rose-500/60 to-pink-700/20 border-rose-400/80",
+const RARITY_TEXT: Record<string, string> = {
+  common: "text-slate-300",
+  uncommon: "text-emerald-400",
+  rare: "text-sky-400",
+  epic: "text-fuchsia-400",
+  legendary: "text-amber-400",
+  mythic: "text-rose-400",
 };
 
 export default function Cases() {
@@ -42,6 +43,9 @@ export default function Cases() {
   const [results, setResults] = useState<RolledItem[] | null>(null);
   const [openedCase, setOpenedCase] = useState<Case | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [pool, setPool] = useState<ReelItem[]>([]);
+  const [spinKey, setSpinKey] = useState(0);
+  const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -60,8 +64,16 @@ export default function Cases() {
   async function openSolo(c: Case, count: number) {
     if (!profile) return;
     if (profile.coins < c.price * count) return toast.error("Not enough coins");
+    // Load item pool for the reel
+    const { data: poolData } = await supabase
+      .from("case_items")
+      .select("name,image,value,rarity")
+      .eq("case_id", c.id);
+    setPool(((poolData ?? []) as ReelItem[]).length ? (poolData as ReelItem[]) : [{ name: "?", image: "❓", value: 0, rarity: "common" }]);
     setOpening(c.id);
     setOpenedCase(c);
+    setResults(null);
+    setRevealed(false);
     const { data, error } = await supabase.rpc("open_case_solo", {
       _case_id: c.id,
       _count: count,
@@ -70,9 +82,14 @@ export default function Cases() {
     if (error) return toast.error(error.message);
     const items = (data ?? []) as RolledItem[];
     setResults(items);
+    setSpinKey((k) => k + 1);
     refetch();
-    const total = items.reduce((s, i) => s + i.value, 0);
-    toast.success(`Won ${formatCoins(Math.floor(total * 0.95))} coins!`);
+  }
+
+  function closeOpening() {
+    setResults(null);
+    setOpenedCase(null);
+    setRevealed(false);
   }
 
   return (
@@ -147,46 +164,92 @@ export default function Cases() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 p-4 backdrop-blur"
-            onClick={() => setResults(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 p-4 backdrop-blur-xl"
           >
             <motion.div
               initial={{ scale: 0.8, y: 30 }}
               animate={{ scale: 1, y: 0 }}
-              className="relative w-full max-w-2xl rounded-3xl border border-border bg-card p-6"
-              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-4xl space-y-4 rounded-3xl border border-border bg-card/80 p-5 sm:p-6"
             >
-              <h3 className="mb-4 text-center text-xl font-black">
-                {openedCase.name} unboxed
-              </h3>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <button
+                onClick={closeOpening}
+                className="absolute right-3 top-3 z-50 rounded-full border border-border bg-background/70 p-2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Opening</p>
+                  <h3 className="text-2xl font-black">
+                    <span className="mr-2 text-3xl">{openedCase.image ?? "🎁"}</span>
+                    {openedCase.name}
+                  </h3>
+                </div>
+                <div className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1.5 text-sm font-black text-primary">
+                  <MizrahiCoin size={12} /> {formatCoins(openedCase.price)}
+                </div>
+              </div>
+
+              {/* Reels — one per opened item */}
+              <div className="space-y-3">
                 {results.map((r, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ scale: 0, rotate: -45 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ delay: i * 0.1, type: "spring" }}
-                    className={`relative overflow-hidden rounded-2xl border-2 bg-gradient-to-b ${
-                      RARITY_GLOW[r.rarity] ?? RARITY_GLOW.common
-                    } p-4 text-center`}
-                  >
-                    <div className="text-5xl">{r.image ?? "🎁"}</div>
-                    <div className="mt-2 text-xs font-bold uppercase tracking-wide opacity-80">
-                      {r.rarity}
-                    </div>
-                    <div className="truncate text-sm font-bold">{r.name}</div>
-                    <div className="mt-1 inline-flex items-center gap-1 text-xs font-black">
-                      <MizrahiCoin size={10} /> {formatCoins(r.value)}
-                    </div>
-                  </motion.div>
+                  <CaseReel
+                    key={`${spinKey}-${i}`}
+                    pool={pool}
+                    result={{ name: r.name, image: r.image, value: r.value, rarity: r.rarity }}
+                    spinKey={`${spinKey}-${i}`}
+                    durationMs={5500 + i * 250}
+                    size="md"
+                    onComplete={i === results.length - 1 ? () => setRevealed(true) : undefined}
+                  />
                 ))}
               </div>
-              <button
-                onClick={() => setResults(null)}
-                className="mt-5 w-full rounded-full bg-primary py-2 font-bold text-primary-foreground"
-              >
-                Close
-              </button>
+
+              {revealed && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-2xl border border-border bg-background/60 p-4"
+                >
+                  <div className="mb-2 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                    You won
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {results.map((r, i) => (
+                      <div key={i} className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5">
+                        <span className="text-lg">{r.image ?? "🎁"}</span>
+                        <span className={`text-xs font-bold uppercase ${RARITY_TEXT[r.rarity] ?? RARITY_TEXT.common}`}>
+                          {r.rarity}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-sm font-black">
+                          <MizrahiCoin size={10} /> {formatCoins(r.value)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 text-center">
+                    <span className="text-xs text-muted-foreground">Total payout (95%): </span>
+                    <span className="inline-flex items-center gap-1 font-black text-primary">
+                      <MizrahiCoin size={12} />
+                      {formatCoins(Math.floor(results.reduce((s, r) => s + r.value, 0) * 0.95))}
+                    </span>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button
+                      onClick={closeOpening}
+                      className="rounded-full border border-border bg-card py-2 text-sm font-bold"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={() => openSolo(openedCase, results.length)}
+                      className="rounded-full bg-primary py-2 text-sm font-bold text-primary-foreground shadow-[0_0_20px_hsl(var(--primary)/0.5)]"
+                    >
+                      Open again
+                    </button>
+                  </div>
+                </motion.div>
+              )}
             </motion.div>
           </motion.div>
         )}
