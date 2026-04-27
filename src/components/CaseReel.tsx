@@ -119,18 +119,6 @@ const ItemCard = forwardRef<
             </div>
           );
         })()}
-        {false && item.image && /^https?:\/\//i.test(item.image) ? (
-          <img
-            src={item.image}
-            alt={item.name}
-            className="max-h-[60%] w-auto object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]"
-            draggable={false}
-          />
-        ) : (
-          <div className={`${emoji} drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]`}>
-            {item.image ?? "🎁"}
-          </div>
-        )}
         <div
           className={`w-full truncate text-center text-[10px] font-bold uppercase tracking-wide ${
             RARITY_TEXT[item.rarity] ?? "text-slate-200"
