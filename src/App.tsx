@@ -38,6 +38,7 @@ import CaseBattleCreate from "./pages/CaseBattleCreate";
 import CaseBattleRoom from "./pages/CaseBattleRoom";
 import CaseUpload from "./pages/CaseUpload";
 import CaseAdmin from "./pages/CaseAdmin";
+import Inventory from "./pages/Inventory";
 import NotFound from "./pages/NotFound";
 
 function Protected({ children }: { children: React.ReactNode }) {
@@ -96,6 +97,7 @@ const App = () => (
             <Route path="/cases" element={<Cases />} />
             <Route path="/cases/upload" element={<CaseUpload />} />
             <Route path="/cases/admin" element={<CaseAdmin />} />
+            <Route path="/inventory" element={<Inventory />} />
             <Route path="/cases/battles" element={<CaseBattles />} />
             <Route path="/cases/battles/new" element={<CaseBattleCreate />} />
             <Route path="/cases/battles/:id" element={<CaseBattleRoom />} />

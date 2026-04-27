@@ -7,6 +7,7 @@ import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { formatCoins } from "@/lib/format";
 import { toast } from "sonner";
 import { Swords, Upload, Shield, Package, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { CaseReel, type ReelItem, type ReelResult } from "@/components/CaseReel";
 import { CaseDetailsModal } from "@/components/CaseDetailsModal";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -42,6 +43,7 @@ const RARITY_TEXT: Record<string, string> = {
 export default function Cases() {
   const { profile, refetch } = useUserProfile();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
   const [opening, setOpening] = useState<string | null>(null);
@@ -296,18 +298,27 @@ export default function Cases() {
                     ))}
                   </div>
                   <div className="mt-3 text-center">
-                    <span className="text-xs text-muted-foreground">Total payout: </span>
+                    <span className="text-xs text-muted-foreground">Total item value: </span>
                     <span className="inline-flex items-center gap-1 font-black text-primary">
                       <MizrahiCoin size={12} />
                       {formatCoins(results.reduce((s, r) => s + r.value, 0))}
                     </span>
+                    <div className="mt-1 text-[11px] font-bold text-amber-300">
+                      💎 Items added to your inventory · sell anytime for coins
+                    </div>
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="mt-4 grid grid-cols-3 gap-2">
                     <button
                       onClick={closeOpening}
                       className="rounded-full border border-border bg-card py-2 text-sm font-bold"
                     >
                       Close
+                    </button>
+                    <button
+                      onClick={() => navigate("/inventory")}
+                      className="inline-flex items-center justify-center gap-1 rounded-full border border-amber-400/50 bg-amber-500/15 py-2 text-sm font-black text-amber-200 hover:bg-amber-500/25"
+                    >
+                      <Package className="h-4 w-4" /> Inventory
                     </button>
                     <button
                       onClick={() => openSolo(openedCase, results.length)}

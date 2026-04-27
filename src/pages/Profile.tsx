@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { AVATAR_OPTIONS } from "@/lib/avatars";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { Link } from "react-router-dom";
+import { Package } from "lucide-react";
 import {
   calculateDailyStreak,
   getStreakTimezone,
@@ -247,6 +249,27 @@ export default function Profile() {
           </div>
         </div>
       </header>
+
+      {/* Quick links */}
+      <section className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <Link
+          to="/inventory"
+          className="group flex items-center gap-3 rounded-2xl border-2 border-primary/40 bg-gradient-to-r from-primary/15 to-primary/5 p-4 transition hover:border-primary hover:shadow-[0_0_24px_hsl(var(--primary)/0.35)]"
+        >
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20 text-primary">
+            <Package className="h-6 w-6" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-black uppercase tracking-widest text-primary">
+              Inventory
+            </div>
+            <div className="text-xs text-muted-foreground">
+              View &amp; sell items you won from cases and battles
+            </div>
+          </div>
+          <span className="text-2xl text-primary transition group-hover:translate-x-1">›</span>
+        </Link>
+      </section>
 
       <section className="rounded-3xl border border-border bg-card/70 p-5 backdrop-blur-xl">
         <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
