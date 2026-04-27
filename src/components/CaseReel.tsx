@@ -523,10 +523,31 @@ export function CaseReel({
           className="pointer-events-none absolute inset-x-0 top-1/2 z-40 mt-1 flex -translate-y-1/2 items-center justify-center"
         >
           <div
-            className={`flex flex-col items-center gap-0.5 rounded-xl border-2 px-3 py-1.5 shadow-[0_0_25px_rgba(255,215,0,0.55)] backdrop-blur ${
+            className={`flex flex-col items-center gap-1 rounded-xl border-2 px-3 py-1.5 shadow-[0_0_25px_rgba(255,215,0,0.55)] backdrop-blur ${
               RARITY_TEXT[result.rarity] ?? "text-slate-100"
             } border-current bg-background/75`}
           >
+            {(() => {
+              const nameIsUrl = result.name && /^https?:\/\//i.test(result.name);
+              const src = result.image && /^https?:\/\//i.test(result.image)
+                ? result.image
+                : (nameIsUrl ? result.name : null);
+              if (src) {
+                return (
+                  <img
+                    src={src}
+                    alt="item"
+                    className="h-7 w-7 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
+                    draggable={false}
+                  />
+                );
+              }
+              return (
+                <span className="text-2xl drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]">
+                  {result.image ?? "🎁"}
+                </span>
+              );
+            })()}
             <span className="max-w-[140px] truncate text-[10px] font-bold uppercase tracking-wide opacity-90">
               {result.name && /^https?:\/\//i.test(result.name) ? "Item" : result.name}
             </span>
