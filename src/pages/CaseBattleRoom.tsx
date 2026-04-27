@@ -748,7 +748,7 @@ export default function CaseBattleRoom() {
                 </div>
                 <div className="mt-3 inline-flex flex-wrap items-center justify-center gap-2 text-xs">
                   <span className="rounded-full border border-border bg-background/50 px-3 py-1">
-                    Pot:{" "}
+                    Total won:{" "}
                     <span className="font-black text-primary">
                       {formatCoins(battle.pot_payout ?? 0)}
                     </span>
@@ -770,7 +770,7 @@ export default function CaseBattleRoom() {
                     const winners = players.filter((pp) => pp.team === battle.winner_team);
                     const humanWinners = winners.filter((pp) => !pp.is_bot).length;
                     const pot = battle.pot_payout ?? 0;
-                    // Pot is split across the full team (humans + bots).
+                    // Team winnings split across full team (humans + bots).
                     // Bots forfeit their share — humans only get their fair fraction.
                     const perSeat = winners.length > 0 ? Math.floor(pot / winners.length) : 0;
                     const myShare = p.is_bot ? 0 : perSeat;
@@ -817,7 +817,7 @@ export default function CaseBattleRoom() {
                               <MizrahiCoin size={12} /> {formatCoins(myShare)}
                             </div>
                             <div className="mt-1 text-[10px] font-bold text-muted-foreground">
-                              {sharePct.toFixed(0)}% of pot
+                              {sharePct.toFixed(0)}% share
                             </div>
                           </>
                         )}
@@ -834,7 +834,7 @@ export default function CaseBattleRoom() {
                 if (winners.length <= 1) return null;
                 return (
                   <div className="mx-auto max-w-md rounded-2xl border border-border bg-background/40 px-4 py-2 text-center text-xs text-muted-foreground">
-                    Pot of{" "}
+                    Team winnings of{" "}
                     <span className="font-black text-primary">
                       {formatCoins(battle.pot_payout ?? 0)}
                     </span>{" "}
