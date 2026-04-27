@@ -1163,43 +1163,19 @@ export type Database = {
           start_at: string
         }[]
       }
-      create_case_battle:
-        | {
-            Args: {
-              _case_ids: string[]
-              _fast: boolean
-              _fill_with_bots: boolean
-              _mode: string
-              _private: boolean
-              _type: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              _allow_borrow?: boolean
-              _case_ids: string[]
-              _fast: boolean
-              _fill_with_bots: boolean
-              _mode: string
-              _private: boolean
-              _type: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              _allow_borrow?: boolean
-              _borrow_pct?: number
-              _case_ids: string[]
-              _fast: boolean
-              _fill_with_bots: boolean
-              _mode: string
-              _private: boolean
-              _type: string
-            }
-            Returns: string
-          }
+      create_case_battle: {
+        Args: {
+          _allow_borrow?: boolean
+          _borrow_pct?: number
+          _case_ids: string[]
+          _fast: boolean
+          _fill_with_bots: boolean
+          _mode: string
+          _private: boolean
+          _type: string
+        }
+        Returns: string
+      }
       dragontower_abandon: {
         Args: never
         Returns: {

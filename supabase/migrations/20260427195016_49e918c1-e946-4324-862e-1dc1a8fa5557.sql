@@ -1,0 +1,2 @@
+DROP FUNCTION IF EXISTS public.create_case_battle(text, text, uuid[], boolean, boolean, boolean);
+DROP FUNCTION IF EXISTS public.create_case_battle(text, text, uuid[], boolean, boolean, boolean, boolean);
