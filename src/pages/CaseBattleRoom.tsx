@@ -804,7 +804,7 @@ export default function CaseBattleRoom() {
                     )}
                     .
                     <div className="mt-1 text-[11px] font-bold text-amber-300">
-                      💎 Each winner's share lands in their inventory as items they can sell anytime.
+                      💎 Winners get items + cash voucher in inventory · Quick Sell pays 100%.
                     </div>
                   </div>
                 );
