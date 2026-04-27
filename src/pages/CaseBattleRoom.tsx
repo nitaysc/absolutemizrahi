@@ -490,7 +490,7 @@ export default function CaseBattleRoom() {
         if (teams.length < 2) return null;
         const leading = Math.max(...Array.from(teamTotals.values()));
         return (
-          <div className="flex flex-wrap items-center justify-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
             {teams.map((t) => {
               const ts = teamStyle(t);
               const total = teamTotals.get(t) ?? 0;
@@ -499,7 +499,7 @@ export default function CaseBattleRoom() {
               return (
                 <div
                   key={t}
-                  className={`flex items-center gap-2 rounded-full border-2 px-3 py-1.5 text-xs font-black uppercase tracking-wider transition ${
+                  className={`flex items-center gap-1.5 rounded-full border-2 px-2 py-1 text-[10px] sm:px-3 sm:py-1.5 sm:text-xs font-black uppercase tracking-wider transition ${
                     isWinner
                       ? "border-amber-400 bg-amber-500/15 text-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.5)]"
                       : `${ts.border} ${ts.bg} ${ts.label}`
@@ -508,7 +508,7 @@ export default function CaseBattleRoom() {
                   <span className={`h-2 w-2 rounded-full ${ts.dot}`} />
                   <span>Team {t + 1}</span>
                   <span className="inline-flex items-center gap-1 text-primary">
-                    <MizrahiCoin size={10} /> {formatCoins(total)}
+                    <MizrahiCoin size={9} /> {formatCoins(total)}
                   </span>
                   {isLeading && !isWinner && (
                     <span className="text-[9px] text-amber-300">LEADING</span>
@@ -724,7 +724,7 @@ export default function CaseBattleRoom() {
                           stiffness: 200,
                           damping: 14,
                         }}
-                        className="relative w-44 overflow-hidden rounded-2xl border-2 border-amber-400/70 bg-gradient-to-b from-amber-400/15 via-primary/10 to-fuchsia-500/15 p-4 text-center shadow-[0_0_30px_rgba(245,158,11,0.45)]"
+                        className="relative w-32 overflow-hidden rounded-2xl border-2 border-amber-400/70 bg-gradient-to-b from-amber-400/15 via-primary/10 to-fuchsia-500/15 p-3 text-center shadow-[0_0_30px_rgba(245,158,11,0.45)] sm:w-44 sm:p-4"
                       >
                         {/* WINNER chip */}
                         <div className="mx-auto mb-2 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-fuchsia-500 px-3 py-0.5 text-[10px] font-black uppercase tracking-widest text-background shadow-[0_0_15px_rgba(245,158,11,0.6)]">
