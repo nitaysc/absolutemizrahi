@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Swords, Upload, Shield, Package, X } from "lucide-react";
 import { CaseReel, type ReelItem, type ReelResult } from "@/components/CaseReel";
 import { CaseDetailsModal } from "@/components/CaseDetailsModal";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type Case = {
   id: string;
