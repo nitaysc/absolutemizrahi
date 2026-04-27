@@ -634,7 +634,7 @@ export default function CaseBattleRoom() {
                     const teammates = players.filter((pp) => pp.team === p.team);
                     if (p.is_bot) return "WINNER · BOT (no payout)";
                     const share = Math.floor((battle.pot_payout ?? 0) / Math.max(1, teammates.length));
-                    return `WINNER · +${formatCoins(share)}`;
+                    return `WINNER · ${formatCoins(share)} → inventory`;
                   })()}
                 </motion.div>
               )}
