@@ -924,6 +924,7 @@ export type Database = {
           team_size: number
         }[]
       }
+      add_bot_to_battle: { Args: { _battle_id: string }; Returns: undefined }
       admin_grant_coins: {
         Args: { _amount: number; _recipient_username: string }
         Returns: {
