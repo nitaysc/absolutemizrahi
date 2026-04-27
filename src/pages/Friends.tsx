@@ -414,3 +414,14 @@ export default function Friends() {
     </div>
   );
 }
+
+function StreakBadge({ value }: { value: number }) {
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-orange-400/40 bg-orange-500/15 px-1.5 py-0 text-[9px] font-black tabular-nums text-orange-300"
+      title={`${value} day daily-bet streak`}
+    >
+      🔥{value}
+    </span>
+  );
+}
