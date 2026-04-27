@@ -829,6 +829,21 @@ export default function CaseBattleRoom() {
                 >
                   <Package className="h-4 w-4" /> Inventory
                 </button>
+                {(() => {
+                  const meWon = !!players.find(
+                    (p) => p.user_id === profile?.id && p.team === battle.winner_team && !p.is_bot,
+                  );
+                  if (!meWon) return null;
+                  return (
+                    <button
+                      onClick={quickSell}
+                      disabled={busy}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 to-primary px-5 py-2 text-sm font-black uppercase tracking-wider text-background shadow-[0_0_20px_hsl(var(--primary)/0.55)] transition hover:brightness-110 disabled:opacity-50"
+                    >
+                      <Coins className="h-4 w-4" /> Quick Sell · 100%
+                    </button>
+                  );
+                })()}
                 <button
                   onClick={recreate}
                   disabled={busy}
