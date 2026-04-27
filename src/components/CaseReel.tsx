@@ -403,8 +403,8 @@ export function CaseReel({
       {/* Strip */}
       <motion.div
         animate={controls}
-        style={{ y: yMotion, willChange: "transform" }}
-        className="absolute inset-x-2 top-0 flex flex-col gap-2"
+        style={{ y: yMotion, willChange: "transform", gap }}
+        className="absolute inset-x-2 top-0 flex flex-col"
       >
         {strip.map((it, i) => (
           <ItemCard key={i} item={it} size={size} height={tileH} />
