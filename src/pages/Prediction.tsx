@@ -390,6 +390,20 @@ export default function Prediction() {
     [games],
   );
 
+  const gamesByDay = useMemo(() => {
+    const groups: { key: string; games: Matchup[] }[] = [];
+    const map = new Map<string, Matchup[]>();
+    for (const g of availableGames) {
+      const k = dayKey(g.startTime);
+      if (!map.has(k)) {
+        map.set(k, []);
+        groups.push({ key: k, games: map.get(k)! });
+      }
+      map.get(k)!.push(g);
+    }
+    return groups;
+  }, [availableGames]);
+
   async function placePrediction(game: Matchup) {
     if (!profile) return;
     const pickedTeamId = selectedTeam[game.id];
@@ -521,8 +535,15 @@ export default function Prediction() {
           No live or upcoming NBA games (next 7 days) available right now. Press refresh later.
         </div>
       ) : (
-        <div className="space-y-3">
-          {availableGames.map((game) => {
+        <div className="space-y-6">
+          {gamesByDay.map((group) => (
+            <div key={group.key} className="space-y-3">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground">
+                <CalendarDays className="h-4 w-4" />
+                {group.key}
+                <span className="text-muted-foreground/60">· {group.games.length} game{group.games.length === 1 ? "" : "s"}</span>
+              </div>
+              {group.games.map((game) => {
             const pickedId = selectedTeam[game.id];
             const [a, b] = game.teams;
             const locked = lockedBets[game.id];
@@ -625,7 +646,9 @@ export default function Prediction() {
                 </div>
               </article>
             );
-          })}
+              })}
+            </div>
+          ))}
         </div>
       )}
     </div>
