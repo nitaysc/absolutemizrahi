@@ -42,7 +42,7 @@ export default function Dice() {
       toast.error("Not enough coins");
       return null;
     }
-    if (winChance < 1 || winChance > 95) {
+    if (winChance < 2 || winChance > 98) {
       toast.error("Invalid target");
       return null;
     }
