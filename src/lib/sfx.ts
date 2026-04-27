@@ -115,11 +115,12 @@ export function playCashout() {
 
 /** Crisp short tick used as a case-reel item passes the center marker. */
 export function playReelTick() {
-  tone({ freq: 1100, duration: 0.035, type: "square", gain: 0.06 });
+  // Soft wooden "tock" — much less harsh than the old square wave.
+  tone({ freq: 520, duration: 0.025, type: "triangle", gain: 0.035 });
 }
 
 /** Final landing chime when the reel settles on a result. */
 export function playReelLand() {
-  tone({ freq: 660, duration: 0.09, type: "triangle", gain: 0.16 });
-  tone({ freq: 990, duration: 0.13, type: "triangle", gain: 0.14, delay: 0.05 });
+  tone({ freq: 540, duration: 0.10, type: "sine", gain: 0.12 });
+  tone({ freq: 810, duration: 0.14, type: "triangle", gain: 0.10, delay: 0.05 });
 }

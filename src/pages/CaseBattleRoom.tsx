@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { formatCoins } from "@/lib/format";
 import { toast } from "sonner";
-import { Bot, Crown, Play, LogOut, Swords, X } from "lucide-react";
+import { Bot, Crown, Play, LogOut, Swords, X, RotateCcw, Pencil, Trophy } from "lucide-react";
 import { CaseReel, type ReelItem } from "@/components/CaseReel";
 
 type Battle = {
@@ -162,40 +162,45 @@ export default function CaseBattleRoom() {
 
     setRevealComplete(false);
     setCurrentSpin(0);
-    // Step length accounts for potential 2-stage special spins (Empire/Duel),
-    // which add ~3s of follow-up animation on top of the base spin.
-    const stepMs = battle.fast ? 2400 : 6500;
+    // Per-round dynamic pacing: special spins (Empire/Duel) need extra time
+    // because they play a 2-stage animation. We schedule each round's advance
+    // individually based on whether ANY lane in that round has a special spin.
     const total = battle.rounds_total;
-    let i = 0;
-    const intervalId = setInterval(() => {
-      i++;
-      if (i >= total) {
-        clearInterval(intervalId);
-        // Wait just long enough for the LAST reel to actually land before
-        // revealing winner & refetching balance. Final reel duration ≈ 5.2s,
-        // plus ~1.2s extra for special-spin stage 2 if it triggers.
-        setTimeout(
-          () => {
+    const baseSpin = battle.fast ? 1600 : 4200; // matches CaseReel durationMs
+    const specialExtra = battle.fast ? 1700 : 3300; // 0.7s gap + ~stage-2 spin
+    const tail = battle.fast ? 600 : 1200;
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
+    const roundHasSpecial = (idx: number) =>
+      rounds.some(
+        (r) => r.round_index === idx && (r.special_spin === "empire" || r.special_spin === "duel"),
+      );
+    let elapsed = 0;
+    for (let i = 1; i <= total; i++) {
+      const prev = i - 1;
+      const dur = baseSpin + (roundHasSpecial(prev) ? specialExtra : 0) + tail;
+      elapsed += dur;
+      const at = elapsed;
+      if (i < total) {
+        timeouts.push(setTimeout(() => setCurrentSpin(i), at));
+      } else {
+        timeouts.push(
+          setTimeout(() => {
             setRevealComplete(true);
             refetch();
-          },
-          battle.fast ? 2000 : 5400,
+          }, at),
         );
-        return;
       }
-      setCurrentSpin(i);
-    }, stepMs);
-    // Failsafe: always flip revealComplete + refetch by max(total*step + buffer)
-    // so UI never sticks.
+    }
+    // Failsafe — never let the UI hang past elapsed + 4s
     const failSafe = setTimeout(
       () => {
         setRevealComplete(true);
         refetch();
       },
-      stepMs * total + (battle.fast ? 2200 : 6000),
+      elapsed + 4000,
     );
     return () => {
-      clearInterval(intervalId);
+      timeouts.forEach(clearTimeout);
       clearTimeout(failSafe);
     };
   }, [battle?.status, battle?.rounds_total, battle?.fast, battle?.id, rounds.length]);
@@ -258,6 +263,44 @@ export default function CaseBattleRoom() {
     setBusy(false);
     if (error) return toast.error(error.message);
     setTimeout(() => refetch(), 1500);
+  }
+
+  // Build the case_ids list for "Recreate" / "Edit Battle"
+  const caseIdList = useMemo(
+    () => bcases.slice().sort((a, b) => a.position - b.position).map((bc) => bc.case_id),
+    [bcases],
+  );
+
+  async function recreate() {
+    if (!battle || !caseIdList.length) return;
+    if (!profile || profile.coins < battle.per_player_cost) {
+      return toast.error("Not enough coins");
+    }
+    setBusy(true);
+    const { data, error } = await supabase.rpc("create_case_battle", {
+      _mode: battle.mode,
+      _type: battle.type,
+      _case_ids: caseIdList,
+      _fill_with_bots: battle.fill_with_bots,
+      _fast: battle.fast,
+      _private: false,
+    });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    refetch();
+    navigate(`/cases/battles/${data}`);
+  }
+
+  function editBattle() {
+    if (!battle || !caseIdList.length) return;
+    const params = new URLSearchParams({
+      mode: battle.mode,
+      type: battle.type,
+      cases: caseIdList.join(","),
+      bots: battle.fill_with_bots ? "1" : "0",
+      fast: battle.fast ? "1" : "0",
+    });
+    navigate(`/cases/battles/new?${params.toString()}`);
   }
 
   if (!battle) return <p className="text-muted-foreground">Loading battle...</p>;
@@ -495,6 +538,134 @@ export default function CaseBattleRoom() {
           );
         })}
       </div>
+
+      {/* Winner end screen */}
+      <AnimatePresence>
+        {showFinishedUI && battle.winner_team !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35 }}
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-background/85 p-4 backdrop-blur-2xl"
+          >
+            {/* Glow background */}
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,hsl(var(--primary)/0.35),transparent_60%)]" />
+
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 180, damping: 18 }}
+              className="relative z-10 w-full max-w-3xl space-y-6 rounded-3xl border border-primary/40 bg-card/80 p-6 shadow-[0_0_60px_-10px_hsl(var(--primary)/0.7)] sm:p-8"
+            >
+              {/* Title */}
+              <div className="text-center">
+                <motion.p
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground"
+                >
+                  Battle complete
+                </motion.p>
+                <motion.h2
+                  initial={{ scale: 0.85, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 220, damping: 14 }}
+                  className="mt-2 bg-gradient-to-r from-amber-300 via-primary to-fuchsia-400 bg-clip-text text-3xl font-black italic tracking-wide text-transparent drop-shadow-[0_0_20px_hsl(var(--primary)/0.5)] sm:text-4xl"
+                >
+                  THE BATTLE HAS ENDED
+                </motion.h2>
+                <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 text-xs font-bold uppercase text-primary">
+                  <Swords className="h-3 w-3" />
+                  {battle.mode} · {battle.type}
+                </div>
+              </div>
+
+              {/* Winner cards */}
+              <div className="flex flex-wrap items-stretch justify-center gap-3">
+                {players
+                  .filter((p) => p.team === battle.winner_team)
+                  .map((p, i) => {
+                    const winners = players.filter((pp) => pp.team === battle.winner_team);
+                    const humanWinners = winners.filter((pp) => !pp.is_bot).length;
+                    const share = Math.floor(
+                      (battle.pot_payout ?? 0) / Math.max(1, humanWinners || winners.length),
+                    );
+                    return (
+                      <motion.div
+                        key={p.id}
+                        initial={{ scale: 0.6, opacity: 0, y: 30 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        transition={{
+                          delay: 0.35 + i * 0.12,
+                          type: "spring",
+                          stiffness: 200,
+                          damping: 14,
+                        }}
+                        className="relative w-44 overflow-hidden rounded-2xl border-2 border-amber-400/70 bg-gradient-to-b from-amber-400/15 via-primary/10 to-fuchsia-500/15 p-4 text-center shadow-[0_0_30px_rgba(245,158,11,0.45)]"
+                      >
+                        {/* WINNER chip */}
+                        <div className="mx-auto mb-2 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-fuchsia-500 px-3 py-0.5 text-[10px] font-black uppercase tracking-widest text-background shadow-[0_0_15px_rgba(245,158,11,0.6)]">
+                          <Trophy className="h-3 w-3" /> Winner
+                        </div>
+                        <div className="relative mx-auto mb-2 h-16 w-16">
+                          <motion.div
+                            animate={{ scale: [1, 1.06, 1] }}
+                            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                            className="absolute inset-0 rounded-full bg-amber-400/30 blur-xl"
+                          />
+                          <div className="relative">
+                            <PlayerAvatar avatar={p.avatar} size={64} ring />
+                          </div>
+                          <Crown className="absolute -top-2 left-1/2 h-5 w-5 -translate-x-1/2 text-amber-300 drop-shadow-[0_0_6px_rgba(245,158,11,0.9)]" />
+                        </div>
+                        <div className="flex items-center justify-center gap-1 truncate text-sm font-black">
+                          <span className="truncate">{p.display_name}</span>
+                          {p.is_bot && <Bot className="h-3 w-3 shrink-0 text-muted-foreground" />}
+                        </div>
+                        <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-background/60 px-2 py-0.5 text-sm font-black text-amber-300">
+                          <MizrahiCoin size={12} /> {formatCoins(share)}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+              </div>
+
+              {/* Action buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="flex flex-wrap items-center justify-center gap-2 pt-2"
+              >
+                <button
+                  onClick={() => navigate("/cases/battles")}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/70 px-4 py-2 text-sm font-bold text-foreground hover:border-primary/50"
+                >
+                  <X className="h-4 w-4" /> Exit
+                </button>
+                <button
+                  onClick={recreate}
+                  disabled={busy}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-primary px-5 py-2 text-sm font-black text-primary-foreground shadow-[0_0_20px_hsl(var(--primary)/0.6)] disabled:opacity-50"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Recreate for {formatCoins(battle.per_player_cost)}
+                </button>
+                {isHost && (
+                  <button
+                    onClick={editBattle}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-fuchsia-400/50 bg-fuchsia-500/15 px-4 py-2 text-sm font-bold text-fuchsia-200 hover:bg-fuchsia-500/25"
+                  >
+                    <Pencil className="h-4 w-4" /> Edit Battle
+                  </button>
+                )}
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
