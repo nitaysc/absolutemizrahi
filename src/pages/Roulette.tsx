@@ -71,6 +71,8 @@ export default function Roulette() {
   const [history, setHistory] = useState<number[]>([]);
   const [angle, setAngle] = useState<number>(0);
   const [spinDuration, setSpinDuration] = useState<number>(4.2);
+  const [ballAngle, setBallAngle] = useState<number>(0);
+  const [ballDuration, setBallDuration] = useState<number>(3.8);
   const [showWin, setShowWin] = useState<{ profit: number } | null>(null);
   const lastBetsRef = useRef<Record<string, number>>({});
 
@@ -123,9 +125,16 @@ export default function Roulette() {
     const travel = extraTurns * 360 + settleDelta;
     const target = angle - travel;
     const nextDuration = Math.max(3.2, Math.min(6.4, travel / 700));
+    const currentBallNorm = ((ballAngle % 360) + 360) % 360;
+    const ballTurns = 10 + Math.floor(Math.random() * 7); // 10..16 orbits
+    const ballSettle = (360 - currentBallNorm) % 360;
+    const nextBallDuration = Math.max(2.8, Math.min(5.4, nextDuration * 0.92));
+    const targetBall = ballAngle + ballTurns * 360 + ballSettle;
 
     setSpinDuration(nextDuration);
+    setBallDuration(nextBallDuration);
     setAngle(target);
+    setBallAngle(targetBall);
 
     // Compute payouts
     let totalReturn = 0;
@@ -142,7 +151,9 @@ export default function Roulette() {
     const mult = stake > 0 ? +(totalReturn / stake).toFixed(4) : 0;
 
     // Wait for spin animation
-    await new Promise((r) => setTimeout(r, Math.ceil(nextDuration * 1000) + 120));
+    await new Promise((r) =>
+      setTimeout(r, Math.ceil(Math.max(nextDuration, nextBallDuration) * 1000) + 120),
+    );
 
     const { data, error } = await supabase.rpc("place_bet", {
       _game: "roulette",
@@ -213,12 +224,14 @@ export default function Roulette() {
         <div className="space-y-3 min-w-0">
           {/* Wheel */}
           <div className="relative flex flex-col items-center overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-emerald-950/60 via-card/80 to-emerald-900/40 p-4 backdrop-blur-xl sm:rounded-3xl sm:p-5">
-            {/* Pointer */}
             <div className="relative">
-              <div className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1">
-                <div className="h-0 w-0 border-l-[10px] border-r-[10px] border-t-[16px] border-l-transparent border-r-transparent border-t-amber-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]" />
-              </div>
-              <Wheel angle={angle} spinning={spinning} duration={spinDuration} />
+              <Wheel
+                angle={angle}
+                spinning={spinning}
+                duration={spinDuration}
+                ballAngle={ballAngle}
+                ballDuration={ballDuration}
+              />
             </div>
 
             {/* Result chip */}
@@ -363,10 +376,14 @@ function Wheel({
   angle,
   spinning,
   duration,
+  ballAngle,
+  ballDuration,
 }: {
   angle: number;
   spinning: boolean;
   duration: number;
+  ballAngle: number;
+  ballDuration: number;
 }) {
   const N = WHEEL_ORDER.length;
   const slice = 360 / N;
@@ -375,6 +392,7 @@ function Wheel({
 
   return (
     <div className="relative h-[260px] w-[260px] sm:h-[300px] sm:w-[300px]">
+      <div className="absolute inset-0 rounded-full border border-amber-200/30 shadow-inner" />
       <motion.div
         animate={{ rotate: angle }}
         transition={{
@@ -435,6 +453,22 @@ function Wheel({
           <circle cx={cx} cy={cy} r={10} fill="hsl(45 90% 60%)" />
         </svg>
       </motion.div>
+
+      {/* Ball lane + rolling ball */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-1/2 h-[88%] w-[88%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20" />
+        <motion.div
+          animate={{ rotate: ballAngle }}
+          transition={{
+            duration: spinning ? ballDuration : 0,
+            ease: spinning ? [0.07, 0.76, 0.16, 1] : "linear",
+          }}
+          className="absolute inset-0"
+          style={{ transformOrigin: "50% 50%" }}
+        >
+          <div className="absolute left-1/2 top-[7.5%] h-4 w-4 -translate-x-1/2 rounded-full bg-zinc-100 shadow-[0_0_0_2px_rgba(255,255,255,0.35),0_0_20px_rgba(250,250,250,0.75)]" />
+        </motion.div>
+      </div>
     </div>
   );
 }
