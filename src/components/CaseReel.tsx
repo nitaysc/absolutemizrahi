@@ -134,19 +134,16 @@ export function CaseReel({
     const offset = -(targetCenter - center);
     const axis = orientation === "horizontal" ? "x" : "y";
 
-    controls.set({ [axis]: orientation === "horizontal" ? containerSize / 2 - itemPx / 2 : 0 } as any);
-    controls
-      .start(
-        { [axis]: offset } as any,
-        {
-          duration: durationMs / 1000,
-          ease: [0.16, 0.84, 0.24, 1], // strong decel
-        } as any
-      )
-      .then(() => {
-        setPhase("landed");
-        onComplete?.();
-      });
+    const startVal: any = { [axis]: orientation === "horizontal" ? containerSize / 2 - itemPx / 2 : 0 };
+    const endVal: any = {
+      [axis]: offset,
+      transition: { duration: durationMs / 1000, ease: [0.16, 0.84, 0.24, 1] },
+    };
+    controls.set(startVal);
+    controls.start(endVal).then(() => {
+      setPhase("landed");
+      onComplete?.();
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spinKey, containerSize, strip.length]);
 
