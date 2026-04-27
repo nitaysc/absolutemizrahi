@@ -109,19 +109,20 @@ export default function Roulette() {
     setShowWin(null);
     lastBetsRef.current = { ...bets };
 
-    // Provably-random pick
-    const winning = WHEEL_ORDER[Math.floor(Math.random() * WHEEL_ORDER.length)];
-
-    // Spin animation: maintain a consistent CCW speed and land exactly on result.
-    const idx = WHEEL_ORDER.indexOf(winning);
+    // Randomized stop point: can land anywhere inside a pocket (not always dead-center).
     const slice = 360 / WHEEL_ORDER.length;
-    const extraTurns = 8;
+    const idx = Math.floor(Math.random() * WHEEL_ORDER.length);
+    const winning = WHEEL_ORDER[idx];
+    const pocketJitter = (Math.random() - 0.5) * slice * 0.86;
+    const targetNorm = (((-idx * slice + pocketJitter) % 360) + 360) % 360;
+
+    // Spin animation: natural deceleration + variable travel for less predictable motion.
+    const extraTurns = 6 + Math.floor(Math.random() * 5); // 6..10 full turns
     const currentNorm = ((angle % 360) + 360) % 360;
-    const targetNorm = (((-idx * slice) % 360) + 360) % 360;
     const settleDelta = (currentNorm - targetNorm + 360) % 360;
     const travel = extraTurns * 360 + settleDelta;
     const target = angle - travel;
-    const nextDuration = travel / 760;
+    const nextDuration = Math.max(3.2, Math.min(6.4, travel / 700));
 
     setSpinDuration(nextDuration);
     setAngle(target);
@@ -378,7 +379,7 @@ function Wheel({
         animate={{ rotate: angle }}
         transition={{
           duration: spinning ? duration : 0,
-          ease: spinning ? [0.18, 0.7, 0.2, 1] : "linear",
+          ease: spinning ? [0.06, 0.72, 0.14, 1] : "linear",
         }}
         className="h-full w-full"
         style={{ transformOrigin: "50% 50%" }}
