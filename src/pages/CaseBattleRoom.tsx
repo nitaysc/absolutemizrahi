@@ -465,6 +465,60 @@ export default function CaseBattleRoom() {
       </div>
 
       {/* Lanes — Empire-Drop style side-by-side */}
+      {battle.team_size >= 1 && (() => {
+        // Aggregate per-team totals from rounds revealed so far.
+        const teamTotals = new Map<number, number>();
+        const teamMembers = new Map<number, Player[]>();
+        players.forEach((pp) => {
+          if (!teamMembers.has(pp.team)) teamMembers.set(pp.team, []);
+          teamMembers.get(pp.team)!.push(pp);
+        });
+        players.forEach((pp) => {
+          const playerRounds = rounds
+            .filter((r) => r.player_slot === pp.slot)
+            .sort((a, b) => a.round_index - b.round_index);
+          const completed = playerRounds.filter((r) => r.round_index < visibleSpinIdx);
+          const spinning = playerRounds.find((r) => r.round_index === visibleSpinIdx);
+          const sum =
+            completed.reduce((s, r) => s + r.item_value, 0) +
+            (revealComplete && spinning ? spinning.item_value : 0);
+          teamTotals.set(pp.team, (teamTotals.get(pp.team) ?? 0) + sum);
+        });
+        const teams = Array.from(teamMembers.keys()).sort((a, b) => a - b);
+        if (teams.length < 2) return null;
+        const leading = Math.max(...Array.from(teamTotals.values()));
+        return (
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {teams.map((t) => {
+              const ts = teamStyle(t);
+              const total = teamTotals.get(t) ?? 0;
+              const isLeading = total > 0 && total === leading;
+              const isWinner = showFinishedUI && battle.winner_team === t;
+              return (
+                <div
+                  key={t}
+                  className={`flex items-center gap-2 rounded-full border-2 px-3 py-1.5 text-xs font-black uppercase tracking-wider transition ${
+                    isWinner
+                      ? "border-amber-400 bg-amber-500/15 text-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.5)]"
+                      : `${ts.border} ${ts.bg} ${ts.label}`
+                  }`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${ts.dot}`} />
+                  <span>Team {t + 1}</span>
+                  <span className="inline-flex items-center gap-1 text-primary">
+                    <MizrahiCoin size={10} /> {formatCoins(total)}
+                  </span>
+                  {isLeading && !isWinner && (
+                    <span className="text-[9px] text-amber-300">LEADING</span>
+                  )}
+                  {isWinner && <Crown className="h-3 w-3 text-amber-400" />}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       <div
         className="grid gap-3"
         style={{
