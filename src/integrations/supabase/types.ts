@@ -1388,6 +1388,7 @@ export type Database = {
         }[]
       }
       sell_all_inventory: { Args: never; Returns: number }
+      sell_battle_inventory: { Args: { _battle_id: string }; Returns: number }
       sell_inventory_item: { Args: { _item_id: string }; Returns: number }
       start_case_battle: { Args: { _battle_id: string }; Returns: undefined }
       transfer_coins: {
@@ -1396,6 +1397,23 @@ export type Database = {
           amount: number
           new_balance: number
           recipient_username: string
+        }[]
+      }
+      upgrade_inventory: {
+        Args: {
+          _cash: number
+          _item_ids: string[]
+          _target_image: string
+          _target_name: string
+          _target_rarity: string
+          _target_value: number
+        }
+        Returns: {
+          chance: number
+          roll: number
+          stake: number
+          target_value: number
+          won: boolean
         }[]
       }
       wordle_win: {
