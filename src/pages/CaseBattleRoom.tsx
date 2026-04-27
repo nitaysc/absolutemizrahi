@@ -487,14 +487,17 @@ export default function CaseBattleRoom() {
           // Only reveal team winner glow after every reel has landed
           const isWinnerTeam =
             showFinishedUI && p && battle.winner_team === p.team;
+          const ts = teamStyle(p?.team ?? slot);
+          // Only show team colours when there's actual team play (>=2 teams,
+          // since 1v1 already has 2 distinct teams). Always-on is fine.
 
           return (
             <div
               key={slot}
-              className={`flex min-w-0 flex-col rounded-2xl border bg-card/70 p-3 transition ${
+              className={`flex min-w-0 flex-col rounded-2xl border-2 ${ts.bg} p-3 transition ${
                 isWinnerTeam
                   ? "border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.55)]"
-                  : "border-border"
+                  : `${ts.border} shadow-[0_0_18px_-6px_currentColor] ${ts.label}`
               }`}
             >
               {/* Player header */}
@@ -507,7 +510,8 @@ export default function CaseBattleRoom() {
                       {p?.is_bot && <Bot className="h-3 w-3 shrink-0 text-muted-foreground" />}
                       {isWinnerTeam && <Crown className="h-3 w-3 shrink-0 text-amber-400" />}
                     </div>
-                    <div className="text-[10px] text-muted-foreground">
+                    <div className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider ${ts.chip}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${ts.dot}`} />
                       Team {(p?.team ?? slot) + 1}
                     </div>
                   </div>
