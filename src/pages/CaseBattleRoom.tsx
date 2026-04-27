@@ -111,6 +111,15 @@ export default function CaseBattleRoom() {
     if (!el) return;
     el.scrollBy({ left: dir * Math.max(180, el.clientWidth * 0.7), behavior: "smooth" });
   };
+  // Keep the currently-spinning case visible in the horizontal track.
+  useEffect(() => {
+    const el = caseTrackRef.current;
+    if (!el) return;
+    const child = el.children[Math.max(0, currentSpin)] as HTMLElement | undefined;
+    if (child && "scrollIntoView" in child) {
+      child.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }
+  }, [currentSpin]);
 
   async function refreshAll() {
     const [{ data: b }, { data: p }, { data: bc }, { data: r }] = await Promise.all([
