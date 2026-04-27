@@ -144,6 +144,13 @@ export function CaseDetailsModal({
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                 {items.map((it) => {
                   const pct = totalWeight > 0 ? (Number(it.weight) / totalWeight) * 100 : 0;
+                  const nameIsUrl = isUrl(it.name);
+                  // If creator typed a URL into the *name* field, treat it as the image
+                  // and use a friendly fallback label instead of dumping the URL on screen.
+                  const displayName = nameIsUrl ? "Mystery Item" : it.name;
+                  const displayImg = it.image && it.image.length > 0 && !nameIsUrl
+                    ? it.image
+                    : (nameIsUrl ? it.name : it.image);
                   return (
                     <div
                       key={it.id}
@@ -153,13 +160,15 @@ export function CaseDetailsModal({
                     >
                       <div className="flex h-12 items-center justify-center">
                         <ImgOrEmoji
-                          src={it.image}
-                          alt={it.name}
+                          src={displayImg}
+                          alt={displayName}
                           className="max-h-12 w-auto object-contain"
                           fallbackClass="text-4xl"
                         />
                       </div>
-                      <div className="mt-1 truncate text-xs font-bold">{it.name}</div>
+                      <div className="mt-1 truncate text-xs font-bold" title={displayName}>
+                        {displayName}
+                      </div>
                       <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-black">
                         <MizrahiCoin size={8} /> {formatCoins(it.value)}
                       </div>
