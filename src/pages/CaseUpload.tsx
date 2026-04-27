@@ -347,7 +347,14 @@ export default function CaseUpload() {
                 </div>
                 <input
                   value={it.name}
-                  onChange={(e) => update(idx, { name: e.target.value.slice(0, 50) })}
+                  onChange={(e) => {
+                    const v = e.target.value.slice(0, 50);
+                    if (looksLikeUrl(v)) {
+                      toast.error("Item name can't be a URL");
+                      return;
+                    }
+                    update(idx, { name: v });
+                  }}
                   placeholder="Item name"
                   className="col-span-3 rounded-lg border border-border bg-card px-2 py-1.5"
                 />
