@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { formatCoins } from "@/lib/format";
 import { ArrowDown, SlidersHorizontal } from "lucide-react";
 
-const HOUSE_EDGE = 0.99;
+const HOUSE_EDGE = 0.97;
 const LANE_COUNT = 7;
 
 type Lane = { multiplier: number; color: string };
