@@ -84,6 +84,9 @@ export default function CaseBattleRoom() {
   const [busy, setBusy] = useState(false);
   // Countdown until auto-start once bots are filled (null = no countdown)
   const [autoStartIn, setAutoStartIn] = useState<number | null>(null);
+  // Track previous human-player count so we can extend the countdown when
+  // a new player joins (gives the room time to settle / let others join too).
+  const prevPlayerCountRef = useRef<number>(0);
 
   async function refreshAll() {
     const [{ data: b }, { data: p }, { data: bc }, { data: r }] = await Promise.all([
@@ -216,17 +219,28 @@ export default function CaseBattleRoom() {
     if (!battle) return;
     if (battle.status !== "waiting") {
       setAutoStartIn(null);
+      prevPlayerCountRef.current = 0;
       return;
     }
-    if (!battle.fill_with_bots) {
+    // Trigger auto-start when EITHER:
+    //  - fill_with_bots is on and at least one human is in, OR
+    //  - the lobby is fully filled (humans + bots called manually)
+    const lobbyFull = players.length >= battle.player_slots;
+    const botsFlow = battle.fill_with_bots && players.length > 0;
+    if (!lobbyFull && !botsFlow) {
       setAutoStartIn(null);
+      prevPlayerCountRef.current = players.length;
       return;
     }
-    if (players.length === 0) {
-      setAutoStartIn(null);
-      return;
+    // If a new player just joined, extend the countdown to give others a chance.
+    const justJoined = players.length > prevPlayerCountRef.current;
+    prevPlayerCountRef.current = players.length;
+    if (autoStartIn === null) {
+      setAutoStartIn(3);
+    } else if (justJoined) {
+      // Extend grace period when a fresh player slides in.
+      setAutoStartIn((v) => Math.max(v ?? 0, 6));
     }
-    if (autoStartIn === null) setAutoStartIn(3);
     const t = setInterval(() => {
       setAutoStartIn((v) => {
         if (v === null) return null;
