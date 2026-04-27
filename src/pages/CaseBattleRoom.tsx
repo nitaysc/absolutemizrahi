@@ -544,9 +544,8 @@ export default function CaseBattleRoom() {
                 >
                   {(() => {
                     const teammates = players.filter((pp) => pp.team === p.team);
-                    const humans = teammates.filter((pp) => !pp.is_bot).length;
-                    if (p.is_bot) return "WINNER · BOT";
-                    const share = Math.floor((battle.pot_payout ?? 0) / Math.max(1, humans));
+                    if (p.is_bot) return "WINNER · BOT (no payout)";
+                    const share = Math.floor((battle.pot_payout ?? 0) / Math.max(1, teammates.length));
                     return `WINNER · +${formatCoins(share)}`;
                   })()}
                 </motion.div>
@@ -621,13 +620,10 @@ export default function CaseBattleRoom() {
                     const winners = players.filter((pp) => pp.team === battle.winner_team);
                     const humanWinners = winners.filter((pp) => !pp.is_bot).length;
                     const pot = battle.pot_payout ?? 0;
-                    // Coins are split only between human winners (bots can't earn).
-                    // If the team is all bots (impossible currently — must have ≥1 human),
-                    // we still display 0 for bots.
-                    const humanShare = humanWinners > 0
-                      ? Math.floor(pot / humanWinners)
-                      : 0;
-                    const myShare = p.is_bot ? 0 : humanShare;
+                    // Pot is split across the full team (humans + bots).
+                    // Bots forfeit their share — humans only get their fair fraction.
+                    const perSeat = winners.length > 0 ? Math.floor(pot / winners.length) : 0;
+                    const myShare = p.is_bot ? 0 : perSeat;
                     const sharePct = pot > 0 ? (myShare / pot) * 100 : 0;
                     return (
                       <motion.div
@@ -692,13 +688,13 @@ export default function CaseBattleRoom() {
                     <span className="font-black text-primary">
                       {formatCoins(battle.pot_payout ?? 0)}
                     </span>{" "}
-                    split between{" "}
-                    <span className="font-black text-foreground">{humanWinners}</span>{" "}
-                    {humanWinners === 1 ? "player" : "players"}
+                    split equally across the{" "}
+                    <span className="font-black text-foreground">{winners.length}</span>-seat
+                    winning team
                     {botWinners > 0 && (
                       <>
                         {" "}· <span className="font-bold">{botWinners}</span>{" "}
-                        {botWinners === 1 ? "bot teammate" : "bot teammates"} earn no coins
+                        {botWinners === 1 ? "bot share is" : "bot shares are"} forfeited
                       </>
                     )}
                     .
