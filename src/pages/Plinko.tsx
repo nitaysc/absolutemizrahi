@@ -79,8 +79,11 @@ export default function Plinko() {
   const rafRef = useRef<number | null>(null);
   const lastTsRef = useRef<number | null>(null);
   const litPegsRef = useRef<Map<string, number>>(new Map());
-  const serverBalanceRef = useRef(0);
-  const reservedStakeRef = useRef(0);
+  // Local optimistic balance that we mutate per-ball. The server is still the
+  // source of truth (place_bet RPC returns new_balance), but we drive the UI
+  // off this ref so each in-flight ball deducts EXACTLY its own stake — no
+  // double-counting, no compounding from racing realtime/profile updates.
+  const localBalanceRef = useRef(0);
 
   function bucketTone(mult: number) {
     if (mult >= 41) return "bg-rose-500 text-white border-rose-300";
@@ -111,11 +114,18 @@ export default function Plinko() {
   );
   const floorY = TOP_PAD + (ROWS + 1) * ROW_H;
 
+  // Sum of stakes for balls that have been dropped but not yet settled.
+  // Used so realtime/profile coin updates from the server don't clobber the
+  // optimistic local balance while balls are still flying.
+  const inFlightStakeRef = useRef(0);
+
   useEffect(() => {
-    // `profile.coins` also reflects optimistic local updates from
-    // `setLocalCoins(...)`. Add back currently reserved stakes so this ref
-    // tracks the underlying server balance and we don't double-reserve.
-    serverBalanceRef.current = (profile?.coins ?? 0) + reservedStakeRef.current;
+    // When the server tells us the latest balance (via fetch/realtime), trust
+    // it but subtract any stakes still in flight that the server hasn't seen
+    // settled yet. This keeps the displayed balance stable across the whole
+    // life of a ball: -bet on drop, +payout on settle, no extra jumps.
+    const serverCoins = profile?.coins ?? 0;
+    localBalanceRef.current = Math.max(0, serverCoins - inFlightStakeRef.current);
   }, [profile?.coins]);
 
   const settleBall = useCallback(async (b: Ball, landedBucket: number) => {
@@ -129,19 +139,25 @@ export default function Plinko() {
       _details: { bucket: landedBucket, path: b.path, rows: ROWS },
     });
 
-    reservedStakeRef.current = Math.max(0, reservedStakeRef.current - b.bet);
+    // This ball is no longer "in flight" from the server's perspective.
+    inFlightStakeRef.current = Math.max(0, inFlightStakeRef.current - b.bet);
 
     if (error) {
       toast.error(error.message);
-      setLocalCoins(Math.max(0, serverBalanceRef.current - reservedStakeRef.current));
+      // Refund the optimistic deduction if the server rejected the bet.
+      localBalanceRef.current = Math.max(0, localBalanceRef.current + b.bet);
+      setLocalCoins(localBalanceRef.current);
       return;
     }
 
     if (data?.[0]) {
-      serverBalanceRef.current = Number(data[0].new_balance);
+      // Server is authoritative for the post-settle balance of THIS ball.
+      // Add back any stakes still in flight for OTHER balls so the UI keeps
+      // showing them as already-deducted.
+      const serverCoins = Number(data[0].new_balance);
+      localBalanceRef.current = Math.max(0, serverCoins - inFlightStakeRef.current);
+      setLocalCoins(localBalanceRef.current);
     }
-
-    setLocalCoins(Math.max(0, serverBalanceRef.current - reservedStakeRef.current));
   }, [setLocalCoins]);
 
   // RAF physics loop
@@ -325,11 +341,15 @@ export default function Plinko() {
       acc.push(prev + dir);
       return acc;
     }, []);
-    const availableCoins = serverBalanceRef.current - reservedStakeRef.current;
-    if (stake > availableCoins) { toast.error("Not enough coins"); return null; }
+    if (stake > localBalanceRef.current) {
+      toast.error("Not enough coins");
+      return null;
+    }
 
-    reservedStakeRef.current += stake;
-    setLocalCoins(Math.max(0, serverBalanceRef.current - reservedStakeRef.current));
+    // Deduct exactly this ball's stake — once — from the local balance.
+    localBalanceRef.current = Math.max(0, localBalanceRef.current - stake);
+    inFlightStakeRef.current += stake;
+    setLocalCoins(localBalanceRef.current);
 
     const id = ++idRef.current;
     const newBall: Ball = {
