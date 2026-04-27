@@ -28,6 +28,7 @@ type Battle = {
   winner_team: number | null;
   pot_payout: number | null;
   finished_at: string | null;
+  allow_borrow?: boolean | null;
 };
 type Player = {
   id: string;
@@ -99,6 +100,8 @@ export default function CaseBattleRoom() {
   // Track previous human-player count so we can extend the countdown when
   // a new player joins (gives the room time to settle / let others join too).
   const prevPlayerCountRef = useRef<number>(0);
+  // Borrow % chosen when joining (only used if host enabled allow_borrow)
+  const [joinBorrowPct, setJoinBorrowPct] = useState(0);
 
   async function refreshAll() {
     const [{ data: b }, { data: p }, { data: bc }, { data: r }] = await Promise.all([
@@ -271,8 +274,12 @@ export default function CaseBattleRoom() {
   }, [battle?.status, battle?.fill_with_bots, players.length, isHost]);
 
   async function join() {
+    const pct = battle?.allow_borrow ? joinBorrowPct : 0;
     setBusy(true);
-    const { error } = await supabase.rpc("join_case_battle", { _battle_id: id! });
+    const { error } = await supabase.rpc("join_case_battle", {
+      _battle_id: id!,
+      _borrow_pct: pct,
+    });
     setBusy(false);
     if (error) return toast.error(error.message);
     refetch();
@@ -386,13 +393,37 @@ export default function CaseBattleRoom() {
           {battle.status === "waiting" && (
             <>
               {!inBattle && players.length < battle.player_slots && (
-                <button
-                  onClick={join}
-                  disabled={busy}
-                  className="rounded-full bg-primary px-4 py-1.5 text-sm font-bold text-primary-foreground"
-                >
-                  Join ({formatCoins(battle.per_player_cost)})
-                </button>
+                <div className="inline-flex items-center gap-2">
+                  {battle.allow_borrow && (
+                    <label className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary">
+                      Borrow
+                      <select
+                        value={joinBorrowPct}
+                        onChange={(e) => setJoinBorrowPct(parseInt(e.target.value, 10))}
+                        className="rounded bg-transparent text-primary outline-none"
+                      >
+                        {[0, 20, 40, 60, 80].map((p) => (
+                          <option key={p} value={p} className="bg-background text-foreground">
+                            {p}%
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <button
+                    onClick={join}
+                    disabled={busy}
+                    className="rounded-full bg-primary px-4 py-1.5 text-sm font-bold text-primary-foreground"
+                  >
+                    Join ({formatCoins(
+                      Math.round(
+                        (battle.per_player_cost *
+                          (100 - (battle.allow_borrow ? joinBorrowPct : 0))) /
+                          100,
+                      ),
+                    )})
+                  </button>
+                </div>
               )}
               {inBattle && (
                 <button

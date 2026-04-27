@@ -1187,6 +1187,19 @@ export type Database = {
             }
             Returns: string
           }
+        | {
+            Args: {
+              _allow_borrow?: boolean
+              _borrow_pct?: number
+              _case_ids: string[]
+              _fast: boolean
+              _fill_with_bots: boolean
+              _mode: string
+              _private: boolean
+              _type: string
+            }
+            Returns: string
+          }
       dragontower_abandon: {
         Args: never
         Returns: {
@@ -1262,7 +1275,12 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
-      join_case_battle: { Args: { _battle_id: string }; Returns: undefined }
+      join_case_battle:
+        | { Args: { _battle_id: string }; Returns: undefined }
+        | {
+            Args: { _battle_id: string; _borrow_pct?: number }
+            Returns: undefined
+          }
       leave_case_battle: { Args: { _battle_id: string }; Returns: undefined }
       list_friend_requests: {
         Args: never

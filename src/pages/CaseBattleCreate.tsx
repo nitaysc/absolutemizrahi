@@ -46,6 +46,7 @@ export default function CaseBattleCreate() {
   const [fast, setFast] = useState(searchParams.get("fast") === "1");
   const [isPrivate, setIsPrivate] = useState(false);
   const [allowBorrow, setAllowBorrow] = useState(false);
+  const [borrowPct, setBorrowPct] = useState(0);
   const [creating, setCreating] = useState(false);
   const [detailsCase, setDetailsCase] = useState<Case | null>(null);
   const navigate = useNavigate();
@@ -66,6 +67,8 @@ export default function CaseBattleCreate() {
 
   const totalCost = allCases.reduce((s, c) => s + (picks[c.id] ?? 0) * c.price, 0);
   const totalCases = Object.values(picks).reduce((s, n) => s + n, 0);
+  const effectiveBorrowPct = allowBorrow ? borrowPct : 0;
+  const youPay = Math.round((totalCost * (100 - effectiveBorrowPct)) / 100);
 
   function bump(id: string, delta: number) {
     setPicks((p) => {
@@ -80,7 +83,7 @@ export default function CaseBattleCreate() {
   async function create() {
     if (totalCases === 0) return toast.error("Pick at least 1 case");
     if (!profile) return toast.error("Not logged in");
-    if (!allowBorrow && profile.coins < totalCost) return toast.error("Not enough coins");
+    if (profile.coins < youPay) return toast.error("Not enough coins");
     const ids: string[] = [];
     for (const [id, n] of Object.entries(picks)) for (let i = 0; i < n; i++) ids.push(id);
     setCreating(true);
@@ -92,6 +95,7 @@ export default function CaseBattleCreate() {
       _fast: fast,
       _private: isPrivate,
       _allow_borrow: allowBorrow,
+      _borrow_pct: effectiveBorrowPct,
     });
     setCreating(false);
     if (error) return toast.error(error.message);
@@ -154,13 +158,57 @@ export default function CaseBattleCreate() {
           <Toggle label="Fill with Bots" value={fillBots} onChange={setFillBots} />
           <Toggle label="Fast Mode" value={fast} onChange={setFast} />
           <Toggle label="Private" value={isPrivate} onChange={setIsPrivate} />
-          <Toggle label="Allow Borrow" value={allowBorrow} onChange={setAllowBorrow} />
-          {allowBorrow && (
-            <p className="text-[10px] leading-tight text-muted-foreground">
-              Players short on coins can still join. Their loan is taken from their winnings (and balance, never below 0).
-            </p>
-          )}
+          <Toggle
+            label="Allow Borrow"
+            value={allowBorrow}
+            onChange={(v) => {
+              setAllowBorrow(v);
+              if (!v) setBorrowPct(0);
+            }}
+          />
         </div>
+
+        {allowBorrow && (
+          <div className="space-y-2 rounded-xl border border-l-4 border-l-primary border-border bg-background p-3">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-bold">Borrow</div>
+              <div className="text-[10px] text-muted-foreground">Empire-style</div>
+            </div>
+            <div className="space-y-1 text-xs">
+              <Row label="Borrow rate" value={`${borrowPct}%`} accent="text-primary" />
+              <Row label="You pay" value={`${100 - borrowPct}%`} accent="text-foreground" />
+              <Row label="You receive if win" value={`${100 - borrowPct}%`} accent="text-amber-400" />
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={80}
+              step={5}
+              value={borrowPct}
+              onChange={(e) => setBorrowPct(parseInt(e.target.value, 10))}
+              className="w-full accent-primary"
+            />
+            <div className="grid grid-cols-4 gap-2">
+              {[20, 40, 60, 80].map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setBorrowPct(p)}
+                  className={`rounded-lg border px-2 py-1 text-xs font-bold transition ${
+                    borrowPct === p
+                      ? "border-primary bg-primary/15 text-primary"
+                      : "border-border bg-card hover:border-primary/50"
+                  }`}
+                >
+                  {p}%
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] leading-tight text-muted-foreground">
+              Pay only {100 - borrowPct}% upfront. If you win, {borrowPct}% of your share goes to repay the loan. If you lose, the loan is forgiven.
+            </p>
+          </div>
+        )}
 
         <div className="rounded-xl border border-border bg-background p-3 text-sm">
           <div className="flex justify-between">
@@ -168,11 +216,19 @@ export default function CaseBattleCreate() {
             <span className="font-bold">{totalCases}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Cost / player</span>
+            <span className="text-muted-foreground">Entry / player</span>
             <span className="inline-flex items-center gap-1 font-bold">
               <MizrahiCoin size={12} /> {formatCoins(totalCost)}
             </span>
           </div>
+          {effectiveBorrowPct > 0 && (
+            <div className="mt-1 flex justify-between text-primary">
+              <span>You pay now</span>
+              <span className="inline-flex items-center gap-1 font-bold">
+                <MizrahiCoin size={12} /> {formatCoins(youPay)}
+              </span>
+            </div>
+          )}
         </div>
 
         <button
@@ -180,7 +236,7 @@ export default function CaseBattleCreate() {
           disabled={creating || totalCases === 0}
           className="w-full rounded-full bg-primary py-2.5 font-black text-primary-foreground disabled:bg-muted disabled:text-muted-foreground"
         >
-          {creating ? "Creating..." : `Create for ${formatCoins(totalCost)}`}
+          {creating ? "Creating..." : `Create for ${formatCoins(youPay)}`}
         </button>
       </aside>
 
@@ -294,5 +350,14 @@ function Toggle({
         />
       </span>
     </button>
+  );
+}
+
+function Row({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={`font-bold ${accent ?? ""}`}>{value}</span>
+    </div>
   );
 }
