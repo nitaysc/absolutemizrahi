@@ -155,14 +155,16 @@ export default function CaseBattleRoom() {
 
     setRevealComplete(false);
     setCurrentSpin(0);
-    const stepMs = battle.fast ? 2400 : 6200;
+    // Step length accounts for potential 2-stage special spins (Empire/Duel),
+    // which add ~3.6-4s of follow-up animation on top of the base spin.
+    const stepMs = battle.fast ? 3200 : 9800;
     const total = battle.rounds_total;
     let i = 0;
     const intervalId = setInterval(() => {
       i++;
       if (i >= total) {
         clearInterval(intervalId);
-        setTimeout(() => setRevealComplete(true), battle.fast ? 1900 : 5400);
+        setTimeout(() => setRevealComplete(true), battle.fast ? 2400 : 6800);
         return;
       }
       setCurrentSpin(i);
