@@ -265,6 +265,44 @@ export default function CaseBattleRoom() {
     setTimeout(() => refetch(), 1500);
   }
 
+  // Build the case_ids list for "Recreate" / "Edit Battle"
+  const caseIdList = useMemo(
+    () => bcases.slice().sort((a, b) => a.position - b.position).map((bc) => bc.case_id),
+    [bcases],
+  );
+
+  async function recreate() {
+    if (!battle || !caseIdList.length) return;
+    if (!profile || profile.coins < battle.per_player_cost) {
+      return toast.error("Not enough coins");
+    }
+    setBusy(true);
+    const { data, error } = await supabase.rpc("create_case_battle", {
+      _mode: battle.mode,
+      _type: battle.type,
+      _case_ids: caseIdList,
+      _fill_with_bots: battle.fill_with_bots,
+      _fast: battle.fast,
+      _private: false,
+    });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    refetch();
+    navigate(`/cases/battles/${data}`);
+  }
+
+  function editBattle() {
+    if (!battle || !caseIdList.length) return;
+    const params = new URLSearchParams({
+      mode: battle.mode,
+      type: battle.type,
+      cases: caseIdList.join(","),
+      bots: battle.fill_with_bots ? "1" : "0",
+      fast: battle.fast ? "1" : "0",
+    });
+    navigate(`/cases/battles/new?${params.toString()}`);
+  }
+
   if (!battle) return <p className="text-muted-foreground">Loading battle...</p>;
 
   const showFinishedUI = battle.status === "finished" && revealComplete;
