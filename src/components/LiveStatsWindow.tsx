@@ -45,7 +45,7 @@ const GAMES = [
   "snakes",
   "roulette",
   "keno",
-  "slide",
+  "slides",
 ];
 const POS_KEY = "liveStats:pos:v1";
 const OPEN_KEY = "liveStats:open:v1";

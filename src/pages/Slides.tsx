@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, useAnimationControls } from "framer-motion";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTrackGame } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,22 +8,37 @@ import { BetControls } from "@/components/BetControls";
 import { NumberField } from "@/components/NumberField";
 import { Button } from "@/components/ui/button";
 import { formatCoins } from "@/lib/format";
-import { ArrowDown, GalleryHorizontal } from "lucide-react";
+import { GalleryHorizontal, ChevronDown } from "lucide-react";
 
+// Stake-style "Slides": a long horizontal strip of randomly-generated
+// multipliers scrolls past a fixed pointer in the middle. Whatever card
+// stops under the pointer is the round result. Win if landed >= target.
 const HOUSE_EDGE = 0.99;
-const STRIP_SIZE = 25;
-const CENTER_INDEX = Math.floor(STRIP_SIZE / 2);
+const CARD_W = 88; // px including gap
+const STRIP_LEN = 80;
+const LANDING_INDEX = 60; // where the marker stops in the strip
 
-function randomResult() {
+function rollMultiplier() {
+  // Inverse-CDF style multiplier with house edge — same shape as Limbo
+  // so payout math stays fair and intuitive.
   let u = Math.random();
   if (u < 0.0001) u = 0.0001;
-  return +(HOUSE_EDGE / u).toFixed(2);
+  return Math.min(+(HOUSE_EDGE / u).toFixed(2), 5000);
 }
 
-function makeStrip(result?: number) {
-  const cards = Array.from({ length: STRIP_SIZE }, () => Math.min(randomResult(), 5000));
-  if (typeof result === "number") cards[CENTER_INDEX] = result;
-  return cards;
+function colorFor(m: number) {
+  if (m >= 50) return "from-fuchsia-500/90 to-pink-500/90 text-white border-fuchsia-300";
+  if (m >= 10) return "from-amber-400/90 to-orange-500/90 text-white border-amber-300";
+  if (m >= 3) return "from-emerald-400/90 to-emerald-500/90 text-white border-emerald-300";
+  if (m >= 1.5) return "from-sky-400/90 to-cyan-500/90 text-white border-cyan-300";
+  return "from-slate-600/80 to-slate-700/80 text-slate-200 border-slate-500/60";
+}
+
+function buildStrip(landed: number) {
+  const arr: number[] = [];
+  for (let i = 0; i < STRIP_LEN; i++) arr.push(rollMultiplier());
+  arr[LANDING_INDEX] = landed;
+  return arr;
 }
 
 export default function Slides() {
@@ -32,9 +47,31 @@ export default function Slides() {
   const [bet, setBet] = useState(10);
   const [target, setTarget] = useState(2);
   const [rolling, setRolling] = useState(false);
+  const [strip, setStrip] = useState<number[]>(() => buildStrip(rollMultiplier()));
   const [result, setResult] = useState<number | null>(null);
-  const [strip, setStrip] = useState<number[]>(() => makeStrip());
   const [history, setHistory] = useState<{ result: number; won: boolean }[]>([]);
+  const controls = useAnimationControls();
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const [trackW, setTrackW] = useState(0);
+
+  useEffect(() => {
+    function measure() {
+      setTrackW(trackRef.current?.clientWidth ?? 0);
+    }
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  // Position strip so the landing card sits under the center pointer.
+  const restingX = useMemo(() => {
+    return trackW / 2 - LANDING_INDEX * CARD_W - CARD_W / 2;
+  }, [trackW]);
+
+  // Set initial position once we know the track width
+  useEffect(() => {
+    if (trackW > 0 && !rolling) controls.set({ x: restingX });
+  }, [trackW, restingX, controls, rolling]);
 
   const winChance = useMemo(
     () => (target > 1 ? +((HOUSE_EDGE * 100) / target).toFixed(2) : 0),
@@ -51,31 +88,39 @@ export default function Slides() {
     setRolling(true);
     setResult(null);
 
-    const rolled = Math.min(randomResult(), 5000);
-    setStrip(makeStrip(rolled));
+    const landed = rollMultiplier();
+    const nextStrip = buildStrip(landed);
+    setStrip(nextStrip);
 
-    await new Promise((r) => setTimeout(r, 1600));
+    // Start strip far to the right then slide left to the landing card
+    const startX = trackW + CARD_W * 4;
+    const endX = trackW / 2 - LANDING_INDEX * CARD_W - CARD_W / 2;
+    controls.set({ x: startX });
+    await controls.start({
+      x: endX,
+      transition: { duration: 2.2, ease: [0.16, 1, 0.3, 1] },
+    });
 
-    const won = rolled >= target;
+    const won = landed >= target;
     const { data, error } = await supabase.rpc("place_bet", {
-      _game: "slide",
+      _game: "slides",
       _bet_amount: bet,
       _won: won,
       _multiplier: target,
-      _details: { target, landed: rolled, variant: "slides" },
+      _details: { target, landed, variant: "slides" },
     });
 
     setRolling(false);
     if (error) return toast.error(error.message);
 
-    setResult(rolled);
+    setResult(landed);
     if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
-    setHistory((h) => [{ result: rolled, won }, ...h].slice(0, 12));
+    setHistory((h) => [{ result: landed, won }, ...h].slice(0, 14));
 
     const payout = Number(data?.[0]?.payout ?? 0);
     const profit = won ? Math.max(payout - bet, 0) : -bet;
-    if (won) toast.success(`Slides hit! +${formatCoins(profit)} (${rolled.toFixed(2)}×)`);
-    else toast.error(`Crashed at ${rolled.toFixed(2)}×`);
+    if (won) toast.success(`Slides hit! +${formatCoins(profit)} (${landed.toFixed(2)}×)`);
+    else toast.error(`Slipped at ${landed.toFixed(2)}×`);
   }
 
   return (
@@ -86,7 +131,7 @@ export default function Slides() {
             <GalleryHorizontal className="h-6 w-6 text-primary sm:h-7 sm:w-7" /> SLIDES
           </h1>
           <p className="text-xs text-muted-foreground sm:text-sm">
-            Stake-style carousel: pick your target and hope the slide lands high enough.
+            Pick a target multiplier. The strip slides — whatever lands under the marker is your result.
           </p>
         </div>
         {history.length > 0 && (
@@ -135,46 +180,75 @@ export default function Slides() {
                 <p className="text-sm font-black">{formatCoins(potentialPayout)}</p>
               </div>
             </div>
-            <Button onClick={playRound} disabled={rolling} className="h-12 w-full text-base font-black">
+            <Button
+              onClick={playRound}
+              disabled={rolling}
+              className="h-12 w-full text-base font-black"
+            >
               {rolling ? "SLIDING..." : "BET"}
             </Button>
           </div>
         </aside>
 
         <section className="relative overflow-hidden rounded-3xl border border-border bg-card/70 p-5 backdrop-blur-xl">
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.2),transparent_70%)]" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.18),transparent_70%)]" />
           <div className="relative">
-            <div className="mb-4 flex justify-center">
-              <div className="flex flex-col items-center gap-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                <ArrowDown className="h-4 w-4 text-primary" />
+            <div className="mb-3 flex items-center justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              <span>Target ≥ <span className="text-foreground">{target.toFixed(2)}×</span></span>
+              <span>
                 Landed:{" "}
-                <span className="text-foreground">{(result ?? target).toFixed(2)}×</span>
-              </div>
+                <span
+                  className={
+                    result === null
+                      ? "text-foreground"
+                      : result >= target
+                        ? "text-[hsl(var(--success))]"
+                        : "text-destructive"
+                  }
+                >
+                  {result === null ? "—" : `${result.toFixed(2)}×`}
+                </span>
+              </span>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-border bg-background/30 p-3">
+            {/* Slide track */}
+            <div
+              ref={trackRef}
+              className="relative h-32 overflow-hidden rounded-2xl border border-border bg-background/40"
+            >
+              {/* Edge fades */}
+              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-card/95 to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-card/95 to-transparent" />
+
+              {/* Center pointer */}
+              <div className="pointer-events-none absolute left-1/2 top-0 z-20 flex h-full -translate-x-1/2 flex-col items-center">
+                <ChevronDown className="-mb-1 h-5 w-5 text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" />
+                <div className="h-full w-px bg-gradient-to-b from-primary via-primary/60 to-transparent" />
+              </div>
+
+              {/* Strip */}
               <motion.div
-                animate={{ x: rolling ? ["0%", "-56%"] : "-48%" }}
-                transition={{ duration: 1.6, ease: "easeInOut" }}
-                className="flex min-w-max gap-2"
+                animate={controls}
+                className="absolute inset-y-0 flex items-center"
+                style={{ willChange: "transform" }}
               >
-                {strip.map((m, i) => {
-                  const isCenter = i === CENTER_INDEX;
-                  return (
-                    <div
-                      key={`${m}-${i}`}
-                      className={`w-20 rounded-xl border p-2 text-center ${
-                        isCenter
-                          ? "border-primary bg-primary/15 shadow-[0_0_22px_hsl(var(--primary)/0.3)]"
-                          : "border-border bg-background/60"
-                      }`}
-                    >
-                      <div className="text-lg font-black tabular-nums text-foreground">{m.toFixed(2)}×</div>
-                    </div>
-                  );
-                })}
+                {strip.map((m, i) => (
+                  <div
+                    key={i}
+                    style={{ width: CARD_W - 8, marginRight: 8 }}
+                    className={`flex h-20 shrink-0 items-center justify-center rounded-xl border bg-gradient-to-b ${colorFor(
+                      m,
+                    )} text-lg font-black tabular-nums shadow-md`}
+                  >
+                    {m.toFixed(2)}×
+                  </div>
+                ))}
               </motion.div>
             </div>
+
+            <p className="mt-3 text-center text-[11px] text-muted-foreground">
+              House edge {Math.round((1 - HOUSE_EDGE) * 100)}% · Provably fair multipliers
+            </p>
           </div>
         </section>
       </div>
