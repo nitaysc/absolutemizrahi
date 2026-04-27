@@ -166,7 +166,7 @@ export function CaseReel({
   pool,
   result,
   spinKey,
-  durationMs = 5500,
+  durationMs = 6400,
   size = "md",
   onComplete,
 }: Props) {
@@ -175,6 +175,7 @@ export function CaseReel({
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerH, setContainerH] = useState(0);
   const [phase, setPhase] = useState<"idle" | "spinning" | "landed">("idle");
+  const [specialHitFx, setSpecialHitFx] = useState<"empire" | "duel" | null>(null);
 
   // Tile dimensions
   const tileH = size === "xs" ? 72 : size === "sm" ? 96 : size === "lg" ? 150 : 120;
@@ -215,10 +216,10 @@ export function CaseReel({
         out.push(basePool[Math.floor(Math.random() * basePool.length)]);
       }
       out[LANDING_INDEX] = landed;
-      // Bait positions — kept FAR enough from the landing tile that they
-      // never sit visibly next to the result (which would look like "I almost
-      // got that" / confuse what was actually won).
-      const baitOffsets = [-6, -5, -4, 4, 5, 6, 7];
+      // Bait positions — sometimes close to center, sometimes farther away.
+      // This creates a more dramatic "near miss" feel without being every spin.
+      const useCloseBaits = Math.random() < 0.45;
+      const baitOffsets = useCloseBaits ? [-3, -2, -1, 1, 2, 3, 4] : [-7, -6, -5, 5, 6, 7, 8];
       baitOffsets.forEach((off, idx) => {
         const pos = LANDING_INDEX + off;
         if (pos < 0 || pos >= STRIP_LEN || pos === LANDING_INDEX) return;
@@ -226,8 +227,7 @@ export function CaseReel({
           out[pos] = baitPool[idx % baitPool.length];
         }
       });
-      // ~25% of normal spins, sprinkle 1-2 Empire/Duel "tease" tiles far from
-      // the landing index so players actually see they exist (visual only).
+      // ~25% of normal spins, sprinkle 1-2 Empire/Duel "tease" tiles.
       if (Math.random() < 0.25) {
         const tease: ReelItem =
           Math.random() < 0.5
@@ -235,10 +235,9 @@ export function CaseReel({
             : { name: "Duel Spin", image: "⚔️", value: 0, rarity: "epic", special: "duel" };
         const teaseCount = 1 + Math.floor(Math.random() * 2);
         for (let k = 0; k < teaseCount; k++) {
-          // Keep teases at least 8 tiles away from the landing index so they
-          // never touch the result or its neighbours.
-          const safe = Math.floor(Math.random() * (LANDING_INDEX - 12));
-          if (safe >= 0 && safe < STRIP_LEN && Math.abs(safe - LANDING_INDEX) > 8) {
+          // Usually farther from center, but sometimes close for hype.
+          const safe = Math.floor(Math.random() * (LANDING_INDEX - 7));
+          if (safe >= 0 && safe < STRIP_LEN && Math.abs(safe - LANDING_INDEX) > 3) {
             out[safe] = tease;
           }
         }
@@ -312,6 +311,7 @@ export function CaseReel({
   // Reset stage whenever spinKey changes (new spin requested)
   useEffect(() => {
     setStage(0);
+    setSpecialHitFx(null);
   }, [spinKey]);
 
   // Main animation effect — runs per stage
@@ -330,8 +330,8 @@ export function CaseReel({
     const targetCenter = LANDING_INDEX * step + tileH / 2 + jitter;
     const offset = -(targetCenter - center);
 
-    // Stage 1 (follow-up spin) is a bit shorter for pacing
-    const dur = stage === 1 ? Math.max(1800, durationMs * 0.7) : durationMs;
+    // Stage 1 (follow-up spin) is slightly shorter but still dramatic.
+    const dur = stage === 1 ? Math.max(2300, durationMs * 0.82) : durationMs;
 
     controls.set({ y: center - tileH / 2 });
     const startedAt = performance.now();
@@ -347,8 +347,10 @@ export function CaseReel({
       playReelLand();
       // If this was the first stage of a special spin, queue stage 2.
       if (stage === 0 && hasSpecial) {
+        setSpecialHitFx(isEmpire ? "empire" : "duel");
+        setTimeout(() => setSpecialHitFx(null), 900);
         // brief beat before second spin
-        setTimeout(() => setStage(1), 700);
+        setTimeout(() => setStage(1), 900);
       } else {
         setPhase("landed");
         onComplete?.();
@@ -390,6 +392,33 @@ export function CaseReel({
       {/* Edge fades top/bottom */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-16 bg-gradient-to-b from-background to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-16 bg-gradient-to-t from-background to-transparent" />
+
+      {/* Special-hit burst when duel/empire lands */}
+      {specialHitFx && (
+        <>
+          <motion.div
+            key={`${specialHitFx}-burst`}
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: [0, 0.95, 0], scale: [0.85, 1.04, 1.16] }}
+            transition={{ duration: 0.85, ease: "easeOut" }}
+            className={`pointer-events-none absolute inset-0 z-[25] ${
+              specialHitFx === "empire"
+                ? "bg-[radial-gradient(circle_at_50%_50%,rgba(245,158,11,0.65),rgba(249,115,22,0.28),transparent_70%)]"
+                : "bg-[radial-gradient(circle_at_50%_50%,rgba(217,70,239,0.62),rgba(59,130,246,0.26),transparent_70%)]"
+            }`}
+          />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 1, 0] }}
+            transition={{ duration: 0.7 }}
+            className={`pointer-events-none absolute inset-x-0 top-1/2 z-[35] h-[6px] -translate-y-1/2 ${
+              specialHitFx === "empire"
+                ? "bg-amber-300 shadow-[0_0_25px_rgba(252,211,77,1)]"
+                : "bg-fuchsia-300 shadow-[0_0_25px_rgba(244,114,182,1)]"
+            }`}
+          />
+        </>
+      )}
 
       {/* Center marker line + side arrows */}
       <div className="pointer-events-none absolute inset-x-0 top-1/2 z-30 h-[3px] -translate-y-1/2 bg-primary shadow-[0_0_12px_hsl(var(--primary))]" />
