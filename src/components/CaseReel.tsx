@@ -215,12 +215,14 @@ export function CaseReel({
         out.push(basePool[Math.floor(Math.random() * basePool.length)]);
       }
       out[LANDING_INDEX] = landed;
-      // More bait positions around the landing zone for stronger "almost!" feel.
-      const baitOffsets = [-5, -4, -3, -2, -1, 2, 3, 4, 5, 6];
+      // Bait positions — kept FAR enough from the landing tile that they
+      // never sit visibly next to the result (which would look like "I almost
+      // got that" / confuse what was actually won).
+      const baitOffsets = [-6, -5, -4, 4, 5, 6, 7];
       baitOffsets.forEach((off, idx) => {
         const pos = LANDING_INDEX + off;
         if (pos < 0 || pos >= STRIP_LEN || pos === LANDING_INDEX) return;
-        if (Math.random() < 0.7 && baitPool.length) {
+        if (Math.random() < 0.55 && baitPool.length) {
           out[pos] = baitPool[idx % baitPool.length];
         }
       });
@@ -321,10 +323,10 @@ export function CaseReel({
     }
     setPhase("spinning");
     const center = containerH / 2;
-    // Wider jitter: the reel can land partially over the neighbouring tile so
-    // it looks like it could go either way, then the snap-back locks the
-    // result in for that adrenaline pop.
-    const jitter = (Math.random() - 0.5) * (tileH * 0.85);
+    // Small jitter — keeps the marker safely INSIDE the result tile so we
+    // never visually overlap a neighbour. (Bigger jitter caused the reel to
+    // look like it landed on the wrong item.)
+    const jitter = (Math.random() - 0.5) * (tileH * 0.25);
     const targetCenter = LANDING_INDEX * step + tileH / 2 + jitter;
     const offset = -(targetCenter - center);
 
@@ -333,23 +335,15 @@ export function CaseReel({
 
     controls.set({ y: center - tileH / 2 });
     const startedAt = performance.now();
-    // Two-phase animation for buttery-smooth feel:
-    //   1) Long glide that overshoots/undershoots toward the offset using a
-    //      decelerating curve (csgo-roulette style).
-    //   2) Short snap that locks the result perfectly under the marker.
+    // Single smooth glide with a strong deceleration curve (csgo-style).
+    // No bounce / overshoot — the reel must NEVER move after it stops, or
+    // it looks like it changed which item you got.
     const glide = controls.start({
       y: offset,
-      transition: { duration: dur / 1000, ease: [0.05, 0.7, 0.1, 1.0] },
+      transition: { duration: dur / 1000, ease: [0.16, 0.84, 0.24, 1] },
     });
-    glide.then(async () => {
+    glide.then(() => {
       void startedAt;
-      // Snap to perfectly-centred result — this is the "lock" feeling.
-      const finalCenter = LANDING_INDEX * step + tileH / 2;
-      const finalOffset = -(finalCenter - center);
-      await controls.start({
-        y: finalOffset,
-        transition: { duration: 0.45, ease: [0.34, 1.56, 0.64, 1] },
-      });
       playReelLand();
       // If this was the first stage of a special spin, queue stage 2.
       if (stage === 0 && hasSpecial) {
