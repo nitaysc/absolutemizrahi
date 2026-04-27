@@ -52,7 +52,7 @@ type Props = {
   result: ReelResult | null;
   spinKey: string | number;
   durationMs?: number;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   onComplete?: () => void;
   /** Deprecated — Empire/Duel are now in-reel special tiles via result.special_spin */
   preBadge?: "empire" | "duel" | null;
@@ -60,7 +60,7 @@ type Props = {
 
 const ItemCard = forwardRef<
   HTMLDivElement,
-  { item: ReelItem; size?: "sm" | "md" | "lg"; height: number }
+  { item: ReelItem; size?: "xs" | "sm" | "md" | "lg"; height: number }
 >(function ItemCard({ item, size = "md", height }, ref) {
   const emoji = size === "sm" ? "text-4xl" : size === "lg" ? "text-7xl" : "text-5xl";
 
