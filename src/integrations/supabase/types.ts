@@ -827,6 +827,13 @@ export type Database = {
           username: string
         }[]
       }
+      get_user_bet_days: {
+        Args: { _limit_per_user?: number; _user_ids: string[] }
+        Returns: {
+          created_at: string
+          user_id: string
+        }[]
+      }
       list_friend_requests: {
         Args: never
         Returns: {
