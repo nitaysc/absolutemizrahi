@@ -70,20 +70,34 @@ const ItemCard = forwardRef<
     return (
       <div
         ref={ref}
-        className={`relative w-full overflow-hidden rounded-xl border-2 ${
+        className={`relative w-full overflow-hidden rounded-xl border-2 animate-pulse ${
           isEmpire
-            ? "border-fuchsia-300/80 bg-gradient-to-b from-fuchsia-500/40 to-purple-950/85 shadow-[0_0_38px_rgba(217,70,239,0.85)]"
-            : "border-amber-300/80 bg-gradient-to-b from-amber-400/40 to-orange-950/85 shadow-[0_0_38px_rgba(245,158,11,0.85)]"
+            ? "border-fuchsia-200 bg-gradient-to-b from-fuchsia-400/60 to-purple-950/90 shadow-[0_0_60px_12px_rgba(217,70,239,0.95)] ring-2 ring-fuchsia-300/70"
+            : "border-amber-200 bg-gradient-to-b from-amber-300/60 to-orange-950/90 shadow-[0_0_60px_12px_rgba(245,158,11,0.95)] ring-2 ring-amber-300/70"
         }`}
         style={{ height }}
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,0.18),transparent_65%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,0.35),transparent_65%)]" />
+        <div
+          className={`absolute inset-0 ${
+            isEmpire ? "bg-fuchsia-500/10" : "bg-amber-500/10"
+          }`}
+        />
         <img
           src={isEmpire ? empireSpinImg : duelSpinImg}
           alt={isEmpire ? "Empire Spin" : "Duel Spin"}
-          className="absolute inset-0 h-full w-full object-contain p-1 drop-shadow-[0_2px_10px_rgba(0,0,0,0.7)]"
+          className="absolute inset-0 h-full w-full object-contain p-1 drop-shadow-[0_0_18px_rgba(255,255,255,0.6)]"
           draggable={false}
         />
+        <div
+          className={`absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-widest ${
+            isEmpire
+              ? "bg-fuchsia-100 text-fuchsia-900"
+              : "bg-amber-100 text-amber-900"
+          }`}
+        >
+          {isEmpire ? "Empire" : "Duel"}
+        </div>
       </div>
     );
   }
@@ -201,14 +215,32 @@ export function CaseReel({
         out.push(basePool[Math.floor(Math.random() * basePool.length)]);
       }
       out[LANDING_INDEX] = landed;
-      const baitOffsets = [-3, -1, 2, 4];
+      // More bait positions around the landing zone for stronger "almost!" feel.
+      const baitOffsets = [-5, -4, -3, -2, -1, 2, 3, 4, 5, 6];
       baitOffsets.forEach((off, idx) => {
         const pos = LANDING_INDEX + off;
         if (pos < 0 || pos >= STRIP_LEN || pos === LANDING_INDEX) return;
-        if (Math.random() < 0.45 && baitPool.length) {
+        if (Math.random() < 0.7 && baitPool.length) {
           out[pos] = baitPool[idx % baitPool.length];
         }
       });
+      // ~25% of normal spins, sprinkle 1-2 Empire/Duel "tease" tiles far from
+      // the landing index so players actually see they exist (visual only).
+      if (Math.random() < 0.25) {
+        const tease: ReelItem =
+          Math.random() < 0.5
+            ? { name: "Empire Spin", image: "✨", value: 0, rarity: "legendary", special: "empire" }
+            : { name: "Duel Spin", image: "⚔️", value: 0, rarity: "epic", special: "duel" };
+        const teaseCount = 1 + Math.floor(Math.random() * 2);
+        for (let k = 0; k < teaseCount; k++) {
+          // Keep teases at least 8 tiles away from the landing index so they
+          // never touch the result or its neighbours.
+          const safe = Math.floor(Math.random() * (LANDING_INDEX - 12));
+          if (safe >= 0 && safe < STRIP_LEN && Math.abs(safe - LANDING_INDEX) > 8) {
+            out[safe] = tease;
+          }
+        }
+      }
       return out;
     };
 
