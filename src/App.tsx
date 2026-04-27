@@ -39,6 +39,7 @@ import CaseBattleRoom from "./pages/CaseBattleRoom";
 import CaseUpload from "./pages/CaseUpload";
 import CaseAdmin from "./pages/CaseAdmin";
 import Inventory from "./pages/Inventory";
+import Upgrader from "./pages/Upgrader";
 import NotFound from "./pages/NotFound";
 
 function Protected({ children }: { children: React.ReactNode }) {
