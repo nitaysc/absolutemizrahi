@@ -585,192 +585,321 @@ export default function Prediction() {
     await loadLockedBets();
   }
 
+  const totalGames = availableGames.length;
+
   return (
-    <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight">NBA MARKETS</h1>
-          <p className="text-sm text-muted-foreground">Polymarket-inspired boards in Mizrahi style: one locked pick per matchup, stake deducted at entry, and automatic winner settlement at 2x when final.</p>
-          <p className="text-xs text-muted-foreground/80">
-            Feed: {feed === null ? "loading..." : feed.toUpperCase()} (auto-refresh every 30s)
+    <div className="space-y-4 pb-24">
+      {/* ===== Compact header ===== */}
+      <header className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-black tracking-tight sm:text-3xl">NBA Markets</h1>
+          <p className="text-[11px] text-muted-foreground/80">
+            {totalGames} game{totalGames === 1 ? "" : "s"} · live odds · auto-settles
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => loadGames(true)} disabled={refreshing || loading} className="gap-2">
-            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-            {refreshing ? "Refreshing..." : "Refresh Games"}
-          </Button>
-          <Button variant="outline" onClick={() => void settleWinners()} disabled={loading}>
-            Settle Winners
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => loadGames(true)}
+          disabled={refreshing || loading}
+          className="gap-1.5"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+          {refreshing ? "..." : "Refresh"}
+        </Button>
       </header>
 
-      <section className="rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/15 via-card/80 to-card/50 p-4 backdrop-blur-xl">
-        <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Stake</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {[10, 25, 50, 100, 250].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setBet(n)}
-                  className={`rounded-full border px-4 py-1.5 text-sm font-bold transition ${
-                    bet === n
-                      ? "border-primary bg-primary text-primary-foreground shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
-                      : "border-border bg-background/70 text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {formatCoins(n)}
-                </button>
-              ))}
-              <input
-                type="number"
-                min={1}
-                value={bet}
-                onChange={(e) => setBet(Math.max(1, Number(e.target.value) || 1))}
-                className="w-28 rounded-full border border-border bg-background px-3 py-1.5 text-sm font-semibold"
-              />
-            </div>
+      {/* ===== Sticky stake + day-jump bar ===== */}
+      <div className="sticky top-0 z-30 -mx-4 border-b border-border/60 bg-background/90 px-4 py-3 backdrop-blur-xl">
+        <div className="space-y-2">
+          {/* Stake row */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <span className="shrink-0 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Stake
+            </span>
+            {[10, 25, 50, 100, 250, 500].map((n) => (
+              <button
+                key={n}
+                onClick={() => setBet(n)}
+                className={`shrink-0 rounded-full border px-3 py-1 text-xs font-bold transition ${
+                  bet === n
+                    ? "border-primary bg-primary text-primary-foreground shadow-[0_0_14px_hsl(var(--primary)/0.45)]"
+                    : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                }`}
+              >
+                {formatCoins(n)}
+              </button>
+            ))}
+            <input
+              type="number"
+              min={1}
+              value={bet}
+              onChange={(e) => setBet(Math.max(1, Number(e.target.value) || 1))}
+              className="w-20 shrink-0 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-bold tabular-nums"
+              aria-label="Custom stake"
+            />
           </div>
-          <div className="rounded-2xl border border-border/80 bg-background/60 px-4 py-3 text-sm">
-            <p className="flex items-center gap-2 font-semibold text-foreground"><ShieldCheck className="h-4 w-4 text-emerald-500" /> 1 pick per matchup</p>
-            <p className="mt-1 flex items-center gap-2 text-muted-foreground"><Timer className="h-4 w-4" /> Auto-settles at final score</p>
-          </div>
-        </div>
-      </section>
 
+          {/* Day-jump pills */}
+          {gamesByDay.length > 1 ? (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              {gamesByDay.map((group, i) => (
+                <a
+                  key={group.key}
+                  href={`#day-${i}`}
+                  className="shrink-0 rounded-full border border-border bg-card px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground transition hover:border-primary/60 hover:text-foreground"
+                >
+                  {group.key} <span className="text-muted-foreground/60">· {group.games.length}</span>
+                </a>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {/* ===== Markets list ===== */}
       {loading ? (
-        <div className="rounded-3xl border border-border bg-card/70 p-8 text-center text-muted-foreground">
+        <div className="rounded-2xl border border-border bg-card/70 p-8 text-center text-sm text-muted-foreground">
           Loading games...
         </div>
       ) : availableGames.length === 0 ? (
-        <div className="rounded-3xl border border-border bg-card/70 p-8 text-center text-muted-foreground">
-          No live or upcoming NBA games (next 7 days) available right now. Press refresh later.
+        <div className="rounded-2xl border border-border bg-card/70 p-8 text-center text-sm text-muted-foreground">
+          No live or upcoming NBA games in the next 7 days.
         </div>
       ) : (
-        <div className="space-y-6">
-          {gamesByDay.map((group) => (
-            <div key={group.key} className="space-y-3">
-              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground">
-                <CalendarDays className="h-4 w-4" />
-                {group.key}
-                <span className="text-muted-foreground/60">· {group.games.length} game{group.games.length === 1 ? "" : "s"}</span>
+        <div className="space-y-5">
+          {gamesByDay.map((group, i) => (
+            <section key={group.key} id={`day-${i}`} className="space-y-2 scroll-mt-32">
+              <div className="flex items-center gap-2 px-1">
+                <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                <h2 className="text-xs font-black uppercase tracking-widest text-foreground">
+                  {group.key}
+                </h2>
+                <span className="text-[10px] text-muted-foreground/70">
+                  · {group.games.length} game{group.games.length === 1 ? "" : "s"}
+                </span>
               </div>
+
               {group.games.map((game) => {
-            const pickedId = selectedTeam[game.id];
-            const [a, b] = game.teams;
-            const locked = lockedBets[game.id];
-            return (
-              <article key={game.id} className="rounded-3xl border border-primary/20 bg-gradient-to-b from-[#060d1f] to-card p-4 shadow-[0_12px_28px_-16px_hsl(var(--primary)/0.5)]">
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <h2 className="text-base font-bold">{game.name}</h2>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(game.startTime).toLocaleString()} · {game.status}
-                    </p>
-                    {locked ? (
-                      <p className="text-xs font-semibold text-amber-500">
-                        Locked on {locked.pickedTeamName} ({formatCoins(locked.amount)})
-                      </p>
-                    ) : null}
-                  </div>
-                  {confirmingId === game.id && !locked ? (
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" onClick={() => setConfirmingId(null)}>Cancel</Button>
-                      <Button onClick={() => placePrediction(game)} disabled={placingId === game.id || !pickedId}>
-                        {placingId === game.id ? "Placing..." : "Are you sure? Place"}
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      onClick={() => setConfirmingId(game.id)}
-                      disabled={placingId === game.id || !pickedId || !!locked}
-                    >
-                      {locked ? "Locked" : `Bet ${formatCoins(bet)} for ${WIN_MULTIPLIER}x`}
-                    </Button>
-                  )}
-                </div>
+                const pickedId = selectedTeam[game.id];
+                const [a, b] = game.teams;
+                const locked = lockedBets[game.id];
+                const odds = getMatchupOdds(a, b, game.isLive);
+                const aPct = Math.round(odds.a.prob * 100);
+                const bPct = 100 - aPct;
+                const pickedOdds = pickedId === a.id ? odds.a : pickedId === b.id ? odds.b : null;
+                const potentialReturn = pickedOdds
+                  ? Math.floor(bet * pickedOdds.multiplier)
+                  : 0;
 
-                <div className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                  <span className="inline-flex items-center gap-2">
-                    <span
-                      className={`inline-block h-2.5 w-2.5 rounded-full ${game.isLive ? "bg-red-500" : "bg-emerald-500"}`}
-                      aria-hidden
-                    />
-                    {game.isLive ? "LIVE market" : "UPCOMING market"} (one pick only)
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {[a, b].map((t) => {
-                    const logoKey = `${game.id}:${t.id}`;
-                    const logoIndex = logoIndexByKey[logoKey] ?? 0;
-                    const selectedLogo = t.logoCandidates?.[logoIndex] ?? t.logo;
-                    const opposing = t.id === a.id ? b : a;
-                    const marketChance = getTeamMarketChance(t, opposing, game.isLive);
-
-                    return (
-                    <button
-                      key={t.id}
-                      onClick={() => setSelectedTeam((prev) => ({ ...prev, [game.id]: t.id }))}
-                      disabled={!!locked}
-                      className={`rounded-2xl border p-3 text-left transition ${
-                        pickedId === t.id
-                          ? "border-primary bg-gradient-to-r from-primary/20 via-primary/10 to-transparent shadow-[0_0_18px_hsl(var(--primary)/0.25)]"
-                          : "border-border/80 bg-background/40 hover:border-primary/40"
-                      } ${locked ? "cursor-not-allowed opacity-60" : ""}`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                        {selectedLogo ? (
-                          <img
-                            src={selectedLogo}
-                            alt={`${t.name} logo`}
-                            className="h-10 w-10 rounded-full border border-border bg-white p-1 object-contain"
-                            loading="lazy"
-                            onError={() => {
-                              if ((t.logoCandidates?.length ?? 0) > logoIndex + 1) {
-                                setLogoIndexByKey((prev) => ({
-                                  ...prev,
-                                  [logoKey]: logoIndex + 1,
-                                }));
-                                return;
-                              }
-
-                              setLogoIndexByKey((prev) => ({
-                                ...prev,
-                                [logoKey]: Number.MAX_SAFE_INTEGER,
-                              }));
-                            }}
-                          />
+                return (
+                  <article
+                    key={game.id}
+                    className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:border-primary/40"
+                  >
+                    {/* Card head */}
+                    <div className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {game.isLive ? (
+                          <span className="flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-destructive">
+                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-destructive" />
+                            Live
+                          </span>
                         ) : (
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background text-xs font-black">
-                            {t.abbrev}
-                          </div>
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                            {new Date(game.startTime).toLocaleTimeString([], {
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })}
+                          </span>
                         )}
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                            {t.abbrev}
-                          </p>
-                          <p className="text-base font-black">{t.name}</p>
-                          <p className="text-sm text-muted-foreground">Score: {t.score}</p>
-                        </div>
-                        </div>
-                        <div className="rounded-xl border border-primary/30 bg-primary/15 px-3 py-2 text-right">
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Chance</p>
-                          <p className="text-2xl font-black text-primary">{marketChance}%</p>
-                        </div>
+                        <p className="truncate text-[11px] text-muted-foreground">{game.status}</p>
                       </div>
-                    </button>
-                    );
-                  })}
-                </div>
-              </article>
-            );
+                      {locked ? (
+                        <span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-500">
+                          <Lock className="h-3 w-3" /> Locked
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {/* Probability bar (Polymarket-style) */}
+                    <div className="px-3 pt-3">
+                      <div className="flex h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="bg-emerald-500 transition-all"
+                          style={{ width: `${aPct}%` }}
+                        />
+                        <div
+                          className="bg-sky-500 transition-all"
+                          style={{ width: `${bPct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Two team rows */}
+                    <div className="space-y-1.5 p-3">
+                      {[
+                        { team: a, side: odds.a, accent: "emerald" as const },
+                        { team: b, side: odds.b, accent: "sky" as const },
+                      ].map(({ team: t, side, accent }) => {
+                        const logoKey = `${game.id}:${t.id}`;
+                        const logoIndex = logoIndexByKey[logoKey] ?? 0;
+                        const selectedLogo = t.logoCandidates?.[logoIndex] ?? t.logo;
+                        const isPicked = pickedId === t.id;
+                        const isLockedPick = locked?.pickedTeamId === t.id;
+                        const pct = Math.round(side.prob * 100);
+
+                        return (
+                          <button
+                            key={t.id}
+                            onClick={() =>
+                              !locked &&
+                              setSelectedTeam((prev) => ({ ...prev, [game.id]: t.id }))
+                            }
+                            disabled={!!locked}
+                            className={`group flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
+                              isLockedPick
+                                ? "border-amber-500/60 bg-amber-500/10"
+                                : isPicked
+                                  ? "border-primary bg-primary/10 shadow-[0_0_12px_hsl(var(--primary)/0.25)]"
+                                  : "border-border bg-background/40 hover:border-primary/40 hover:bg-background/70"
+                            } ${locked && !isLockedPick ? "opacity-50" : ""} ${locked ? "cursor-default" : "cursor-pointer"}`}
+                          >
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              {selectedLogo && logoIndex !== Number.MAX_SAFE_INTEGER ? (
+                                <img
+                                  src={selectedLogo}
+                                  alt={`${t.name} logo`}
+                                  className="h-9 w-9 shrink-0 rounded-full border border-border bg-white object-contain p-0.5"
+                                  loading="lazy"
+                                  onError={() => {
+                                    if ((t.logoCandidates?.length ?? 0) > logoIndex + 1) {
+                                      setLogoIndexByKey((prev) => ({
+                                        ...prev,
+                                        [logoKey]: logoIndex + 1,
+                                      }));
+                                      return;
+                                    }
+                                    setLogoIndexByKey((prev) => ({
+                                      ...prev,
+                                      [logoKey]: Number.MAX_SAFE_INTEGER,
+                                    }));
+                                  }}
+                                />
+                              ) : (
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-[10px] font-black">
+                                  {t.abbrev}
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-black leading-tight">
+                                  {t.name}
+                                </p>
+                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                  {t.abbrev}
+                                  {t.record ? ` · ${t.record.w}-${t.record.l}` : ""}
+                                  {game.isLive ? ` · ${t.score} pts` : ""}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex shrink-0 items-center gap-2">
+                              <div className="text-right">
+                                <p
+                                  className={`text-lg font-black leading-none tabular-nums ${
+                                    accent === "emerald" ? "text-emerald-500" : "text-sky-500"
+                                  }`}
+                                >
+                                  {pct}%
+                                </p>
+                                <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                  {side.multiplier.toFixed(2)}×
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Bet button row */}
+                    <div className="border-t border-border/60 bg-background/30 px-3 py-2.5">
+                      {locked ? (
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-amber-500">
+                            🔒 {locked.pickedTeamName}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {formatCoins(locked.amount)} @{" "}
+                            <span className="font-black text-foreground">
+                              {locked.multiplier.toFixed(2)}×
+                            </span>{" "}
+                            → win{" "}
+                            <span className="font-black text-emerald-500">
+                              {formatCoins(Math.floor(locked.amount * locked.multiplier))}
+                            </span>
+                          </span>
+                        </div>
+                      ) : confirmingId === game.id ? (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => setConfirmingId(null)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="flex-1 bg-gradient-to-r from-primary to-primary/80 font-black"
+                            onClick={() => placePrediction(game)}
+                            disabled={placingId === game.id || !pickedId}
+                          >
+                            {placingId === game.id ? "Placing..." : "Confirm Bet"}
+                          </Button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => pickedId && setConfirmingId(game.id)}
+                          disabled={!pickedId || placingId === game.id}
+                          className={`relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-3 text-sm font-black uppercase tracking-wider transition active:scale-[0.98] ${
+                            pickedId
+                              ? "bg-gradient-to-r from-primary via-primary to-primary/80 text-primary-foreground shadow-[0_4px_20px_-4px_hsl(var(--primary)/0.6)] hover:shadow-[0_6px_24px_-2px_hsl(var(--primary)/0.8)]"
+                              : "cursor-not-allowed bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {pickedId ? (
+                            <>
+                              <Zap className="h-4 w-4" />
+                              Bet {formatCoins(bet)} → win{" "}
+                              <span className="tabular-nums">
+                                {formatCoins(potentialReturn)}
+                              </span>
+                              <span className="rounded-md bg-background/20 px-1.5 py-0.5 text-[10px]">
+                                {pickedOdds?.multiplier.toFixed(2)}×
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <TrendingUp className="h-4 w-4" />
+                              Pick a team to bet
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </article>
+                );
               })}
-            </div>
+            </section>
           ))}
+
+          <div className="flex items-center justify-center gap-2 pt-2 text-[10px] text-muted-foreground/70">
+            <ShieldCheck className="h-3 w-3 text-emerald-500" />
+            One pick per matchup · Auto-settles at final score · Feed: {feed?.toUpperCase() ?? "..."}
+          </div>
         </div>
       )}
     </div>
