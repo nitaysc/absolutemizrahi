@@ -215,14 +215,32 @@ export function CaseReel({
         out.push(basePool[Math.floor(Math.random() * basePool.length)]);
       }
       out[LANDING_INDEX] = landed;
-      const baitOffsets = [-3, -1, 2, 4];
+      // More bait positions around the landing zone for stronger "almost!" feel.
+      const baitOffsets = [-5, -4, -3, -2, -1, 2, 3, 4, 5, 6];
       baitOffsets.forEach((off, idx) => {
         const pos = LANDING_INDEX + off;
         if (pos < 0 || pos >= STRIP_LEN || pos === LANDING_INDEX) return;
-        if (Math.random() < 0.45 && baitPool.length) {
+        if (Math.random() < 0.7 && baitPool.length) {
           out[pos] = baitPool[idx % baitPool.length];
         }
       });
+      // ~25% of normal spins, sprinkle 1-2 Empire/Duel "tease" tiles far from
+      // the landing index so players actually see they exist (visual only).
+      if (Math.random() < 0.25) {
+        const tease: ReelItem =
+          Math.random() < 0.5
+            ? { name: "Empire Spin", image: "✨", value: 0, rarity: "legendary", special: "empire" }
+            : { name: "Duel Spin", image: "⚔️", value: 0, rarity: "epic", special: "duel" };
+        const teaseCount = 1 + Math.floor(Math.random() * 2);
+        for (let k = 0; k < teaseCount; k++) {
+          // Keep teases at least 8 tiles away from the landing index so they
+          // never touch the result or its neighbours.
+          const safe = Math.floor(Math.random() * (LANDING_INDEX - 12));
+          if (safe >= 0 && safe < STRIP_LEN && Math.abs(safe - LANDING_INDEX) > 8) {
+            out[safe] = tease;
+          }
+        }
+      }
       return out;
     };
 
