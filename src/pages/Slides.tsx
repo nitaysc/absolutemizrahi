@@ -7,17 +7,20 @@ import { toast } from "sonner";
 import { BetControls } from "@/components/BetControls";
 import { NumberField } from "@/components/NumberField";
 import { Button } from "@/components/ui/button";
+import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel";
 import { formatCoins } from "@/lib/format";
 import { GalleryHorizontal, ChevronDown } from "lucide-react";
 
 // Stake-style "Slides": a long horizontal strip of randomly-generated
 // multipliers scrolls past a fixed pointer in the middle. Whatever card
 // stops under the pointer is the round result. Win if landed >= target.
-const HOUSE_EDGE = 0.97;
+// Matches Limbo's edge so the math feels consistent across games.
+const HOUSE_EDGE = 0.99;
 const CARD_W = 88; // px including gap
 const STRIP_LEN = 80;
 const LANDING_INDEX = 60; // where the marker stops in the strip
 const SLIDE_DURATION_SEC = 3.6;
+const FAST_SLIDE_DURATION_SEC = 0.6; // used while autobetting so rounds chain quickly
 
 function rollMultiplier() {
   // Inverse-CDF style multiplier with house edge — same shape as Limbo
@@ -45,6 +48,7 @@ function buildStrip(landed: number) {
 export default function Slides() {
   useTrackGame("slides");
   const { profile, setLocalCoins } = useUserProfile();
+  const [mode, setMode] = useState<"manual" | "auto">("manual");
   const [bet, setBet] = useState(10);
   const [target, setTarget] = useState(2);
   const [rolling, setRolling] = useState(false);
@@ -80,11 +84,21 @@ export default function Slides() {
   );
   const potentialPayout = Math.floor(bet * target);
 
-  async function playRound() {
-    if (!profile) return;
-    if (bet < 1) return toast.error("Bet at least 1 coin");
-    if (bet > profile.coins) return toast.error("Not enough coins");
-    if (target < 1.01 || target > 5000) return toast.error("Target must be 1.01 – 5000");
+  async function playRound(betOverride?: number): Promise<AutoBetRoundResult | null> {
+    if (!profile) return null;
+    const stake = betOverride ?? bet;
+    if (stake < 1) {
+      toast.error("Bet at least 1 coin");
+      return null;
+    }
+    if (stake > profile.coins) {
+      toast.error("Not enough coins");
+      return null;
+    }
+    if (target < 1.01 || target > 5000) {
+      toast.error("Target must be 1.01 – 5000");
+      return null;
+    }
 
     setRolling(true);
     setResult(null);
@@ -98,11 +112,12 @@ export default function Slides() {
     // Add a tiny overshoot before settling to make it feel smoother.
     const startX = trackW + CARD_W * 4;
     const endX = trackW / 2 - LANDING_INDEX * CARD_W - CARD_W / 2;
+    const duration = mode === "auto" ? FAST_SLIDE_DURATION_SEC : SLIDE_DURATION_SEC;
     controls.set({ x: startX });
     await controls.start({
       x: [startX, endX + CARD_W * 0.35, endX],
       transition: {
-        duration: SLIDE_DURATION_SEC,
+        duration,
         ease: [0.1, 0.85, 0.2, 1],
         times: [0, 0.92, 1],
       },
@@ -111,7 +126,7 @@ export default function Slides() {
     const won = landed >= targetAtBet;
     const { data, error } = await supabase.rpc("place_bet", {
       _game: "slides",
-      _bet_amount: bet,
+      _bet_amount: stake,
       _won: won,
       // place_bet treats multiplier as total return multiple (bet × multiplier),
       // matching Limbo/Dice. A 2× target on a 10 bet returns 20 (+10 profit).
@@ -120,16 +135,22 @@ export default function Slides() {
     });
 
     setRolling(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return null;
+    }
 
     setResult(landed);
     if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
     setHistory((h) => [{ result: landed, won }, ...h].slice(0, 14));
 
     const payout = Number(data?.[0]?.payout ?? 0);
-    const profit = won ? Math.max(payout - bet, 0) : -bet;
-    if (won) toast.success(`Slides hit! +${formatCoins(profit)} (${landed.toFixed(2)}× vs ${targetAtBet.toFixed(2)}×)`);
-    else toast.error(`Slipped at ${landed.toFixed(2)}×`);
+    const profit = won ? Math.max(payout - stake, 0) : -stake;
+    if (mode === "manual") {
+      if (won) toast.success(`Slides hit! +${formatCoins(profit)} (${landed.toFixed(2)}× vs ${targetAtBet.toFixed(2)}×)`);
+      else toast.error(`Slipped at ${landed.toFixed(2)}×`);
+    }
+    return { won, profit: won ? profit : -stake };
   }
 
   return (
@@ -164,6 +185,20 @@ export default function Slides() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[320px_1fr]">
         <aside className="rounded-3xl border border-border bg-card/70 p-4 backdrop-blur-xl">
           <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-1 rounded-full bg-background/60 p-1">
+              {(["manual", "auto"] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMode(m)}
+                  disabled={rolling}
+                  className={`rounded-full py-1.5 text-xs font-bold uppercase tracking-widest transition ${
+                    mode === m ? "bg-card text-foreground shadow" : "text-muted-foreground"
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
             <BetControls bet={bet} setBet={setBet} disabled={rolling} />
             <div>
               <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
@@ -189,13 +224,17 @@ export default function Slides() {
                 <p className="text-sm font-black">{formatCoins(potentialPayout)}</p>
               </div>
             </div>
-            <Button
-              onClick={playRound}
-              disabled={rolling}
-              className="h-12 w-full text-base font-black"
-            >
-              {rolling ? "SLIDING..." : "BET"}
-            </Button>
+            {mode === "manual" ? (
+              <Button
+                onClick={() => playRound()}
+                disabled={rolling}
+                className="h-12 w-full text-base font-black"
+              >
+                {rolling ? "SLIDING..." : "BET"}
+              </Button>
+            ) : (
+              <AutoBetPanel bet={bet} setBet={setBet} onBet={playRound} disabled={rolling} />
+            )}
           </div>
         </aside>
 
