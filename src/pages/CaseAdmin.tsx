@@ -10,6 +10,21 @@ function isUrl(s: string | null | undefined) {
   return !!s && /^https?:\/\//i.test(s);
 }
 
+function isValidImageUrl(s: string | null | undefined): boolean {
+  if (!s) return false;
+  if (!/^https?:\/\//i.test(s)) return false;
+  try {
+    new URL(s);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function looksLikeUrl(s: string): boolean {
+  return /^\s*https?:\/\//i.test(s) || /\.(png|jpg|jpeg|webp|gif|svg)(\?|$)/i.test(s);
+}
+
 type CaseRow = {
   id: string;
   name: string;
@@ -441,15 +456,28 @@ function ItemRowEditor({
       />
       <div className="flex items-center gap-1">
         <button
-          onClick={() =>
+          onClick={() => {
+            const cleanName = name.trim();
+            if (!cleanName) {
+              toast.error("Name is required");
+              return;
+            }
+            if (looksLikeUrl(cleanName)) {
+              toast.error("Item name can't be a URL — put the URL in the image field");
+              return;
+            }
+            if (image && /^https?:\/\//i.test(image) && !isValidImageUrl(image)) {
+              toast.error("Invalid image URL");
+              return;
+            }
             void onSave({
-              name: name.trim(),
+              name: cleanName,
               value: Math.max(0, Math.floor(value)),
               weight: Math.max(0.0001, Number(weight)),
               rarity,
               image: image || null,
-            })
-          }
+            });
+          }}
           className="inline-flex items-center gap-1 rounded bg-primary px-2 py-1 font-bold text-primary-foreground"
         >
           <Save className="h-3 w-3" />

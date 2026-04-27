@@ -517,23 +517,20 @@ export default function CaseBattleRoom() {
               )}
 
               {/* Winner badge */}
-              {isWinnerTeam && (
+              {isWinnerTeam && p && (
                 <motion.div
                   initial={{ scale: 0.85, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: "spring", stiffness: 200, damping: 14 }}
                   className="mt-2 rounded-lg bg-amber-500/15 p-2 text-center text-xs font-black text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.5)]"
                 >
-                  WINNER · +
-                  {formatCoins(
-                    Math.floor(
-                      (battle.pot_payout ?? 0) /
-                        Math.max(
-                          1,
-                          players.filter((pp) => pp.team === p?.team && !pp.is_bot).length
-                        )
-                    )
-                  )}
+                  {(() => {
+                    const teammates = players.filter((pp) => pp.team === p.team);
+                    const humans = teammates.filter((pp) => !pp.is_bot).length;
+                    if (p.is_bot) return "WINNER · BOT";
+                    const share = Math.floor((battle.pot_payout ?? 0) / Math.max(1, humans));
+                    return `WINNER · +${formatCoins(share)}`;
+                  })()}
                 </motion.div>
               )}
             </div>
@@ -558,7 +555,7 @@ export default function CaseBattleRoom() {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               transition={{ type: "spring", stiffness: 180, damping: 18 }}
-              className="relative z-10 w-full max-w-3xl space-y-6 rounded-3xl border border-primary/40 bg-card/80 p-6 shadow-[0_0_60px_-10px_hsl(var(--primary)/0.7)] sm:p-8"
+              className="relative z-10 my-6 w-full max-w-3xl space-y-6 rounded-3xl border border-primary/40 bg-card/80 p-6 shadow-[0_0_60px_-10px_hsl(var(--primary)/0.7)] sm:p-8"
             >
               {/* Title */}
               <div className="text-center">
@@ -582,6 +579,20 @@ export default function CaseBattleRoom() {
                   <Swords className="h-3 w-3" />
                   {battle.mode} · {battle.type}
                 </div>
+                <div className="mt-3 inline-flex flex-wrap items-center justify-center gap-2 text-xs">
+                  <span className="rounded-full border border-border bg-background/50 px-3 py-1">
+                    Pot:{" "}
+                    <span className="font-black text-primary">
+                      {formatCoins(battle.pot_payout ?? 0)}
+                    </span>
+                  </span>
+                  <span className="rounded-full border border-border bg-background/50 px-3 py-1 text-muted-foreground">
+                    Total wagered:{" "}
+                    <span className="font-black text-foreground">
+                      {formatCoins(battle.total_cost)}
+                    </span>
+                  </span>
+                </div>
               </div>
 
               {/* Winner cards */}
@@ -591,9 +602,15 @@ export default function CaseBattleRoom() {
                   .map((p, i) => {
                     const winners = players.filter((pp) => pp.team === battle.winner_team);
                     const humanWinners = winners.filter((pp) => !pp.is_bot).length;
-                    const share = Math.floor(
-                      (battle.pot_payout ?? 0) / Math.max(1, humanWinners || winners.length),
-                    );
+                    const pot = battle.pot_payout ?? 0;
+                    // Coins are split only between human winners (bots can't earn).
+                    // If the team is all bots (impossible currently — must have ≥1 human),
+                    // we still display 0 for bots.
+                    const humanShare = humanWinners > 0
+                      ? Math.floor(pot / humanWinners)
+                      : 0;
+                    const myShare = p.is_bot ? 0 : humanShare;
+                    const sharePct = pot > 0 ? (myShare / pot) * 100 : 0;
                     return (
                       <motion.div
                         key={p.id}
@@ -626,13 +643,50 @@ export default function CaseBattleRoom() {
                           <span className="truncate">{p.display_name}</span>
                           {p.is_bot && <Bot className="h-3 w-3 shrink-0 text-muted-foreground" />}
                         </div>
-                        <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-background/60 px-2 py-0.5 text-sm font-black text-amber-300">
-                          <MizrahiCoin size={12} /> {formatCoins(share)}
-                        </div>
+                        {p.is_bot ? (
+                          <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-background/60 px-2 py-0.5 text-[11px] font-black text-muted-foreground">
+                            BOT · no payout
+                          </div>
+                        ) : (
+                          <>
+                            <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-background/60 px-2 py-0.5 text-sm font-black text-amber-300">
+                              <MizrahiCoin size={12} /> {formatCoins(myShare)}
+                            </div>
+                            <div className="mt-1 text-[10px] font-bold text-muted-foreground">
+                              {sharePct.toFixed(0)}% of pot
+                            </div>
+                          </>
+                        )}
                       </motion.div>
                     );
                   })}
               </div>
+
+              {/* Split summary line */}
+              {(() => {
+                const winners = players.filter((pp) => pp.team === battle.winner_team);
+                const humanWinners = winners.filter((pp) => !pp.is_bot).length;
+                const botWinners = winners.length - humanWinners;
+                if (winners.length <= 1) return null;
+                return (
+                  <div className="mx-auto max-w-md rounded-2xl border border-border bg-background/40 px-4 py-2 text-center text-xs text-muted-foreground">
+                    Pot of{" "}
+                    <span className="font-black text-primary">
+                      {formatCoins(battle.pot_payout ?? 0)}
+                    </span>{" "}
+                    split between{" "}
+                    <span className="font-black text-foreground">{humanWinners}</span>{" "}
+                    {humanWinners === 1 ? "player" : "players"}
+                    {botWinners > 0 && (
+                      <>
+                        {" "}· <span className="font-bold">{botWinners}</span>{" "}
+                        {botWinners === 1 ? "bot teammate" : "bot teammates"} earn no coins
+                      </>
+                    )}
+                    .
+                  </div>
+                );
+              })()}
 
               {/* Action buttons */}
               <motion.div
