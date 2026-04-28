@@ -49,6 +49,7 @@ export function AutoBetPanel({ bet, setBet, onBet, disabled, intervalMs = 250 }:
   const [onLossPct, setOnLossPct] = useState(0);
   const [stopProfit, setStopProfit] = useState(0);
   const [stopLoss, setStopLoss] = useState(0);
+  const [autoSpeed, setAutoSpeed] = useState(2);
 
   const [running, setRunning] = useState(false);
   const [left, setLeft] = useState(0);
@@ -113,7 +114,8 @@ export function AutoBetPanel({ bet, setBet, onBet, disabled, intervalMs = 250 }:
       }
       i++;
       if (!infinite) setLeft(bets - i);
-      await new Promise((r) => setTimeout(r, intervalMs));
+      const waitMs = Math.max(40, Math.round(intervalMs / autoSpeed));
+      await new Promise((r) => setTimeout(r, waitMs));
     }
     setRunning(false);
     // Restore the stake the user originally entered.
@@ -195,6 +197,25 @@ export function AutoBetPanel({ bet, setBet, onBet, disabled, intervalMs = 250 }:
             className="mt-1"
           />
         </div>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Auto speed
+          </label>
+          <span className="text-xs font-black tabular-nums text-foreground">{autoSpeed.toFixed(1)}×</span>
+        </div>
+        <input
+          type="range"
+          min={2}
+          max={5}
+          step={0.1}
+          value={autoSpeed}
+          onChange={(e) => setAutoSpeed(Number(e.target.value))}
+          disabled={running}
+          className="mt-2 h-2 w-full cursor-pointer accent-primary disabled:cursor-not-allowed"
+        />
       </div>
 
       {/* Live session readout */}
