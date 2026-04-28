@@ -104,7 +104,7 @@ export default function Keno() {
   }
 
   async function placeBet(betOverride?: number): Promise<AutoBetRoundResult | null> {
-    if (!profile) return;
+    if (!profile) return null;
     if (selected.size < 1 || selected.size > MAX_PICKS)
       return null;
     const stake = Math.floor(betOverride ?? bet);
@@ -246,7 +246,7 @@ export default function Keno() {
                   }
                   placeBet();
                 }}
-                disabled={rolling || selected.size === 0}
+                disabled={rolling || selected.size === 0 || !profile}
                 className="h-12 w-full text-base font-black"
               >
                 <Play className="mr-2 h-4 w-4" /> {rolling ? "DRAWING..." : "BET"}
@@ -256,7 +256,7 @@ export default function Keno() {
                 bet={bet}
                 setBet={setBet}
                 onBet={placeBet}
-                disabled={rolling || selected.size === 0}
+                disabled={rolling || selected.size === 0 || !profile}
                 intervalMs={350}
               />
             )}
