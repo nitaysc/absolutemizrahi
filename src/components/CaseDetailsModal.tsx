@@ -74,7 +74,7 @@ export function CaseDetailsModal({
   const empireRate = 0.0025;
   const duelRate = 0.01;
   const empireRarities = ["legendary", "mythic"];
-  const duelRarities = ["legendary"];
+  const duelRarities = ["legendary", "common"];
   const empireWeight = items?.reduce(
     (s, i) => (empireRarities.includes(i.rarity) ? s + Number(i.weight) : s),
     0,
@@ -230,7 +230,7 @@ export function CaseDetailsModal({
             )}
           </div>
           <p className="border-t border-border p-2 text-center text-[10px] text-muted-foreground">
-            Odds are exact and match the server roll. Solo = raw weights. Battle adds a 0.25% Empire spin (legendary / mythic only) and a 1% Duel spin (legendary only). Hover an item to see "1 in N" odds. RTP = expected solo return after 5% house edge.
+            Odds are exact and match the server roll. Solo = raw weights. Battle adds a 0.25% Empire spin (legendary / mythic only) and a 1% Duel spin (50% legendary / 50% common). Hover an item to see "1 in N" odds. RTP = expected solo return after 5% house edge.
           </p>
         </motion.div>
       </motion.div>

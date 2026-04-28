@@ -292,10 +292,11 @@ export function CaseReel({
       return buildStrip(upgraded.length ? upgraded : pool, result, empireTop.length ? empireTop : topItems);
     }
     if (isDuel) {
-      // Duel = legendary-only lane (matches backend roll rules)
+      // Duel = strict 50/50 rarity lane between legendary and common.
       const legendaryPool = sortedPool.filter((it) => it.rarity === "legendary");
+      const commonPool = sortedPool.filter((it) => it.rarity === "common");
       const high = legendaryPool[0] ?? result;
-      const low = legendaryPool[legendaryPool.length - 1] ?? result;
+      const low = commonPool[0] ?? result;
       const duelPool = [high, low];
       const out: ReelItem[] = [];
       for (let i = 0; i < STRIP_LEN; i++) {
@@ -303,7 +304,7 @@ export function CaseReel({
       }
       out[LANDING_INDEX] = result;
       // Make the neighbours visibly the OTHER outcome to tease
-      const other = result.value >= high.value ? low : high;
+      const other = result.rarity === "legendary" ? low : high;
       [-2, -1, 1, 2].forEach((off) => {
         const p = LANDING_INDEX + off;
         if (p >= 0 && p < STRIP_LEN) out[p] = other;
