@@ -9,10 +9,15 @@ import { cn } from "@/lib/utils";
 import mizrahi from "@/assets/absolute-mizrahi.gif";
 import { LiveStatsWindow } from "./LiveStatsWindow";
 import { PlayerAvatar } from "./PlayerAvatar";
+import { LevelBar } from "./LevelBar";
+import { LevelBadge } from "./LevelBadge";
+import { useProgression } from "@/hooks/useProgression";
+import { Trophy as TrophyIcon, Sparkles } from "lucide-react";
 
 const navItems = [
   { to: "/", label: "Lobby", icon: Home, end: true },
   { to: "/wordle", label: "Wordle", icon: Type },
+  { to: "/progression", label: "Quests", icon: Sparkles },
   { to: "/friends", label: "Friends", icon: Users },
   { to: "/leaderboard", label: "Top", icon: Trophy },
   { to: "/prediction", label: "Prediction", icon: Activity },
@@ -22,6 +27,7 @@ const navItems = [
 export function Layout() {
   const { signOut } = useAuth();
   const { profile } = useUserProfile();
+  const { stats } = useProgression();
   const navigate = useNavigate();
 
   return (
@@ -60,9 +66,17 @@ export function Layout() {
           </button>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate("/progression")}
+              className="hidden sm:block"
+              aria-label="Open progression"
+            >
+              <LevelBar />
+            </button>
             <UserPill
               avatar={profile?.avatar ?? "🎰"}
               username={profile?.username ?? "player"}
+              level={stats?.level ?? null}
               onClick={() => navigate("/profile")}
             />
             <BalancePill coins={profile?.coins ?? 0} />
@@ -74,6 +88,16 @@ export function Layout() {
               <LogOut className="h-4 w-4" />
             </button>
           </div>
+        </div>
+        {/* Mobile-only level bar row */}
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 pb-2 sm:hidden">
+          <button
+            onClick={() => navigate("/progression")}
+            className="flex w-full items-center"
+            aria-label="Open progression"
+          >
+            <LevelBar className="w-full" />
+          </button>
         </div>
       </header>
 
@@ -116,10 +140,12 @@ export function Layout() {
 function UserPill({
   avatar,
   username,
+  level,
   onClick,
 }: {
   avatar: string;
   username: string;
+  level: number | null;
   onClick: () => void;
 }) {
   return (
@@ -129,8 +155,9 @@ function UserPill({
       aria-label="Open profile"
     >
       <PlayerAvatar avatar={avatar} size={32} ring />
-      <span className="max-w-[120px] truncate text-sm font-bold">
-        {username}
+      <span className="flex items-center gap-1">
+        {level !== null && <LevelBadge level={level} size="xs" />}
+        <span className="max-w-[100px] truncate text-sm font-bold">{username}</span>
       </span>
     </button>
   );

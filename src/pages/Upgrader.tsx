@@ -161,8 +161,26 @@ export default function Upgrader() {
     setCash(0);
     refetch();
     load();
-    if (won) toast.success(`UPGRADED! ${target.name} is yours.`);
-    else toast.error("Upgrade failed — stake lost.");
+    if (won) {
+      toast.success(`UPGRADED! ${target.name} is yours.`);
+      // mission + low-chance achievement
+      if (profile) {
+        void supabase.rpc("bump_mission" as never, {
+          _user_id: profile.id,
+          _kind: "upgrade_wins",
+          _amount: 1,
+        } as never);
+        const chancePct = Number(row?.chance ?? chance);
+        if (chancePct > 0 && chancePct <= 0.1) {
+          void supabase.rpc("unlock_achievement" as never, {
+            _user_id: profile.id,
+            _code: "upgrade_low",
+          } as never);
+        }
+      }
+    } else {
+      toast.error("Upgrade failed — stake lost.");
+    }
   }
 
   return (
