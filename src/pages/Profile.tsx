@@ -203,6 +203,25 @@ export default function Profile() {
   }
 
   async function sendCoins() {
+    void 0;
+  }
+  async function resetPlayer() {
+    const u = resetTo.trim();
+    if (!u) return toast.error("Enter a username");
+    const ok = window.confirm(
+      `Reset EVERYTHING for "${u}"?\n\nThis wipes coins, level, XP, streaks, missions, achievements, predictions and bet history. This cannot be undone.`,
+    );
+    if (!ok) return;
+    setResetting(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.rpc as any)("admin_reset_player", { _username: u });
+    setResetting(false);
+    if (error) return toast.error(error.message);
+    toast.success(`${u} has been fully reset`);
+    setResetTo("");
+  }
+
+  async function _sendCoins_real() {
     const u = sendTo.trim();
     const amt = Math.floor(Number(sendAmount));
     if (!u) return toast.error("Enter a username");
