@@ -167,7 +167,15 @@ export default function Moles() {
       showResolvedBoard(molePositions);
       await settle({ won: true, mult: finalMult, stake: bet, hits: newCount, positions: molePositions });
       resetBoard();
+      return;
     }
+
+    setBusy(true);
+    setTimeout(() => {
+      setTiles(Array(HOLES).fill("hidden"));
+      setMolePositions(generateMolePositions(moles));
+      setBusy(false);
+    }, 260);
   }
 
   async function cashout() {
