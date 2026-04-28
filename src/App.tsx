@@ -6,6 +6,7 @@ import { ProfileProvider } from "@/hooks/useUserProfile";
 import { PresenceProvider } from "@/hooks/usePresence";
 import { ProgressionProvider } from "@/hooks/useProgression";
 import { ProgressionOverlay } from "@/components/ProgressionOverlay";
+import { WinBurst } from "@/components/WinBurst";
 import AuthPage from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Lobby from "./pages/Lobby";
@@ -118,6 +119,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
         <ProgressionOverlay />
+        <WinBurst />
         <Toaster />
       </BrowserRouter>
       </PresenceProvider>

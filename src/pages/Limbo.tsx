@@ -9,6 +9,7 @@ import { BetControls } from "@/components/BetControls";
 import { NumberField } from "@/components/NumberField";
 import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel";
 import { formatCoins } from "@/lib/format";
+import { triggerBigWin } from "@/components/WinBurst";
 import { Rocket, Zap } from "lucide-react";
 
 const HOUSE_EDGE = 0.99;
@@ -64,7 +65,10 @@ export default function Limbo() {
     setHistory((h) => [{ mult: result, won }, ...h].slice(0, 10));
     const payout = Number(data?.[0]?.payout ?? 0);
     const profit = won ? Math.max(payout - stake, 0) : -stake;
-    if (won) toast.success(`+${formatCoins(profit)}`);
+    if (won) {
+      toast.success(`+${formatCoins(profit)}`);
+      if (target >= 5) triggerBigWin(target, "Limbo hit");
+    }
     return { won, profit };
   }
 

@@ -9,6 +9,8 @@ import { useTrackGame } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCoins } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { playCardFlip, playCardReveal, playBomb, playCashout } from "@/lib/sfx";
+import { triggerBigWin } from "@/components/WinBurst";
 
 type Pick = "higher" | "lower" | "equal";
 type Suit = "♠" | "♥" | "♦" | "♣";
@@ -78,11 +80,13 @@ export default function HiLo() {
     setPhase("revealing");
     const drawn = randomCard();
     // Phase 1: spin the card back (suspense)
+    playCardFlip();
     setFlipping(true);
     await new Promise((r) => setTimeout(r, 550));
     // Phase 2: reveal the drawn card (flips into view)
     setNext(drawn);
     setFlipping(false);
+    playCardFlip();
     await new Promise((r) => setTimeout(r, 600));
 
     const won =
@@ -95,6 +99,7 @@ export default function HiLo() {
     setHistory((h) => [{ ...drawn, win: won }, ...h].slice(0, 12));
 
     if (!won) {
+      playBomb();
       // bust — record a losing bet for the full stake
       const { error } = await supabase.rpc("place_bet", {
         _game: "hilo",
@@ -115,8 +120,10 @@ export default function HiLo() {
     }
 
     // won this step — advance multiplier, keep playing
+    playCardReveal();
     const newMult = +(multiplier * stepMults[choice]).toFixed(4);
     setMultiplier(newMult);
+    if (newMult >= 5) triggerBigWin(newMult, "Streak");
     await new Promise((r) => setTimeout(r, 700));
     setCurrent(drawn);
     setNext(null);
@@ -141,6 +148,8 @@ export default function HiLo() {
       return;
     }
     if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
+    playCashout();
+    if (multiplier >= 3) triggerBigWin(multiplier, "Cashed out");
     toast.success(`Cashed out ${formatCoins(potential)} (${multiplier.toFixed(2)}×)`);
     setPhase("cashed");
     setPending(false);

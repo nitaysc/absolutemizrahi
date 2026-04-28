@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
 import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel";
 import { formatCoins } from "@/lib/format";
+import { triggerBigWin } from "@/components/WinBurst";
 import { Zap } from "lucide-react";
 
 const HOUSE_EDGE = 0.99;
@@ -68,6 +69,7 @@ export default function Dice() {
     setLastRoll(result);
     setHistory((h) => [{ roll: result, won }, ...h].slice(0, 10));
     const payout = Number(data?.[0]?.payout ?? 0);
+    if (won && multiplier >= 5) triggerBigWin(multiplier, "Dice win");
     return { won, profit: won ? Math.max(payout - stake, 0) : -stake };
   }
 

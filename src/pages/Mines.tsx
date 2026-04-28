@@ -11,6 +11,7 @@ import { CashoutPop } from "@/components/CashoutPop";
 import { formatCoins } from "@/lib/format";
 import { Bomb, Gem, Target, Repeat } from "lucide-react";
 import { playGem, playBomb, playTileClick, playCashout } from "@/lib/sfx";
+import { triggerBigWin } from "@/components/WinBurst";
 
 type Tile = "hidden" | "gem" | "bomb";
 type Mode = "manual" | "auto";
@@ -144,6 +145,8 @@ export default function Mines() {
       playCashout();
       const profit = Math.max(Number(r.payout ?? 0) - bet, 0);
       toast.success(`+${formatCoins(profit)} (${Number(r.multiplier).toFixed(2)}×)`);
+      const m = Number(r.multiplier);
+      if (m >= 5) triggerBigWin(m, "Cashed out");
       setCashoutPop({ show: true, multiplier: Number(r.multiplier), payout: Number(r.payout ?? 0) });
       setTimeout(() => setCashoutPop((prev) => ({ ...prev, show: false })), 1600);
       const bombs = (r.bombs as number[]) ?? [];
