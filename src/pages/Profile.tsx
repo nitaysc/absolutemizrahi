@@ -202,9 +202,6 @@ export default function Profile() {
     }
   }
 
-  async function sendCoins() {
-    void 0;
-  }
   async function resetPlayer() {
     const u = resetTo.trim();
     if (!u) return toast.error("Enter a username");
@@ -221,7 +218,7 @@ export default function Profile() {
     setResetTo("");
   }
 
-  async function _sendCoins_real() {
+  async function sendCoins() {
     const u = sendTo.trim();
     const amt = Math.floor(Number(sendAmount));
     if (!u) return toast.error("Enter a username");
