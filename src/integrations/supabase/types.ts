@@ -858,6 +858,7 @@ export type Database = {
           avatar: string
           blackjack_round: Json | null
           coins: number
+          coins_decimal: number
           created_at: string | null
           display_name: string | null
           dragontower_round: Json | null
@@ -875,6 +876,7 @@ export type Database = {
           avatar?: string
           blackjack_round?: Json | null
           coins?: number
+          coins_decimal?: number
           created_at?: string | null
           display_name?: string | null
           dragontower_round?: Json | null
@@ -892,6 +894,7 @@ export type Database = {
           avatar?: string
           blackjack_round?: Json | null
           coins?: number
+          coins_decimal?: number
           created_at?: string | null
           display_name?: string | null
           dragontower_round?: Json | null
