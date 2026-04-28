@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTrackGame } from "@/hooks/usePresence";
@@ -13,7 +13,7 @@ import { Rabbit } from "lucide-react";
 import { playGem, playBomb, playTileClick, playCashout } from "@/lib/sfx";
 
 const HOLES = 7;
-const HOUSE_EDGE = 0.99;
+const HOUSE_EDGE_PER_HIT = 0.98;
 
 type Tile = "hidden" | "empty" | "mole";
 
@@ -25,8 +25,8 @@ type Tile = "hidden" | "empty" | "mole";
  */
 function molesMultiplier(moles: number, k: number): number {
   if (k <= 0) return 1;
-  const perHit = HOLES / moles;
-  return Math.pow(perHit, k) * HOUSE_EDGE;
+  const perHit = (HOLES / moles) * HOUSE_EDGE_PER_HIT;
+  return Math.pow(perHit, k);
 }
 
 function generateMolePositions(count: number): number[] {
@@ -50,16 +50,29 @@ export default function Moles() {
   const [hitCount, setHitCount] = useState(0);
   const [busy, setBusy] = useState(false);
   const [hammerAt, setHammerAt] = useState<number | null>(null);
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const multiplier = useMemo(() => molesMultiplier(moles, hitCount), [moles, hitCount]);
   const molesLeft = moles - hitCount;
   const profit = Math.floor(bet * multiplier) - bet;
 
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current) {
+        clearTimeout(resetTimerRef.current);
+      }
+    };
+  }, []);
+
   function resetBoard(delay = 2200) {
-    setTimeout(() => {
+    if (resetTimerRef.current) {
+      clearTimeout(resetTimerRef.current);
+    }
+    resetTimerRef.current = setTimeout(() => {
       setTiles(Array(HOLES).fill("hidden"));
       setHitCount(0);
       setMolePositions([]);
+      resetTimerRef.current = null;
     }, delay);
   }
 
@@ -92,6 +105,10 @@ export default function Moles() {
 
   function start() {
     if (!validateStake(bet)) return;
+    if (resetTimerRef.current) {
+      clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = null;
+    }
     const nextMoles = generateMolePositions(moles);
     setMolePositions(nextMoles);
     setTiles(Array(HOLES).fill("hidden"));
