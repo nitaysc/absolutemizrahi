@@ -36,6 +36,7 @@ export default function HiLo() {
   const [history, setHistory] = useState<{ rank: number; suit: Suit; win: boolean }[]>([]);
   const [pending, setPending] = useState(false);
   const [flip, setFlip] = useState(0);
+  const [flipping, setFlipping] = useState(false);
 
   const probabilities = useMemo(() => {
     const higher = (13 - current.rank) / 13;
@@ -76,9 +77,13 @@ export default function HiLo() {
     setPending(true);
     setPhase("revealing");
     const drawn = randomCard();
-    // small reveal delay for the flip animation
-    await new Promise((r) => setTimeout(r, 450));
+    // Phase 1: spin the card back (suspense)
+    setFlipping(true);
+    await new Promise((r) => setTimeout(r, 550));
+    // Phase 2: reveal the drawn card (flips into view)
     setNext(drawn);
+    setFlipping(false);
+    await new Promise((r) => setTimeout(r, 600));
 
     const won =
       choice === "higher"
@@ -112,7 +117,7 @@ export default function HiLo() {
     // won this step — advance multiplier, keep playing
     const newMult = +(multiplier * stepMults[choice]).toFixed(4);
     setMultiplier(newMult);
-    await new Promise((r) => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 700));
     setCurrent(drawn);
     setNext(null);
     setFlip((f) => f + 1);
@@ -161,11 +166,11 @@ export default function HiLo() {
 
   return (
     <div className="space-y-4">
-      <section className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-card/80 via-card/60 to-background p-5 backdrop-blur-xl">
+      <section className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-card/80 via-card/60 to-background p-4 backdrop-blur-xl">
         <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/20 blur-3xl" />
         <p className="text-xs font-bold uppercase tracking-widest text-primary">Classic card game</p>
-        <h1 className="mt-1 text-3xl font-black">HI-LO</h1>
-        <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+        <h1 className="mt-1 text-2xl font-black">HI-LO</h1>
+        <p className="mt-1 max-w-xl text-xs text-muted-foreground">
           Place a bet, then chain correct guesses to grow your multiplier. Cash out anytime — one wrong call busts the round.
         </p>
       </section>
@@ -173,7 +178,7 @@ export default function HiLo() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
         <section className="rounded-3xl border border-border bg-card/70 p-5 backdrop-blur-xl">
           {/* Multiplier + cashout banner */}
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-background/60 px-4 py-3">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-background/60 px-4 py-2.5">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Multiplier</p>
               <motion.p
@@ -181,7 +186,7 @@ export default function HiLo() {
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 className={cn(
-                  "text-3xl font-black tabular-nums",
+                  "text-2xl font-black tabular-nums",
                   multiplier > 1 ? "text-primary drop-shadow-[0_0_18px_hsl(var(--primary)/0.55)]" : "text-foreground",
                 )}
               >
@@ -190,30 +195,42 @@ export default function HiLo() {
             </div>
             <div className="text-right">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Potential</p>
-              <p className="text-2xl font-black tabular-nums text-foreground">{formatCoins(potential)}</p>
+              <p className="text-xl font-black tabular-nums text-foreground">{formatCoins(potential)}</p>
             </div>
           </div>
 
           {/* Cards */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="mx-auto grid max-w-md grid-cols-2 gap-3" style={{ perspective: 1200 }}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={`cur-${flip}`}
-                initial={{ rotateY: 90, opacity: 0 }}
+                initial={{ rotateY: -90, opacity: 0 }}
                 animate={{ rotateY: 0, opacity: 1 }}
-                transition={{ duration: 0.35 }}
+                transition={{ duration: 0.5 }}
+                style={{ transformStyle: "preserve-3d" }}
               >
                 <PlayingCard label="Current" rank={current.rank} suit={current.suit} active />
               </motion.div>
             </AnimatePresence>
 
             <AnimatePresence mode="wait">
-              {next ? (
+              {flipping ? (
+                <motion.div
+                  key="flipping"
+                  initial={{ rotateY: 0 }}
+                  animate={{ rotateY: 90 }}
+                  transition={{ duration: 0.5, ease: "easeIn" }}
+                  style={{ transformStyle: "preserve-3d" }}
+                >
+                  <CardBack pulsing />
+                </motion.div>
+              ) : next ? (
                 <motion.div
                   key={`next-${history.length}`}
-                  initial={{ rotateY: 90, opacity: 0 }}
+                  initial={{ rotateY: -90, opacity: 0 }}
                   animate={{ rotateY: 0, opacity: 1 }}
-                  transition={{ duration: 0.4 }}
+                  transition={{ duration: 0.55, ease: "easeOut" }}
+                  style={{ transformStyle: "preserve-3d" }}
                 >
                   <PlayingCard
                     label="Drawn"
@@ -229,7 +246,7 @@ export default function HiLo() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
                 >
-                  <CardBack pulsing={phase === "revealing"} />
+                  <CardBack />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -381,7 +398,7 @@ function PlayingCard({
   return (
     <div
       className={cn(
-        "relative aspect-[3/4] overflow-hidden rounded-2xl border bg-gradient-to-br p-3 shadow-lg transition-all",
+        "relative mx-auto aspect-[3/4] w-full max-w-[160px] overflow-hidden rounded-xl border bg-gradient-to-br p-2 shadow-lg transition-all",
         active
           ? "border-primary/60 from-background to-card shadow-[0_0_30px_hsl(var(--primary)/0.25)]"
           : win === true
@@ -393,26 +410,26 @@ function PlayingCard({
     >
       <div className="flex items-start justify-between">
         <div>
-          <p className={cn("text-2xl font-black leading-none", red ? "text-rose-400" : "text-foreground")}>
+          <p className={cn("text-lg font-black leading-none", red ? "text-rose-400" : "text-foreground")}>
             {RANKS[rank - 1]}
           </p>
-          <p className={cn("text-xl leading-none", red ? "text-rose-400" : "text-foreground")}>{suit}</p>
+          <p className={cn("text-base leading-none", red ? "text-rose-400" : "text-foreground")}>{suit}</p>
         </div>
-        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+        <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
       </div>
       <div
         className={cn(
-          "absolute inset-0 flex items-center justify-center text-7xl font-black opacity-90",
+          "absolute inset-0 flex items-center justify-center text-5xl font-black opacity-90",
           red ? "text-rose-400" : "text-foreground",
         )}
       >
         {suit}
       </div>
-      <div className="absolute bottom-3 right-3 rotate-180">
-        <p className={cn("text-2xl font-black leading-none", red ? "text-rose-400" : "text-foreground")}>
+      <div className="absolute bottom-2 right-2 rotate-180">
+        <p className={cn("text-lg font-black leading-none", red ? "text-rose-400" : "text-foreground")}>
           {RANKS[rank - 1]}
         </p>
-        <p className={cn("text-xl leading-none", red ? "text-rose-400" : "text-foreground")}>{suit}</p>
+        <p className={cn("text-base leading-none", red ? "text-rose-400" : "text-foreground")}>{suit}</p>
       </div>
     </div>
   );
@@ -422,13 +439,13 @@ function CardBack({ pulsing }: { pulsing?: boolean }) {
   return (
     <div
       className={cn(
-        "relative aspect-[3/4] overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/20 via-card to-background p-3 shadow-lg",
+        "relative mx-auto aspect-[3/4] w-full max-w-[160px] overflow-hidden rounded-xl border border-border bg-gradient-to-br from-primary/20 via-card to-background p-2 shadow-lg",
         pulsing && "animate-pulse",
       )}
     >
       <div className="absolute inset-2 rounded-xl border border-primary/30" />
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="text-5xl font-black text-primary/70 drop-shadow-[0_0_20px_hsl(var(--primary)/0.6)]">?</div>
+        <div className="text-4xl font-black text-primary/70 drop-shadow-[0_0_20px_hsl(var(--primary)/0.6)]">?</div>
       </div>
       <div
         className="absolute inset-0 opacity-30"

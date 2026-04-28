@@ -46,6 +46,7 @@ import Upgrader from "./pages/Upgrader";
 import Progression from "./pages/Progression";
 import NotFound from "./pages/NotFound";
 import HiLo from "./pages/HiLo";
+import Darts from "./pages/Darts";
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -96,6 +97,7 @@ const App = () => (
             <Route path="/slide" element={<Slide />} />
             <Route path="/slides" element={<Slides />} />
             <Route path="/hilo" element={<HiLo />} />
+            <Route path="/darts" element={<Darts />} />
             <Route path="/chess" element={<ChessLobby />} />
             <Route path="/chess/:gameId" element={<ChessGame />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
