@@ -452,6 +452,36 @@ export default function Profile() {
         </section>
       )}
 
+      {isAdmin && (
+        <section className="rounded-3xl border border-destructive/40 bg-gradient-to-br from-destructive/10 to-transparent p-5">
+          <h2 className="text-sm font-black uppercase tracking-widest text-destructive">
+            👑 Admin · Reset player
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Wipes coins, level, XP, streaks, missions, achievements, predictions and bet
+            history for the given username. This cannot be undone.
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
+            <Input
+              value={resetTo}
+              onChange={(e) => setResetTo(e.target.value)}
+              placeholder="Username"
+              disabled={resetting}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") resetPlayer();
+              }}
+            />
+            <Button
+              onClick={resetPlayer}
+              disabled={resetting || !resetTo.trim()}
+              variant="destructive"
+            >
+              {resetting ? "Resetting..." : "Reset everything"}
+            </Button>
+          </div>
+        </section>
+      )}
+
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Balance" value={formatCoins(profile?.coins ?? 0)} coin />
         <Stat label="Wagered" value={formatCoins(profile?.total_wagered ?? 0)} coin />
