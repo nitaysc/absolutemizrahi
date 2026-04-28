@@ -71,6 +71,20 @@ export function CaseDetailsModal({
   }, [caseId]);
 
   const totalWeight = items?.reduce((s, i) => s + Number(i.weight), 0) ?? 0;
+  const empireRate = 0.01;
+  const duelRate = 0.03;
+  const empireWeight = items?.reduce(
+    (s, i) => (['epic', 'legendary', 'mythic'].includes(i.rarity) ? s + Number(i.weight) : s),
+    0,
+  ) ?? 0;
+  const duelWeight = items?.reduce(
+    (s, i) => (i.rarity === 'legendary' ? s + Number(i.weight) : s),
+    0,
+  ) ?? 0;
+  const empireActiveRate = empireWeight > 0 ? empireRate : 0;
+  const duelActiveRate = duelWeight > 0 ? duelRate : 0;
+  const normalRate = 1 - empireActiveRate - duelActiveRate;
+
   // Theoretical RTP (95% house cut applied on solo opens)
   const ev = items
     ? items.reduce((s, i) => s + (Number(i.weight) / Math.max(1, totalWeight)) * Number(i.value), 0)
@@ -143,7 +157,16 @@ export function CaseDetailsModal({
             ) : (
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                 {items.map((it) => {
-                  const pct = totalWeight > 0 ? (Number(it.weight) / totalWeight) * 100 : 0;
+                  const baseChance = totalWeight > 0 ? Number(it.weight) / totalWeight : 0;
+                  const empireChance = empireWeight > 0 && ["epic", "legendary", "mythic"].includes(it.rarity)
+                    ? empireActiveRate * (Number(it.weight) / empireWeight)
+                    : 0;
+                  const duelChance = duelWeight > 0 && it.rarity === "legendary"
+                    ? duelActiveRate * (Number(it.weight) / duelWeight)
+                    : 0;
+                  const battleChance = normalRate * baseChance + empireChance + duelChance;
+                  const soloPct = baseChance * 100;
+                  const battlePct = battleChance * 100;
                   const nameIsUrl = isUrl(it.name);
                   // If creator typed a URL into the *name* field, treat it as the image
                   // and use a friendly fallback label instead of dumping the URL on screen.
@@ -173,7 +196,10 @@ export function CaseDetailsModal({
                         <MizrahiCoin size={8} /> {formatCoins(it.value)}
                       </div>
                       <div className="mt-1.5 rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-black text-primary">
-                        {pct < 0.01 ? "<0.01" : pct.toFixed(pct < 1 ? 2 : 1)}%
+                        {soloPct < 0.01 ? "<0.01" : soloPct.toFixed(soloPct < 1 ? 2 : 1)}% solo
+                      </div>
+                      <div className="mt-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-black text-primary">
+                        {battlePct < 0.01 ? "<0.01" : battlePct.toFixed(battlePct < 1 ? 2 : 1)}% battle
                       </div>
                     </div>
                   );
@@ -182,7 +208,7 @@ export function CaseDetailsModal({
             )}
           </div>
           <p className="border-t border-border p-2 text-center text-[10px] text-muted-foreground">
-            * RTP = expected return per open after 5% house edge
+            * Solo odds use raw case weights. Battle odds include special spins (1% Empire: epic/legendary/mythic, 3% Duel: legendary only). RTP = expected solo return after 5% house edge
           </p>
         </motion.div>
       </motion.div>
