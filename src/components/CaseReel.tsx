@@ -288,8 +288,13 @@ export function CaseReel({
       // Empire = legendary/mythic only (matches backend roll rules)
       const empirePool = sortedPool.filter((it) => ["legendary", "mythic"].includes(it.rarity));
       const empireTop = empirePool.slice(0, Math.max(1, Math.ceil(empirePool.length * 0.45)));
+      const empireResult = ["legendary", "mythic"].includes(result.rarity)
+        ? result
+        : empirePool[0] ?? result;
       const upgraded = [...empireTop, ...empirePool];
-      return buildStrip(upgraded.length ? upgraded : pool, result, empireTop.length ? empireTop : topItems);
+      const strictPool = upgraded.length ? upgraded : [empireResult];
+      const strictTop = empireTop.length ? empireTop : [empireResult];
+      return buildStrip(strictPool, empireResult, strictTop);
     }
     if (isDuel) {
       // Duel = strict 50/50 rarity lane between legendary and common.
