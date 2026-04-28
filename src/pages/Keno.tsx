@@ -4,6 +4,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BetControls } from "@/components/BetControls";
+import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel";
 import { Button } from "@/components/ui/button";
 import { formatCoins } from "@/lib/format";
 import { motion } from "framer-motion";
@@ -45,6 +46,7 @@ function applyHouseEdge(multiplier: number) {
 export default function Keno() {
   useTrackGame("keno");
   const { profile, setLocalCoins } = useUserProfile();
+  const [mode, setMode] = useState<"manual" | "auto">("manual");
   const [bet, setBet] = useState(10);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -101,12 +103,13 @@ export default function Keno() {
     setDrawnSequence([]);
   }
 
-  async function placeBet() {
+  async function placeBet(betOverride?: number): Promise<AutoBetRoundResult | null> {
     if (!profile) return;
     if (selected.size < 1 || selected.size > MAX_PICKS)
-      return toast.error("Pick 1 to 10 numbers");
-    if (bet < 1) return toast.error("Bet at least 1 coin");
-    if (bet > profile.coins) return toast.error("Not enough coins");
+      return null;
+    const stake = Math.floor(betOverride ?? bet);
+    if (stake < 1) return null;
+    if (stake > profile.coins) return null;
 
     setRolling(true);
     setDrawn(new Set());
@@ -140,7 +143,7 @@ export default function Keno() {
 
     const betPromise = supabase.rpc("place_bet", {
       _game: "keno",
-      _bet_amount: bet,
+      _bet_amount: stake,
       _won: won,
       _multiplier: roundMultiplier,
       _details: {
@@ -154,17 +157,28 @@ export default function Keno() {
     await animateDraw;
     const { data, error } = await betPromise;
     setRolling(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      if (mode === "manual") toast.error(error.message);
+      return null;
+    }
 
     if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
 
     const payout = Number(data?.[0]?.payout ?? 0);
-    const profit = payout - bet;
-    if (profit > 0)
-      toast.success(
-        `Hit ${hitCount}! +${formatCoins(profit)} (${roundMultiplier.toFixed(2)}×)`,
-      );
-    else toast.error(`Hit ${hitCount}. Better luck next draw.`);
+    const profit = payout - stake;
+    if (mode === "manual") {
+      if (profit > 0)
+        toast.success(
+          `Hit ${hitCount}! +${formatCoins(profit)} (${roundMultiplier.toFixed(2)}×)`,
+        );
+      else toast.error(`Hit ${hitCount}. Better luck next draw.`);
+    }
+
+    return {
+      won: profit > 0,
+      profit,
+      multiplier: roundMultiplier,
+    };
   }
 
   return (
@@ -181,6 +195,7 @@ export default function Keno() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[320px_1fr]">
         <aside className="rounded-3xl border border-border bg-card/70 p-4 backdrop-blur-xl">
           <div className="space-y-3">
+            <ModeTabs mode={mode} onChange={setMode} />
             <BetControls bet={bet} setBet={setBet} disabled={rolling} />
 
             <div>
@@ -222,13 +237,29 @@ export default function Keno() {
               </Button>
             </div>
 
-            <Button
-              onClick={placeBet}
-              disabled={rolling || selected.size === 0}
-              className="h-12 w-full text-base font-black"
-            >
-              <Play className="mr-2 h-4 w-4" /> {rolling ? "DRAWING..." : "BET"}
-            </Button>
+            {mode === "manual" ? (
+              <Button
+                onClick={() => {
+                  if (selected.size < 1 || selected.size > MAX_PICKS) {
+                    toast.error("Pick 1 to 10 numbers");
+                    return;
+                  }
+                  placeBet();
+                }}
+                disabled={rolling || selected.size === 0}
+                className="h-12 w-full text-base font-black"
+              >
+                <Play className="mr-2 h-4 w-4" /> {rolling ? "DRAWING..." : "BET"}
+              </Button>
+            ) : (
+              <AutoBetPanel
+                bet={bet}
+                setBet={setBet}
+                onBet={placeBet}
+                disabled={rolling || selected.size === 0}
+                intervalMs={350}
+              />
+            )}
 
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="rounded-xl border border-border bg-background/50 p-2">
@@ -328,6 +359,32 @@ export default function Keno() {
           </div>
         </section>
       </div>
+    </div>
+  );
+}
+
+function ModeTabs({
+  mode,
+  onChange,
+}: {
+  mode: "manual" | "auto";
+  onChange: (mode: "manual" | "auto") => void;
+}) {
+  return (
+    <div className="inline-flex rounded-xl border border-border bg-background/50 p-1">
+      {(["manual", "auto"] as const).map((m) => (
+        <button
+          key={m}
+          onClick={() => onChange(m)}
+          className={`rounded-lg px-3 py-1.5 text-xs font-black uppercase tracking-wide transition ${
+            mode === m
+              ? "bg-primary text-primary-foreground shadow"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {m}
+        </button>
+      ))}
     </div>
   );
 }
