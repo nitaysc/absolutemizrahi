@@ -212,16 +212,30 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
     }
     refresh();
 
-    // Pull recent unseen events (catch-up)
+    // Pull recent unseen events (catch-up).
+    // IMPORTANT: only replay events from the last 60s so a page refresh does
+    // NOT re-fire every level-up / achievement pop-up the user already saw.
+    // Older unseen events are silently marked seen so they don't pile up.
     (async () => {
+      const cutoffIso = new Date(Date.now() - 60_000).toISOString();
       const { data } = await supabase
         .from("progression_events")
         .select("*")
         .eq("user_id", user.id)
         .eq("seen", false)
         .order("created_at", { ascending: true })
-        .limit(50);
-      (data ?? []).forEach((e) => ingest(e as ProgressionEvent));
+        .limit(100);
+      const recent: ProgressionEvent[] = [];
+      const stale: string[] = [];
+      (data ?? []).forEach((e) => {
+        const evt = e as ProgressionEvent;
+        if (evt.created_at >= cutoffIso) recent.push(evt);
+        else stale.push(evt.id);
+      });
+      if (stale.length > 0) {
+        void supabase.rpc("mark_progression_events_seen", { _ids: stale });
+      }
+      recent.forEach((evt) => ingest(evt));
     })();
 
     // Realtime subscription
