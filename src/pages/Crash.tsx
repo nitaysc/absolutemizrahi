@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
 import { NumberField } from "@/components/NumberField";
 import { formatCoins } from "@/lib/format";
+import { triggerBigWin } from "@/components/WinBurst";
 import { Rocket, TrendingUp } from "lucide-react";
 
 type Round = {
@@ -247,6 +248,8 @@ export default function Crash() {
       else {
         const profit = Math.max(Number(r.payout) - bet, 0);
         toast.success(`+${formatCoins(profit)} (${Number(r.multiplier).toFixed(2)}×)`);
+        const m = Number(r.multiplier);
+        if (m >= 5) triggerBigWin(m, "Cashed out");
       }
     }
     if (round) loadBets(round.id);
