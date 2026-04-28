@@ -45,6 +45,8 @@ export default function Profile() {
   const [grantTo, setGrantTo] = useState("");
   const [grantAmount, setGrantAmount] = useState("");
   const [granting, setGranting] = useState(false);
+  const [resetTo, setResetTo] = useState("");
+  const [resetting, setResetting] = useState(false);
   const [sendTo, setSendTo] = useState("");
   const [sendAmount, setSendAmount] = useState("");
   const [sending, setSending] = useState(false);
@@ -198,6 +200,22 @@ export default function Profile() {
       setGrantTo("");
       setGrantAmount("");
     }
+  }
+
+  async function resetPlayer() {
+    const u = resetTo.trim();
+    if (!u) return toast.error("Enter a username");
+    const ok = window.confirm(
+      `Reset EVERYTHING for "${u}"?\n\nThis wipes coins, level, XP, streaks, missions, achievements, predictions and bet history. This cannot be undone.`,
+    );
+    if (!ok) return;
+    setResetting(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.rpc as any)("admin_reset_player", { _username: u });
+    setResetting(false);
+    if (error) return toast.error(error.message);
+    toast.success(`${u} has been fully reset`);
+    setResetTo("");
   }
 
   async function sendCoins() {
@@ -429,6 +447,36 @@ export default function Profile() {
               variant="destructive"
             >
               {granting ? "..." : "Grant"}
+            </Button>
+          </div>
+        </section>
+      )}
+
+      {isAdmin && (
+        <section className="rounded-3xl border border-destructive/40 bg-gradient-to-br from-destructive/10 to-transparent p-5">
+          <h2 className="text-sm font-black uppercase tracking-widest text-destructive">
+            👑 Admin · Reset player
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Wipes coins, level, XP, streaks, missions, achievements, predictions and bet
+            history for the given username. This cannot be undone.
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
+            <Input
+              value={resetTo}
+              onChange={(e) => setResetTo(e.target.value)}
+              placeholder="Username"
+              disabled={resetting}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") resetPlayer();
+              }}
+            />
+            <Button
+              onClick={resetPlayer}
+              disabled={resetting || !resetTo.trim()}
+              variant="destructive"
+            >
+              {resetting ? "Resetting..." : "Reset everything"}
             </Button>
           </div>
         </section>
