@@ -24,11 +24,12 @@ const DRAW_REVEAL_MS = 110;
 const HOUSE_EDGE = 0.01;
 
 const DIFFICULTY_MULTIPLIERS: Record<Difficulty, number[]> = {
-  // Keep the same 1% house-edge trim, but smooth low difficulty so it is
-  // less top-heavy: smaller max jackpots, slightly steadier mid-hit returns.
-  low: [0, 0, 0.50, 0.90, 1.40, 2.20, 3.25, 4.60, 6.00, 7.80, 10.5],
-  medium: [0, 0, 0.20, 1.10, 1.90, 3.00, 5.50, 9.00, 14.0, 22.0, 33.0],
-  high: [0, 0, 0, 1.30, 2.20, 4.20, 8.00, 14.5, 26.0, 42.0, 65.0],
+  // Balance pass:
+  // - low: notable nerf to reduce overpowered consistency/top-end.
+  // - medium/high: slight buffs to keep riskier difficulties more rewarding.
+  low: [0, 0, 0.35, 0.70, 1.10, 1.75, 2.60, 3.70, 4.90, 6.20, 8.40],
+  medium: [0, 0, 0.22, 1.18, 2.05, 3.25, 5.90, 9.70, 15.0, 23.5, 35.0],
+  high: [0, 0, 0, 1.36, 2.35, 4.45, 8.45, 15.2, 27.0, 43.5, 67.0],
 };
 const DRAW_COUNT_BY_DIFFICULTY: Record<Difficulty, number> = {
   low: 12,
