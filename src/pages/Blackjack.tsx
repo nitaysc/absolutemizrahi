@@ -119,6 +119,7 @@ export default function Blackjack() {
   const { profile, setLocalCoins } = useUserProfile();
   const [bet, setBet] = useState(10);
   const [busy, setBusy] = useState(false);
+  const [autoJoin, setAutoJoin] = useState(false);
   const [state, setState] = useState<TableState | null>(null);
   const [now, setNow] = useState(Date.now());
   const lastResultRound = useRef<number>(-1);
@@ -193,6 +194,15 @@ export default function Blackjack() {
     if (d?.new_balance != null) setLocalCoins(Number(d.new_balance));
     refresh();
   }
+
+  useEffect(() => {
+    if (!autoJoin || busy || !profile || !state) return;
+    if (state.status !== "betting" || mySeat) return;
+    if (bet > profile.coins) return;
+
+    joinSeat();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoJoin, busy, state?.status, state?.round_seq, mySeat?.user_id, bet, profile?.coins]);
 
   async function act(action: "hit" | "stand" | "double" | "split") {
     setBusy(true);
@@ -342,6 +352,15 @@ export default function Blackjack() {
         {!mySeat && state.status === "betting" && (
           <>
             <BetControls bet={bet} setBet={setBet} disabled={busy} />
+            <Button
+              type="button"
+              variant={autoJoin ? "default" : "outline"}
+              onClick={() => setAutoJoin((v) => !v)}
+              disabled={busy}
+              className="h-12 w-full text-base font-black tracking-wider"
+            >
+              AUTO JOIN: {autoJoin ? "ON" : "OFF"}
+            </Button>
             <Button
               onClick={joinSeat}
               disabled={busy}
