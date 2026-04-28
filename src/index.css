@@ -204,3 +204,13 @@
       border-color 0.3s ease, box-shadow 0.3s ease;
   }
 }
+
+@keyframes chicken-car-left {
+  0% { transform: translate(115%, -50%); }
+  100% { transform: translate(-145%, -50%); }
+}
+
+@keyframes chicken-car-right {
+  0% { transform: translate(-145%, -50%); }
+  100% { transform: translate(115%, -50%); }
+}
