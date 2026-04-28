@@ -1143,6 +1143,7 @@ export type Database = {
           recipient_username: string
         }[]
       }
+      admin_reset_player: { Args: { _username: string }; Returns: Json }
       approve_case: { Args: { _case_id: string }; Returns: undefined }
       award_xp: {
         Args: {
