@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, Equal, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,12 @@ export default function HiLo() {
   const [next, setNext] = useState<number | null>(null);
   const [pending, setPending] = useState(false);
   const [lastPick, setLastPick] = useState<Pick | null>(null);
+
+  useEffect(() => {
+    if (next === null) return;
+    const timer = window.setTimeout(() => setNext(null), 1200);
+    return () => window.clearTimeout(timer);
+  }, [next]);
 
   const probabilities = useMemo(() => {
     const higher = (13 - current) / 13;
@@ -77,10 +83,13 @@ export default function HiLo() {
       return;
     }
 
-    if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
     setLastPick(pick);
     setNext(drawn);
     setCurrent(drawn);
+
+    window.setTimeout(() => {
+      if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
+    }, 450);
   }
 
   return (
@@ -146,9 +155,9 @@ export default function HiLo() {
               <li>• Cards are sampled with replacement for each round.</li>
             </ul>
           </div>
-          <Button disabled className="mt-3 w-full">
+          <Button type="button" variant="secondary" className="mt-3 w-full" onClick={() => toast.message(`Bet set to ${formatCoins(bet)}`)}>
             <Layers className="mr-2 h-4 w-4" />
-            Bet: {formatCoins(bet)}
+            Current bet: {formatCoins(bet)}
           </Button>
         </section>
       </div>
