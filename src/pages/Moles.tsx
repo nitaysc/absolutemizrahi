@@ -14,9 +14,9 @@ import { playGem, playBomb, playTileClick, playCashout } from "@/lib/sfx";
 const HOLES = 6;
 const HOUSE_EDGE = 0.99;
 
-type Tile = "hidden" | "safe" | "mole";
+type Tile = "hidden" | "empty" | "mole";
 
-/** Fair multiplier after k safe reveals with `moles` moles among HOLES holes. */
+/** Fair multiplier after k successful mole hits with `moles` moles among HOLES holes. */
 function molesMultiplier(moles: number, k: number): number {
   if (k <= 0) return 1;
   let m = 1;
@@ -34,15 +34,12 @@ export default function Moles() {
   const [active, setActive] = useState(false);
   const [tiles, setTiles] = useState<Tile[]>(Array(HOLES).fill("hidden"));
   const [molePositions, setMolePositions] = useState<number[]>([]);
-  const [revealedCount, setRevealedCount] = useState(0);
+  const [hitCount, setHitCount] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [hammerAt, setHammerAt] = useState<number | null>(null);
 
-  const multiplier = useMemo(() => molesMultiplier(moles, revealedCount), [moles, revealedCount]);
-  const nextMultiplier = useMemo(
-    () => molesMultiplier(moles, revealedCount + 1),
-    [moles, revealedCount],
-  );
-  const safeLeft = HOLES - moles - revealedCount;
+  const multiplier = useMemo(() => molesMultiplier(moles, hitCount), [moles, hitCount]);
+  const molesLeft = moles - hitCount;
   const profit = Math.floor(bet * multiplier) - bet;
 
   function start() {
@@ -59,7 +56,7 @@ export default function Moles() {
     }
     setMolePositions(all.slice(0, moles));
     setTiles(Array(HOLES).fill("hidden"));
-    setRevealedCount(0);
+    setHitCount(0);
     setActive(true);
   }
 
@@ -70,7 +67,7 @@ export default function Moles() {
       _bet_amount: bet,
       _won: won,
       _multiplier: won ? Number(mult.toFixed(4)) : 0,
-      _details: { moles, revealed: revealedCount, mole_positions: molePositions },
+      _details: { moles, hit_count: hitCount, mole_positions: molePositions },
     });
     setBusy(false);
     if (error) {
@@ -82,21 +79,24 @@ export default function Moles() {
       const payout = Number(data?.[0]?.payout ?? 0);
       toast.success(`+${formatCoins(Math.max(payout - bet, 0))} (${mult.toFixed(2)}×)`);
     } else {
-      toast.error(`Caught a mole! -${formatCoins(bet)}`);
+      toast.error(`Missed! -${formatCoins(bet)}`);
     }
   }
 
   async function reveal(i: number) {
     if (!active || tiles[i] !== "hidden" || busy) return;
     playTileClick();
-    if (molePositions.includes(i)) {
-      // Bust — show all moles
+    setHammerAt(i);
+    setTimeout(() => setHammerAt((prev) => (prev === i ? null : prev)), 240);
+
+    if (!molePositions.includes(i)) {
+      // Bust on empty hole — reveal entire board.
       playBomb();
       setTiles((prev) => {
         const next: Tile[] = [...prev];
         for (let idx = 0; idx < HOLES; idx++) {
           if (molePositions.includes(idx)) next[idx] = "mole";
-          else if (next[idx] === "hidden") next[idx] = "safe";
+          else if (next[idx] === "hidden") next[idx] = "empty";
         }
         return next;
       });
@@ -104,57 +104,58 @@ export default function Moles() {
       await settle(false, 0);
       setTimeout(() => {
         setTiles(Array(HOLES).fill("hidden"));
-        setRevealedCount(0);
+        setHitCount(0);
       }, 2200);
       return;
     }
+
+    // Correct hit.
     playGem();
-    const newCount = revealedCount + 1;
+    const newCount = hitCount + 1;
     setTiles((prev) => {
       const next: Tile[] = [...prev];
-      next[i] = "safe";
+      next[i] = "mole";
       return next;
     });
-    setRevealedCount(newCount);
-    // If user cleared all safe tiles, auto-cashout.
-    if (newCount >= HOLES - moles) {
+    setHitCount(newCount);
+    // If user hits all selected moles, auto-cashout.
+    if (newCount >= moles) {
       const finalMult = molesMultiplier(moles, newCount);
       setActive(false);
       playCashout();
       setTiles((prev) => {
         const next: Tile[] = [...prev];
-        molePositions.forEach((idx) => {
-          if (next[idx] === "hidden") next[idx] = "mole";
-        });
+        for (let idx = 0; idx < HOLES; idx++) {
+          if (!molePositions.includes(idx) && next[idx] === "hidden") next[idx] = "empty";
+        }
         return next;
       });
       await settle(true, finalMult);
       setTimeout(() => {
         setTiles(Array(HOLES).fill("hidden"));
-        setRevealedCount(0);
+        setHitCount(0);
       }, 2200);
     }
   }
 
   async function cashout() {
-    if (!active || revealedCount === 0) return;
-    const mult = molesMultiplier(moles, revealedCount);
+    if (!active || hitCount === 0) return;
+    const mult = molesMultiplier(moles, hitCount);
     setActive(false);
     playCashout();
     setTiles((prev) => {
       const next: Tile[] = [...prev];
-      molePositions.forEach((idx) => {
-        if (next[idx] === "hidden") next[idx] = "mole";
-      });
       for (let idx = 0; idx < HOLES; idx++) {
-        if (next[idx] === "hidden") next[idx] = "safe";
+        if (next[idx] === "hidden") {
+          next[idx] = molePositions.includes(idx) ? "mole" : "empty";
+        }
       }
       return next;
     });
     await settle(true, mult);
     setTimeout(() => {
       setTiles(Array(HOLES).fill("hidden"));
-      setRevealedCount(0);
+      setHitCount(0);
     }, 2200);
   }
 
@@ -165,7 +166,7 @@ export default function Moles() {
           <Rabbit className="h-7 w-7 text-primary" /> MOLES
         </h1>
         <p className="text-sm text-muted-foreground">
-          Six holes. Pick safely, dodge the moles, cash out anytime.
+          Whack only the moles. Hit an empty hole and you bust.
         </p>
       </header>
 
@@ -184,19 +185,31 @@ export default function Moles() {
                 >
                   {/* Hole */}
                   <div
-                    className={`absolute inset-0 rounded-full bg-background/60 ring-2 ring-border transition ${
+                    className={`absolute inset-0 rounded-full bg-background/60 ring-2 ring-border shadow-[inset_0_6px_18px_rgba(0,0,0,0.4)] transition ${
                       clickable ? "group-hover:ring-primary/60 group-active:scale-95" : ""
                     }`}
                   />
+                  {/* Hammer effect */}
+                  {hammerAt === i && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -24, rotate: -35, scale: 0.85 }}
+                      animate={{ opacity: 1, y: -6, rotate: 0, scale: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="pointer-events-none absolute -top-8 left-1/2 z-20 -translate-x-1/2 text-3xl"
+                    >
+                      🔨
+                    </motion.div>
+                  )}
                   {/* Reveal */}
-                  {t === "safe" && (
+                  {t === "empty" && (
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ type: "spring", stiffness: 260, damping: 14 }}
-                      className="absolute inset-3 flex items-center justify-center rounded-full bg-[hsl(var(--success))]/20 ring-2 ring-[hsl(var(--success))]"
+                      className="absolute inset-3 flex items-center justify-center rounded-full bg-destructive/20 ring-2 ring-destructive/60"
                     >
-                      <span className="text-3xl">✓</span>
+                      <span className="text-3xl">✕</span>
                     </motion.div>
                   )}
                   {t === "mole" && (
@@ -206,7 +219,9 @@ export default function Moles() {
                       transition={{ type: "spring", stiffness: 280, damping: 16 }}
                       className="absolute inset-0 flex items-center justify-center"
                     >
-                      <Rabbit className="h-10 w-10 text-[hsl(var(--warning,38_92%_50%))] drop-shadow-[0_0_12px_hsl(var(--primary)/0.6)] sm:h-12 sm:w-12" />
+                      <span className="text-5xl drop-shadow-[0_0_12px_hsl(var(--primary)/0.6)] sm:text-6xl">
+                        🐹
+                      </span>
                     </motion.div>
                   )}
                 </button>
@@ -214,7 +229,7 @@ export default function Moles() {
             })}
           </div>
 
-          {active && revealedCount > 0 && (
+          {active && hitCount > 0 && (
             <div className="mt-6 flex justify-center">
               <div className="rounded-full border border-primary/40 bg-background/70 px-5 py-2 text-sm font-black tabular-nums">
                 {multiplier.toFixed(2)}× · +{formatCoins(profit)}
@@ -245,8 +260,8 @@ export default function Moles() {
             <div className="grid grid-cols-2 gap-2 text-center">
               <Stat label="Multiplier" value={`${multiplier.toFixed(2)}×`} />
               <Stat
-                label="Next pick"
-                value={safeLeft > 0 ? `${nextMultiplier.toFixed(2)}×` : "—"}
+                label="Moles left"
+                value={molesLeft > 0 ? `${molesLeft}` : "0"}
               />
             </div>
           )}
@@ -262,7 +277,7 @@ export default function Moles() {
           ) : (
             <Button
               onClick={cashout}
-              disabled={busy || revealedCount === 0}
+              disabled={busy || hitCount === 0}
               variant="secondary"
               className="h-12 w-full bg-[hsl(var(--success))] text-background hover:bg-[hsl(var(--success))]/90 text-lg font-black"
             >
@@ -271,7 +286,7 @@ export default function Moles() {
           )}
 
           <p className="text-center text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-            {moles} mole{moles === 1 ? "" : "s"} · {HOLES - moles} safe
+            {moles} target mole{moles === 1 ? "" : "s"} · {HOLES - moles} empty
           </p>
         </div>
       </div>
