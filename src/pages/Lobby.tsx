@@ -25,7 +25,7 @@ import pumpImg from "@/assets/games/pump.jpg";
 import rouletteImg from "@/assets/games/roulette.png";
 import kenoImg from "@/assets/games/keno.png";
 import slidesImg from "@/assets/games/slides.jpg";
-import hiloImg from "@/assets/games/poker.jpg";
+import hiloImg from "@/assets/games/hilo.jpg";
 import dartsImg from "@/assets/games/darts.jpg";
 
 export default function Lobby() {
