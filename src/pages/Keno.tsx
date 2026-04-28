@@ -54,6 +54,7 @@ export default function Keno() {
   const [drawnSequence, setDrawnSequence] = useState<number[]>([]);
   const [rolling, setRolling] = useState(false);
   const drawCount = DRAW_COUNT_BY_DIFFICULTY[difficulty];
+  const hasEnoughCoins = Boolean(profile && Math.floor(bet) >= 1 && Math.floor(bet) <= profile.coins);
 
   const hits = useMemo(
     () => [...selected].filter((n) => drawn.has(n)).length,
@@ -108,8 +109,14 @@ export default function Keno() {
     if (selected.size < 1 || selected.size > MAX_PICKS)
       return null;
     const stake = Math.floor(betOverride ?? bet);
-    if (stake < 1) return null;
-    if (stake > profile.coins) return null;
+    if (stake < 1) {
+      toast.error("Bet must be at least 1 coin");
+      return null;
+    }
+    if (stake > profile.coins) {
+      toast.error("Not enough coins for this bet");
+      return null;
+    }
 
     setRolling(true);
     setDrawn(new Set());
@@ -246,7 +253,7 @@ export default function Keno() {
                   }
                   placeBet();
                 }}
-                disabled={rolling || selected.size === 0 || !profile}
+                disabled={rolling || selected.size === 0 || !profile || !hasEnoughCoins}
                 className="h-12 w-full text-base font-black"
               >
                 <Play className="mr-2 h-4 w-4" /> {rolling ? "DRAWING..." : "BET"}
@@ -256,7 +263,7 @@ export default function Keno() {
                 bet={bet}
                 setBet={setBet}
                 onBet={placeBet}
-                disabled={rolling || selected.size === 0 || !profile}
+                disabled={rolling || selected.size === 0 || !profile || !hasEnoughCoins}
                 intervalMs={350}
               />
             )}
@@ -303,6 +310,7 @@ export default function Keno() {
               return (
                 <motion.button
                   key={n}
+                  type="button"
                   onClick={() => toggleNumber(n)}
                   disabled={rolling}
                   whileTap={{ scale: 0.94 }}
@@ -375,6 +383,7 @@ function ModeTabs({
       {(["manual", "auto"] as const).map((m) => (
         <button
           key={m}
+          type="button"
           onClick={() => onChange(m)}
           className={`rounded-lg px-3 py-1.5 text-xs font-black uppercase tracking-wide transition ${
             mode === m
