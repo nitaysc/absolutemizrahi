@@ -73,12 +73,14 @@ export function CaseDetailsModal({
   const totalWeight = items?.reduce((s, i) => s + Number(i.weight), 0) ?? 0;
   const empireRate = 0.01;
   const duelRate = 0.03;
+  const empireRarities = ["epic", "legendary", "mythic"];
+  const duelRarities = ["legendary"];
   const empireWeight = items?.reduce(
-    (s, i) => (['epic', 'legendary', 'mythic'].includes(i.rarity) ? s + Number(i.weight) : s),
+    (s, i) => (empireRarities.includes(i.rarity) ? s + Number(i.weight) : s),
     0,
   ) ?? 0;
   const duelWeight = items?.reduce(
-    (s, i) => (i.rarity === 'legendary' ? s + Number(i.weight) : s),
+    (s, i) => (duelRarities.includes(i.rarity) ? s + Number(i.weight) : s),
     0,
   ) ?? 0;
   const empireActiveRate = empireWeight > 0 ? empireRate : 0;
@@ -158,10 +160,10 @@ export function CaseDetailsModal({
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                 {items.map((it) => {
                   const baseChance = totalWeight > 0 ? Number(it.weight) / totalWeight : 0;
-                  const empireChance = empireWeight > 0 && ["epic", "legendary", "mythic"].includes(it.rarity)
+                  const empireChance = empireWeight > 0 && empireRarities.includes(it.rarity)
                     ? empireActiveRate * (Number(it.weight) / empireWeight)
                     : 0;
-                  const duelChance = duelWeight > 0 && it.rarity === "legendary"
+                  const duelChance = duelWeight > 0 && duelRarities.includes(it.rarity)
                     ? duelActiveRate * (Number(it.weight) / duelWeight)
                     : 0;
                   const battleChance = normalRate * baseChance + empireChance + duelChance;
@@ -196,10 +198,10 @@ export function CaseDetailsModal({
                         <MizrahiCoin size={8} /> {formatCoins(it.value)}
                       </div>
                       <div className="mt-1.5 rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-black text-primary">
-                        {soloPct < 0.01 ? "<0.01" : soloPct.toFixed(soloPct < 1 ? 2 : 1)}% solo
+                        {soloPct < 0.001 ? "<0.001" : soloPct.toFixed(soloPct < 1 ? 3 : 2)}% solo
                       </div>
                       <div className="mt-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-black text-primary">
-                        {battlePct < 0.01 ? "<0.01" : battlePct.toFixed(battlePct < 1 ? 2 : 1)}% battle
+                        {battlePct < 0.001 ? "<0.001" : battlePct.toFixed(battlePct < 1 ? 3 : 2)}% battle
                       </div>
                     </div>
                   );

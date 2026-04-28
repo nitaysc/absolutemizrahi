@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { formatCoins } from "@/lib/format";
-import { Swords, Plus, Users, Zap, Lock, Bot } from "lucide-react";
+import { Swords, Plus, Users, Zap, Lock, Bot, Eye } from "lucide-react";
 
 type Battle = {
   id: string;
@@ -108,10 +108,10 @@ export default function CaseBattles() {
               </button>
               <button
                 onClick={() => navigate(`/cases/battles/${b.id}`)}
-                className="ml-3 shrink-0 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-bold text-primary hover:bg-primary/20"
-                title="Watch this battle"
+                className="ml-3 inline-flex shrink-0 items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-bold text-primary hover:bg-primary/20"
+                title="Watch this battle (including bot-filled battles)"
               >
-                Watch
+                <Eye className="h-3 w-3" /> Watch
               </button>
             </div>
           ))}
