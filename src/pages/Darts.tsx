@@ -4,6 +4,7 @@ import { Target, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
+import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTrackGame } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
@@ -80,6 +81,7 @@ type Throw = { x: number; y: number; mult: number; color: string };
 export default function Darts() {
   useTrackGame("darts");
   const { profile, setLocalCoins } = useUserProfile();
+  const [mode, setMode] = useState<"manual" | "auto">("manual");
   const [bet, setBet] = useState(10);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [pending, setPending] = useState(false);
@@ -94,11 +96,18 @@ export default function Darts() {
     return rings.map((r) => ({ ...r, chance: r.weight / total }));
   }, [rings]);
 
-  async function throwDart() {
-    if (!profile) return;
-    if (pending) return;
-    if (bet < 1) return toast.error("Bet at least 1 coin");
-    if (bet > profile.coins) return toast.error("Not enough coins");
+  async function throwDart(betOverride?: number): Promise<AutoBetRoundResult | null> {
+    if (!profile) return null;
+    if (pending) return null;
+    const stake = betOverride ?? bet;
+    if (stake < 1) {
+      toast.error("Bet at least 1 coin");
+      return null;
+    }
+    if (stake > profile.coins) {
+      toast.error("Not enough coins");
+      return null;
+    }
 
     setPending(true);
     setLastResult(null);
@@ -120,7 +129,7 @@ export default function Darts() {
     const won = ring.mult > 0;
     const { data, error } = await supabase.rpc("place_bet", {
       _game: "darts",
-      _bet_amount: bet,
+      _bet_amount: stake,
       _won: won,
       _multiplier: won ? ring.mult : 0,
       _details: { difficulty, ring: idx, mult: ring.mult },
@@ -129,20 +138,22 @@ export default function Darts() {
       toast.error(error.message);
       setFlying(null);
       setPending(false);
-      return;
+      return null;
     }
     if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
 
     // Stick the dart
     setThrows((t) => [{ x: point.x, y: point.y, mult: ring.mult, color: ring.ringColor }, ...t].slice(0, 6));
     setFlying(null);
-    setLastResult({ mult: ring.mult, payout: Math.floor(bet * ring.mult) });
+    const payout = Math.floor(stake * ring.mult);
+    setLastResult({ mult: ring.mult, payout });
     if (won && ring.mult >= 5) {
       playBullseye();
       triggerBigWin(ring.mult, ring.mult >= 25 ? "Bullseye" : "Big hit");
-      toast.success(`💥 ${ring.mult}× — ${formatCoins(Math.floor(bet * ring.mult))}!`);
+      toast.success(`💥 ${ring.mult}× — ${formatCoins(payout)}!`);
     }
     setPending(false);
+    return { won, profit: won ? payout - stake : -stake };
   }
 
   return (
@@ -241,15 +252,40 @@ export default function Darts() {
           <div className="mt-4">
             <BetControls bet={bet} setBet={setBet} disabled={pending} />
           </div>
-
-          <Button
-            className="mt-3 h-12 w-full text-base font-black"
-            onClick={throwDart}
-            disabled={!profile || pending}
-          >
-            <Target className="mr-2 h-5 w-5" />
-            {pending ? "Throwing…" : `Throw · ${formatCoins(bet)}`}
-          </Button>
+          <div className="mt-3 grid grid-cols-2 gap-1 rounded-full bg-background/60 p-1">
+            {(["manual", "auto"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                className={cn(
+                  "rounded-full py-1.5 text-xs font-bold uppercase tracking-widest transition",
+                  mode === m ? "bg-card text-foreground shadow" : "text-muted-foreground",
+                )}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+          {mode === "manual" ? (
+            <Button
+              className="mt-3 h-12 w-full text-base font-black"
+              onClick={() => void throwDart()}
+              disabled={!profile || pending}
+            >
+              <Target className="mr-2 h-5 w-5" />
+              {pending ? "Throwing…" : `Throw · ${formatCoins(bet)}`}
+            </Button>
+          ) : (
+            <div className="mt-3">
+              <AutoBetPanel
+                bet={bet}
+                setBet={setBet}
+                onBet={throwDart}
+                disabled={!profile || pending}
+                intervalMs={450}
+              />
+            </div>
+          )}
 
           {/* Payout table */}
           <div className="mt-4 rounded-2xl border border-border bg-background/60 p-3">

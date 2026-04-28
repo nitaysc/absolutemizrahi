@@ -34,6 +34,8 @@ const GAMES = [
   "all",
   "dice",
   "limbo",
+  "darts",
+  "hilo",
   "coinflip",
   "mines",
   "blackjack",
