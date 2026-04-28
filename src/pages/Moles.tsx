@@ -17,14 +17,16 @@ const HOUSE_EDGE = 0.99;
 
 type Tile = "hidden" | "empty" | "mole";
 
-/** Fair multiplier after k successful mole hits with `moles` moles among HOLES holes. */
+/**
+ * Multiplier after k successful hits.
+ *
+ * Each hit is a fresh board with the same mole count, so the chance to hit a
+ * mole is `moles / HOLES` every time (independent rounds).
+ */
 function molesMultiplier(moles: number, k: number): number {
   if (k <= 0) return 1;
-  let m = 1;
-  for (let i = 0; i < k; i++) {
-    m *= (HOLES - i) / (moles - i);
-  }
-  return m * HOUSE_EDGE;
+  const perHit = HOLES / moles;
+  return Math.pow(perHit, k) * HOUSE_EDGE;
 }
 
 function generateMolePositions(count: number): number[] {
@@ -171,11 +173,12 @@ export default function Moles() {
     }
 
     setBusy(true);
+    showResolvedBoard(molePositions);
     setTimeout(() => {
       setTiles(Array(HOLES).fill("hidden"));
       setMolePositions(generateMolePositions(moles));
       setBusy(false);
-    }, 260);
+    }, 520);
   }
 
   async function cashout() {
