@@ -24,9 +24,9 @@ const DRAW_REVEAL_MS = 110;
 const HOUSE_EDGE = 0.01;
 
 const DIFFICULTY_MULTIPLIERS: Record<Difficulty, number[]> = {
-  // Rebalanced so every (difficulty, picks) combo stays under 99% RTP
-  // after the 1% applyHouseEdge() trim. Old Low/10 was 114% RTP (player edge).
-  low: [0, 0, 0.50, 0.90, 1.40, 2.20, 3.20, 4.80, 7.00, 10.0, 14.0],
+  // Keep the same 1% house-edge trim, but smooth low difficulty so it is
+  // less top-heavy: smaller max jackpots, slightly steadier mid-hit returns.
+  low: [0, 0, 0.50, 0.90, 1.40, 2.20, 3.25, 4.60, 6.00, 7.80, 10.5],
   medium: [0, 0, 0.20, 1.10, 1.90, 3.00, 5.50, 9.00, 14.0, 22.0, 33.0],
   high: [0, 0, 0, 1.30, 2.20, 4.20, 8.00, 14.5, 26.0, 42.0, 65.0],
 };
