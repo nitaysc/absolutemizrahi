@@ -189,10 +189,6 @@ export function CaseReel({
   const [containerH, setContainerH] = useState(0);
   const [phase, setPhase] = useState<"idle" | "spinning" | "landed">("idle");
   const [specialHitFx, setSpecialHitFx] = useState<"empire" | "duel" | null>(null);
-  // Brief mid-spin "hesitation": the reel almost stops on a tile and then
-  // jumps to the real result. Empire-Drop style suspense. Triggered randomly
-  // (~25% of normal spins) and never on stage-1 of specials.
-  const [hesitating, setHesitating] = useState(false);
 
   // Tile dimensions
   const tileH = size === "xs" ? 72 : size === "sm" ? 96 : size === "lg" ? 150 : 120;
@@ -329,7 +325,6 @@ export function CaseReel({
   useEffect(() => {
     setStage(0);
     setSpecialHitFx(null);
-    setHesitating(false);
   }, [spinKey]);
 
   // Main animation effect — runs per stage
@@ -353,13 +348,6 @@ export function CaseReel({
 
     controls.set({ y: center - tileH / 2 });
     const startedAt = performance.now();
-    // Decide whether this spin gets the dramatic "almost stops on the wrong
-    // tile" hesitation. Skip on stage-1 specials (they already feel resolved).
-    // Sometimes (~15%) the reel doesn't land cleanly on a tile center —
-    // it can stop slightly before/after a neighbour and drift into place.
-    // This is now ONE continuous animation (no chained controls.start), so
-    // there's no teleport — just smooth keyframes.
-    const wantsHesitation = !(stage === 1 && hasSpecial) && Math.random() < 0.15;
     // Single smooth glide with a strong deceleration curve (csgo-style).
     // No bounce / overshoot — the reel must NEVER move after it stops, or
     // it looks like it changed which item you got.
@@ -375,43 +363,13 @@ export function CaseReel({
       }
     };
 
-    if (wantsHesitation) {
-      // Drift PAST the result by a random fraction of a tile (could be
-      // before or after, anywhere from 0.4 to 1.1 tiles), then very slowly
-      // creep back to the real result. ALL one keyframe sequence so the
-      // motion is perfectly continuous — no chained .then() that visually
-      // teleports.
-      const dir = Math.random() < 0.5 ? 1 : -1;
-      const overshoot = step * (0.4 + Math.random() * 0.7); // 0.4..1.1 tiles
-      const farPoint = offset + dir * overshoot;
-      const totalDur = (dur / 1000) + 0.9; // longer than a normal spin
-      // Times: 0 → 0.78 reach the overshoot point, hold until 0.85, slow
-      // creep back to real result by 1.0
-      controls.start({
-        y: [center - tileH / 2, farPoint, farPoint, offset],
-        transition: {
-          duration: totalDur,
-          times: [0, 0.78, 0.85, 1],
-          // Single ease for whole sequence — keyframes interpolate
-          // smoothly so the "hold" + "creep back" looks like one motion.
-          ease: [0.16, 0.84, 0.24, 1],
-        },
-      }).then(() => {
-        void startedAt;
-        finalLand();
-      });
-      // Show the chip during the slow-creep phase
-      setTimeout(() => setHesitating(true), totalDur * 1000 * 0.78);
-      setTimeout(() => setHesitating(false), totalDur * 1000 * 0.98);
-    } else {
-      controls.start({
-        y: offset,
-        transition: { duration: dur / 1000, ease: [0.16, 0.84, 0.24, 1] },
-      }).then(() => {
-        void startedAt;
-        finalLand();
-      });
-    }
+    controls.start({
+      y: offset,
+      transition: { duration: dur / 1000, ease: [0.16, 0.84, 0.24, 1] },
+    }).then(() => {
+      void startedAt;
+      finalLand();
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spinKey, containerH, strip.length, stage]);
 
@@ -501,18 +459,6 @@ export function CaseReel({
           />
         ))}
       </motion.div>
-
-      {/* Hesitation "Locking..." chip — appears when the reel almost stops on the wrong tile */}
-      {hesitating && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.85 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
-          className="pointer-events-none absolute right-2 top-2 z-40 inline-flex items-center gap-1 rounded-full bg-amber-500/30 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-amber-100 backdrop-blur"
-        >
-          <Sparkles className="h-3 w-3 animate-pulse" /> Locking…
-        </motion.div>
-      )}
 
       {/* Big pop reveal of the value when landed (only when values were hidden) */}
       {phase === "landed" && hideValuesUntilLanded && result && (
