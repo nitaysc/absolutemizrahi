@@ -218,34 +218,36 @@ export function AutoBetPanel({ bet, setBet, onBet, disabled, intervalMs = 250 }:
         />
       </div>
 
-      {/* Live session readout */}
-      {(running || session.wins + session.losses > 0) && (
-        <div className="grid grid-cols-3 gap-2 rounded-xl bg-background/60 p-2 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          <div>
-            <div>Wins</div>
-            <div className="mt-0.5 text-sm font-black tabular-nums text-[hsl(var(--success))]">
-              {session.wins}
-            </div>
-          </div>
-          <div>
-            <div>Losses</div>
-            <div className="mt-0.5 text-sm font-black tabular-nums text-destructive">
-              {session.losses}
-            </div>
-          </div>
-          <div>
-            <div>Profit</div>
-            <div
-              className={`mt-0.5 text-sm font-black tabular-nums ${
-                session.profit >= 0 ? "text-[hsl(var(--success))]" : "text-destructive"
-              }`}
-            >
-              {session.profit >= 0 ? "+" : ""}
-              {session.profit.toLocaleString()}
-            </div>
+      {/* Live session readout: always mounted to avoid layout jump while auto is running */}
+      <div
+        className={`grid min-h-[72px] grid-cols-3 gap-2 rounded-xl bg-background/60 p-2 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-opacity ${
+          running || session.wins + session.losses > 0 ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        <div>
+          <div>Wins</div>
+          <div className="mt-0.5 text-sm font-black tabular-nums text-[hsl(var(--success))]">
+            {session.wins}
           </div>
         </div>
-      )}
+        <div>
+          <div>Losses</div>
+          <div className="mt-0.5 text-sm font-black tabular-nums text-destructive">
+            {session.losses}
+          </div>
+        </div>
+        <div>
+          <div>Profit</div>
+          <div
+            className={`mt-0.5 text-sm font-black tabular-nums ${
+              session.profit >= 0 ? "text-[hsl(var(--success))]" : "text-destructive"
+            }`}
+          >
+            {session.profit >= 0 ? "+" : ""}
+            {session.profit.toLocaleString()}
+          </div>
+        </div>
+      </div>
 
       <Button
         onClick={start}
