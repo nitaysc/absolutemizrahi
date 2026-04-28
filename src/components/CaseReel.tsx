@@ -285,8 +285,8 @@ export function CaseReel({
 
     // STAGE 1: follow-up spin for specials
     if (isEmpire) {
-      // Empire = epic/legendary/mythic only (matches backend roll rules)
-      const empirePool = sortedPool.filter((it) => ["epic", "legendary", "mythic"].includes(it.rarity));
+      // Empire = legendary/mythic only (matches backend roll rules)
+      const empirePool = sortedPool.filter((it) => ["legendary", "mythic"].includes(it.rarity));
       const empireTop = empirePool.slice(0, Math.max(1, Math.ceil(empirePool.length * 0.45)));
       const upgraded = [...empireTop, ...empirePool];
       return buildStrip(upgraded.length ? upgraded : pool, result, empireTop.length ? empireTop : topItems);
