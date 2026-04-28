@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useUserProfile } from "@/hooks/useUserProfile";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { formatCoins } from "@/lib/format";
-import { toast } from "sonner";
 import { Swords, Plus, Users, Zap, Lock, Bot } from "lucide-react";
 
 type Battle = {
@@ -75,36 +73,47 @@ export default function CaseBattles() {
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {battles.map((b) => (
-            <button
+            <div
               key={b.id}
-              onClick={() => navigate(`/cases/battles/${b.id}`)}
               className="group flex items-center justify-between rounded-2xl border border-border bg-card p-4 text-left transition hover:border-primary"
             >
-              <div>
-                <div className="flex items-center gap-2">
-                  <Swords className="h-4 w-4 text-primary" />
-                  <span className="font-bold">{b.mode.toUpperCase()}</span>
-                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
-                    {b.type}
-                  </span>
-                  {b.fast && <Zap className="h-3 w-3 text-amber-400" />}
-                  {b.fill_with_bots && <Bot className="h-3 w-3 text-muted-foreground" />}
-                  {b.is_private && <Lock className="h-3 w-3 text-muted-foreground" />}
+              <button
+                onClick={() => navigate(`/cases/battles/${b.id}`)}
+                className="flex flex-1 items-center justify-between text-left"
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Swords className="h-4 w-4 text-primary" />
+                    <span className="font-bold">{b.mode.toUpperCase()}</span>
+                    <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
+                      {b.type}
+                    </span>
+                    {b.fast && <Zap className="h-3 w-3 text-amber-400" />}
+                    {b.fill_with_bots && <Bot className="h-3 w-3 text-muted-foreground" />}
+                    {b.is_private && <Lock className="h-3 w-3 text-muted-foreground" />}
+                  </div>
+                  <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                    <Users className="h-3 w-3" /> {b.player_slots} slots · {b.rounds_total} rounds ·{" "}
+                    {b.status}
+                  </div>
                 </div>
-                <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                  <Users className="h-3 w-3" /> {b.player_slots} slots · {b.rounds_total} rounds ·{" "}
-                  {b.status}
+                <div className="text-right">
+                  <div className="inline-flex items-center gap-1 font-black text-primary">
+                    <MizrahiCoin size={14} /> {formatCoins(b.total_cost)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {formatCoins(b.per_player_cost)} / player
+                  </div>
                 </div>
-              </div>
-              <div className="text-right">
-                <div className="inline-flex items-center gap-1 font-black text-primary">
-                  <MizrahiCoin size={14} /> {formatCoins(b.total_cost)}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {formatCoins(b.per_player_cost)} / player
-                </div>
-              </div>
-            </button>
+              </button>
+              <button
+                onClick={() => navigate(`/cases/battles/${b.id}`)}
+                className="ml-3 shrink-0 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-bold text-primary hover:bg-primary/20"
+                title="Watch this battle"
+              >
+                Watch
+              </button>
+            </div>
           ))}
         </div>
       )}
