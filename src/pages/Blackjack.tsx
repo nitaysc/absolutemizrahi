@@ -360,21 +360,42 @@ export default function Blackjack() {
         </Button>
 
         {!mySeat && state.status === "betting" && (
+        {!mySeat && (
           <>
             <BetControls bet={bet} setBet={setBet} disabled={busy} />
             <Button
-              onClick={joinSeat}
+              type="button"
+              variant={autoJoin ? "default" : "outline"}
+              onClick={() => setAutoJoin((v) => !v)}
               disabled={busy}
+              className="h-12 w-full text-base font-black tracking-wider"
+            >
+              AUTO JOIN: {autoJoin ? "ON" : "OFF"}
+            </Button>
+            {autoJoin && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setAutoJoin(false)}
+                disabled={busy}
+                className="h-11 w-full font-black tracking-wider"
+              >
+                STOP AUTO JOIN
+              </Button>
+            )}
+            <Button
+              onClick={joinSeat}
+              disabled={busy || state.status !== "betting"}
               className="h-12 w-full text-base font-black tracking-wider"
             >
               JOIN TABLE — {formatCoins(bet)}
             </Button>
+            {state.status !== "betting" && (
+              <div className="rounded-xl bg-background/60 p-3 text-center text-sm text-muted-foreground">
+                Round in progress · next betting in {secondsLeft}s
+              </div>
+            )}
           </>
-        )}
-        {!mySeat && state.status !== "betting" && (
-          <div className="rounded-xl bg-background/60 p-3 text-center text-sm text-muted-foreground">
-            Round in progress · next betting in {secondsLeft}s
-          </div>
         )}
         {mySeat && state.status === "betting" && (
           <div className="rounded-xl bg-[hsl(var(--success))]/10 p-3 text-center text-sm font-bold text-[hsl(var(--success))]">
