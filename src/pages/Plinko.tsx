@@ -10,6 +10,7 @@ import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel
 import { formatCoins } from "@/lib/format";
 import { Triangle } from "lucide-react";
 import { playPlinkoBigWin, playPlinkoDrop, playPlinkoLand, playPlinkoLose } from "@/lib/sfx";
+import { triggerBigWin } from "@/components/WinBurst";
 
 /**
  * Plinko — Stake-style with real continuous gravity simulation.
@@ -298,6 +299,7 @@ export default function Plinko() {
           setHitBucket({ i: landedBucket, t: Date.now() });
           if (landedMultiplier >= 5) playPlinkoBigWin();
           else if (landedMultiplier < 1) playPlinkoLose();
+          if (landedMultiplier >= 10) triggerBigWin(landedMultiplier, "Plinko jackpot");
           else playPlinkoLand();
           setRecent((rec) =>
             [{ mult: landedMultiplier, won: landedMultiplier >= 1 }, ...rec].slice(0, 8)
