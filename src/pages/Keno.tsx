@@ -117,7 +117,9 @@ export default function Keno() {
     const roundMultiplier = applyHouseEdge(
       DIFFICULTY_MULTIPLIERS[difficulty][hitCount] ?? 0,
     );
-    const won = roundMultiplier > 1;
+    // Any non-zero multiplier returns coins (partial refunds like 0.25× still pay).
+    // Profit-vs-bet is shown to the user separately below.
+    const won = roundMultiplier > 0;
 
     const animateDraw = new Promise<void>((resolve) => {
       draw.forEach((num, index) => {
