@@ -45,6 +45,8 @@ export default function Profile() {
   const [grantTo, setGrantTo] = useState("");
   const [grantAmount, setGrantAmount] = useState("");
   const [granting, setGranting] = useState(false);
+  const [resetTo, setResetTo] = useState("");
+  const [resetting, setResetting] = useState(false);
   const [sendTo, setSendTo] = useState("");
   const [sendAmount, setSendAmount] = useState("");
   const [sending, setSending] = useState(false);
