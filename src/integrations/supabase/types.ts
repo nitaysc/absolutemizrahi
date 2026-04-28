@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          category: string
+          code: string
+          description: string
+          icon: string
+          name: string
+          reward_coins: number
+          reward_xp: number
+        }
+        Insert: {
+          category?: string
+          code: string
+          description: string
+          icon?: string
+          name: string
+          reward_coins?: number
+          reward_xp?: number
+        }
+        Update: {
+          category?: string
+          code?: string
+          description?: string
+          icon?: string
+          name?: string
+          reward_coins?: number
+          reward_xp?: number
+        }
+        Relationships: []
+      }
       battle_cases: {
         Row: {
           battle_id: string
@@ -662,6 +692,48 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_missions: {
+        Row: {
+          completed: boolean
+          created_at: string
+          description: string
+          expires_at: string
+          id: string
+          kind: string
+          progress: number
+          reward_coins: number
+          reward_xp: number
+          target: number
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          description: string
+          expires_at: string
+          id?: string
+          kind: string
+          progress?: number
+          reward_coins?: number
+          reward_xp?: number
+          target: number
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          description?: string
+          expires_at?: string
+          id?: string
+          kind?: string
+          progress?: number
+          reward_coins?: number
+          reward_xp?: number
+          target?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       friendships: {
         Row: {
           addressee: string
@@ -865,12 +937,20 @@ export type Database = {
           email: string | null
           id: string
           last_daily_bonus: string | null
+          last_streak_claim: string | null
+          level: number
+          lose_streak: number
           mines_round: Json | null
           pump_round: Json | null
+          streak_days: number
           total_wagered: number
           total_won: number
           updated_at: string | null
           username: string | null
+          win_streak: number
+          xp: number
+          xp_booster_until: string | null
+          xp_total: number
         }
         Insert: {
           avatar?: string
@@ -883,12 +963,20 @@ export type Database = {
           email?: string | null
           id: string
           last_daily_bonus?: string | null
+          last_streak_claim?: string | null
+          level?: number
+          lose_streak?: number
           mines_round?: Json | null
           pump_round?: Json | null
+          streak_days?: number
           total_wagered?: number
           total_won?: number
           updated_at?: string | null
           username?: string | null
+          win_streak?: number
+          xp?: number
+          xp_booster_until?: string | null
+          xp_total?: number
         }
         Update: {
           avatar?: string
@@ -901,12 +989,47 @@ export type Database = {
           email?: string | null
           id?: string
           last_daily_bonus?: string | null
+          last_streak_claim?: string | null
+          level?: number
+          lose_streak?: number
           mines_round?: Json | null
           pump_round?: Json | null
+          streak_days?: number
           total_wagered?: number
           total_won?: number
           updated_at?: string | null
           username?: string | null
+          win_streak?: number
+          xp?: number
+          xp_booster_until?: string | null
+          xp_total?: number
+        }
+        Relationships: []
+      }
+      progression_events: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          payload: Json
+          seen: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          payload?: Json
+          seen?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          payload?: Json
+          seen?: boolean
+          user_id?: string
         }
         Relationships: []
       }
@@ -933,6 +1056,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_achievements: {
+        Row: {
+          code: string
+          id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          id?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_code_fkey"
+            columns: ["code"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["code"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -992,6 +1144,15 @@ export type Database = {
         }[]
       }
       approve_case: { Args: { _case_id: string }; Returns: undefined }
+      award_xp: {
+        Args: {
+          _amount: number
+          _meta?: Json
+          _reason?: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       bj_action: { Args: { _action: string; _table_id: string }; Returns: Json }
       bj_advance: { Args: { _table_id: string }; Returns: undefined }
       bj_double: {
@@ -1045,6 +1206,10 @@ export type Database = {
         }[]
       }
       bj_table_state: { Args: { _table_id: string }; Returns: Json }
+      bump_mission: {
+        Args: { _amount?: number; _kind: string; _user_id: string }
+        Returns: undefined
+      }
       chess_accept_draw: { Args: { _game_id: string }; Returns: undefined }
       chess_ai_move: {
         Args: {
@@ -1121,6 +1286,15 @@ export type Database = {
         Returns: {
           awarded: number
           new_balance: number
+        }[]
+      }
+      claim_daily_streak: {
+        Args: never
+        Returns: {
+          already_claimed: boolean
+          reward_coins: number
+          reward_xp: number
+          streak_days: number
         }[]
       }
       crash_cashout: {
@@ -1280,6 +1454,10 @@ export type Database = {
           username: string
         }[]
       }
+      mark_progression_events_seen: {
+        Args: { _ids: string[] }
+        Returns: undefined
+      }
       mines_abandon: {
         Args: never
         Returns: {
@@ -1392,6 +1570,28 @@ export type Database = {
         Args: { _case_id: string; _reason: string }
         Returns: undefined
       }
+      roll_daily_missions: {
+        Args: never
+        Returns: {
+          completed: boolean
+          created_at: string
+          description: string
+          expires_at: string
+          id: string
+          kind: string
+          progress: number
+          reward_coins: number
+          reward_xp: number
+          target: number
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "daily_missions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       search_players: {
         Args: { _q: string }
         Returns: {
@@ -1407,6 +1607,7 @@ export type Database = {
       sell_battle_inventory: { Args: { _battle_id: string }; Returns: number }
       sell_inventory_item: { Args: { _item_id: string }; Returns: number }
       start_case_battle: { Args: { _battle_id: string }; Returns: undefined }
+      title_for_level: { Args: { _level: number }; Returns: string }
       transfer_coins: {
         Args: { _amount: number; _recipient_username: string }
         Returns: {
@@ -1414,6 +1615,10 @@ export type Database = {
           new_balance: number
           recipient_username: string
         }[]
+      }
+      unlock_achievement: {
+        Args: { _code: string; _user_id: string }
+        Returns: undefined
       }
       upgrade_inventory: {
         Args: {
@@ -1439,6 +1644,7 @@ export type Database = {
           new_balance: number
         }[]
       }
+      xp_for_level: { Args: { _level: number }; Returns: number }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
