@@ -75,10 +75,17 @@ export function CaseDetailsModal({
   const duelRate = 0.01;
   const empireRarities = ["legendary", "mythic"];
   const duelRarities = ["legendary", "common"];
-  const empireWeight = items?.reduce(
-    (s, i) => (empireRarities.includes(i.rarity) ? s + Number(i.weight) : s),
+  const empireLegendaryRateWhenBoth = 0.9;
+  const empireMythicRateWhenBoth = 0.1;
+  const empireLegendaryWeight = items?.reduce(
+    (s, i) => (i.rarity === "legendary" ? s + Number(i.weight) : s),
     0,
   ) ?? 0;
+  const empireMythicWeight = items?.reduce(
+    (s, i) => (i.rarity === "mythic" ? s + Number(i.weight) : s),
+    0,
+  ) ?? 0;
+  const empireWeight = empireLegendaryWeight + empireMythicWeight;
   const duelWeight = items?.reduce(
     (s, i) => (duelRarities.includes(i.rarity) ? s + Number(i.weight) : s),
     0,
@@ -160,9 +167,21 @@ export function CaseDetailsModal({
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                 {items.map((it) => {
                   const baseChance = totalWeight > 0 ? Number(it.weight) / totalWeight : 0;
-                  const empireChance = empireWeight > 0 && empireRarities.includes(it.rarity)
-                    ? empireActiveRate * (Number(it.weight) / empireWeight)
-                    : 0;
+                  const empireLegendarySplit = empireLegendaryWeight > 0 && empireMythicWeight > 0
+                    ? empireLegendaryRateWhenBoth
+                    : empireLegendaryWeight > 0
+                      ? 1
+                      : 0;
+                  const empireMythicSplit = empireLegendaryWeight > 0 && empireMythicWeight > 0
+                    ? empireMythicRateWhenBoth
+                    : empireMythicWeight > 0
+                      ? 1
+                      : 0;
+                  const empireChance = it.rarity === "legendary" && empireLegendaryWeight > 0
+                    ? empireActiveRate * empireLegendarySplit * (Number(it.weight) / empireLegendaryWeight)
+                    : it.rarity === "mythic" && empireMythicWeight > 0
+                      ? empireActiveRate * empireMythicSplit * (Number(it.weight) / empireMythicWeight)
+                      : 0;
                   const duelChance = duelWeight > 0 && duelRarities.includes(it.rarity)
                     ? duelActiveRate * (Number(it.weight) / duelWeight)
                     : 0;
@@ -230,7 +249,7 @@ export function CaseDetailsModal({
             )}
           </div>
           <p className="border-t border-border p-2 text-center text-[10px] text-muted-foreground">
-            Odds are exact and match the server roll. Solo = raw weights. Battle adds a 0.25% Empire spin (legendary / mythic only) and a 1% Duel spin (50% legendary / 50% common). Hover an item to see "1 in N" odds. RTP = expected solo return after 5% house edge.
+            Odds are exact and match the server roll. Solo = raw weights. Battle adds a 0.25% Empire spin (legendary / mythic only, 90% / 10% when both exist) and a 1% Duel spin (50% legendary / 50% common). Hover an item to see "1 in N" odds. RTP = expected solo return after 5% house edge.
           </p>
         </motion.div>
       </motion.div>
