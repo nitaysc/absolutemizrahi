@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
 import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel";
 import { formatCoins } from "@/lib/format";
+import { triggerBigWin } from "@/components/WinBurst";
 
 const MULTIPLIER = 1.98;
 type Side = "heads" | "tails";
@@ -65,7 +66,10 @@ export default function Coinflip() {
     setHistory((h) => [outcome, ...h].slice(0, 12));
     const payout = Number(data?.[0]?.payout ?? 0);
     const profit = w ? Math.max(payout - stake, 0) : -stake;
-    if (w) toast.success(`+${formatCoins(profit)} coins!`);
+    if (w) {
+      toast.success(`+${formatCoins(profit)} coins!`);
+      if (profit >= stake * 4) triggerBigWin(MULTIPLIER, "Heads up!");
+    }
     return { won: w, profit };
   }
 
