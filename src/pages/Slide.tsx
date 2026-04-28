@@ -29,8 +29,11 @@ const LANE_COLORS = [
 function randomMultiplier() {
   // Similar risk profile to limbo: lots of low rolls, occasional high pops.
   let u = Math.random();
-  if (u < 0.0001) u = 0.0001;
-  return +(HOUSE_EDGE / u).toFixed(2);
+  // Slightly nerfed — bias outcomes toward lower multipliers so high
+  // pops are rarer. House edge constant is unchanged.
+  const skewed = Math.pow(u, 1.18);
+  if (skewed < 0.0001) return 200;
+  return +(HOUSE_EDGE / skewed).toFixed(2);
 }
 
 function makeLanes() {

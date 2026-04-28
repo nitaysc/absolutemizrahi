@@ -26,8 +26,12 @@ function rollMultiplier() {
   // Inverse-CDF style multiplier with house edge — same shape as Limbo
   // so payout math stays fair and intuitive.
   let u = Math.random();
-  if (u < 0.0001) u = 0.0001;
-  return Math.min(+(HOUSE_EDGE / u).toFixed(2), 5000);
+  // Slightly nerfed: skew distribution toward lower outcomes so big
+  // multipliers feel rarer, while keeping the same house edge baseline.
+  // Squaring u biases the result lower; cap at 500× to tame jackpots.
+  const skewed = Math.pow(u, 1.18);
+  if (skewed < 0.0001) return 500;
+  return Math.min(+(HOUSE_EDGE / skewed).toFixed(2), 500);
 }
 
 function colorFor(m: number) {
