@@ -108,10 +108,10 @@ export default function CaseBattles() {
               </button>
               <button
                 onClick={() => navigate(`/cases/battles/${b.id}`)}
-                className="ml-3 inline-flex shrink-0 items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-bold text-primary hover:bg-primary/20"
-                title="Watch this battle (including bot-filled battles)"
+                className="ml-3 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/60 bg-primary/15 px-4 py-1.5 text-xs font-black uppercase tracking-wider text-primary shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:bg-primary/25"
+                title={b.fill_with_bots ? "Spectate this bot-filled battle live" : "Spectate this battle live"}
               >
-                <Eye className="h-3 w-3" /> Watch
+                <Eye className="h-3.5 w-3.5" /> Watch{b.fill_with_bots ? " 🤖" : ""}
               </button>
             </div>
           ))}
