@@ -22,7 +22,7 @@ function molesMultiplier(moles: number, k: number): number {
   if (k <= 0) return 1;
   let m = 1;
   for (let i = 0; i < k; i++) {
-    m *= (HOLES - i) / (HOLES - moles - i);
+    m *= (HOLES - i) / (moles - i);
   }
   return m * HOUSE_EDGE;
 }
