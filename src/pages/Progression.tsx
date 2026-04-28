@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   useProgression,
@@ -10,11 +10,9 @@ import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { Flame, Sparkles, Target, Trophy, Lock, Gift, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
-import { toast } from "sonner";
 
 export default function Progression() {
-  const { stats, missions, achievements, unlockedCodes, claimStreak } = useProgression();
-  const [claiming, setClaiming] = useState(false);
+  const { stats, missions, achievements, unlockedCodes } = useProgression();
   const [boosterRemaining, setBoosterRemaining] = useState<string | null>(null);
 
   // tick countdown for booster
@@ -41,19 +39,6 @@ export default function Progression() {
   const nextRewardCoins = stats ? 100 * (stats.level + 1) : 100;
   const isMilestone5 = stats ? (stats.level + 1) % 5 === 0 : false;
   const isMilestone10 = stats ? (stats.level + 1) % 10 === 0 : false;
-
-  // streak claimable today?
-  const today = new Date().toISOString().slice(0, 10);
-  const claimedToday = stats?.last_streak_claim === today;
-
-  async function onClaimStreak() {
-    setClaiming(true);
-    const r = await claimStreak();
-    setClaiming(false);
-    if (!r) return;
-    if (r.already) toast.info("Streak already claimed today");
-    else toast.success(`Day ${r.day}! +${r.coins} coins`);
-  }
 
   const sortedAch = useMemo(() => {
     return [...achievements].sort((a, b) => {
