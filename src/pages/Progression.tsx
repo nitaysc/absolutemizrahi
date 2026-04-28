@@ -10,11 +10,9 @@ import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { Flame, Sparkles, Target, Trophy, Lock, Gift, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
-import { toast } from "sonner";
 
 export default function Progression() {
-  const { stats, missions, achievements, unlockedCodes, claimStreak } = useProgression();
-  const [claiming, setClaiming] = useState(false);
+  const { stats, missions, achievements, unlockedCodes } = useProgression();
   const [boosterRemaining, setBoosterRemaining] = useState<string | null>(null);
 
   // tick countdown for booster
@@ -41,19 +39,6 @@ export default function Progression() {
   const nextRewardCoins = stats ? 100 * (stats.level + 1) : 100;
   const isMilestone5 = stats ? (stats.level + 1) % 5 === 0 : false;
   const isMilestone10 = stats ? (stats.level + 1) % 10 === 0 : false;
-
-  // streak claimable today?
-  const today = new Date().toISOString().slice(0, 10);
-  const claimedToday = stats?.last_streak_claim === today;
-
-  async function onClaimStreak() {
-    setClaiming(true);
-    const r = await claimStreak();
-    setClaiming(false);
-    if (!r) return;
-    if (r.already) toast.info("Streak already claimed today");
-    else toast.success(`Day ${r.day}! +${r.coins} coins`);
-  }
 
   const sortedAch = useMemo(() => {
     return [...achievements].sort((a, b) => {
@@ -148,44 +133,6 @@ export default function Progression() {
             </div>
           </div>
           <p className="text-xs font-bold text-muted-foreground">{(nextNeed - 0).toLocaleString()} XP gate</p>
-        </div>
-      </section>
-
-      {/* DAILY STREAK CLAIM */}
-      <section className="rounded-3xl border border-orange-400/30 bg-gradient-to-br from-orange-500/10 to-rose-700/10 p-4 backdrop-blur-xl">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <motion.div
-              animate={{ scale: claimedToday ? 1 : [1, 1.12, 1] }}
-              transition={{ duration: 1.6, repeat: claimedToday ? 0 : Infinity }}
-              className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-400/25"
-            >
-              <Flame className="h-6 w-6 text-orange-300" />
-            </motion.div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-orange-200">
-                Daily login bonus
-              </p>
-              <p className="text-base font-black">
-                {claimedToday ? `Day ${stats.streak_days} claimed ✓` : `Claim day ${stats.streak_days + 1}`}
-              </p>
-              <p className="text-[11px] text-orange-200/70">
-                {claimedToday ? "Come back tomorrow to keep your streak" : `Reward: ${(200 * Math.min(stats.streak_days + 1, 7)).toLocaleString()} coins + ${50 * Math.min(stats.streak_days + 1, 7)} XP`}
-              </p>
-            </div>
-          </div>
-          <button
-            disabled={claimedToday || claiming}
-            onClick={onClaimStreak}
-            className={cn(
-              "rounded-full px-4 py-2 text-sm font-black transition",
-              claimedToday
-                ? "cursor-default bg-card text-muted-foreground"
-                : "bg-gradient-to-r from-orange-400 to-rose-500 text-white shadow-[0_0_20px_hsl(20_90%_55%/0.5)] hover:brightness-110",
-            )}
-          >
-            {claimedToday ? "Claimed" : "Claim"}
-          </button>
         </div>
       </section>
 
