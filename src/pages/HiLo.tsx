@@ -398,7 +398,7 @@ function PlayingCard({
   return (
     <div
       className={cn(
-        "relative aspect-[3/4] overflow-hidden rounded-2xl border bg-gradient-to-br p-3 shadow-lg transition-all",
+        "relative mx-auto aspect-[3/4] w-full max-w-[160px] overflow-hidden rounded-xl border bg-gradient-to-br p-2 shadow-lg transition-all",
         active
           ? "border-primary/60 from-background to-card shadow-[0_0_30px_hsl(var(--primary)/0.25)]"
           : win === true
@@ -410,26 +410,26 @@ function PlayingCard({
     >
       <div className="flex items-start justify-between">
         <div>
-          <p className={cn("text-2xl font-black leading-none", red ? "text-rose-400" : "text-foreground")}>
+          <p className={cn("text-lg font-black leading-none", red ? "text-rose-400" : "text-foreground")}>
             {RANKS[rank - 1]}
           </p>
-          <p className={cn("text-xl leading-none", red ? "text-rose-400" : "text-foreground")}>{suit}</p>
+          <p className={cn("text-base leading-none", red ? "text-rose-400" : "text-foreground")}>{suit}</p>
         </div>
-        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+        <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
       </div>
       <div
         className={cn(
-          "absolute inset-0 flex items-center justify-center text-7xl font-black opacity-90",
+          "absolute inset-0 flex items-center justify-center text-5xl font-black opacity-90",
           red ? "text-rose-400" : "text-foreground",
         )}
       >
         {suit}
       </div>
-      <div className="absolute bottom-3 right-3 rotate-180">
-        <p className={cn("text-2xl font-black leading-none", red ? "text-rose-400" : "text-foreground")}>
+      <div className="absolute bottom-2 right-2 rotate-180">
+        <p className={cn("text-lg font-black leading-none", red ? "text-rose-400" : "text-foreground")}>
           {RANKS[rank - 1]}
         </p>
-        <p className={cn("text-xl leading-none", red ? "text-rose-400" : "text-foreground")}>{suit}</p>
+        <p className={cn("text-base leading-none", red ? "text-rose-400" : "text-foreground")}>{suit}</p>
       </div>
     </div>
   );
@@ -439,13 +439,13 @@ function CardBack({ pulsing }: { pulsing?: boolean }) {
   return (
     <div
       className={cn(
-        "relative aspect-[3/4] overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/20 via-card to-background p-3 shadow-lg",
+        "relative mx-auto aspect-[3/4] w-full max-w-[160px] overflow-hidden rounded-xl border border-border bg-gradient-to-br from-primary/20 via-card to-background p-2 shadow-lg",
         pulsing && "animate-pulse",
       )}
     >
       <div className="absolute inset-2 rounded-xl border border-primary/30" />
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="text-5xl font-black text-primary/70 drop-shadow-[0_0_20px_hsl(var(--primary)/0.6)]">?</div>
+        <div className="text-4xl font-black text-primary/70 drop-shadow-[0_0_20px_hsl(var(--primary)/0.6)]">?</div>
       </div>
       <div
         className="absolute inset-0 opacity-30"
