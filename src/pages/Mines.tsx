@@ -39,6 +39,7 @@ export default function Mines() {
   const [onLossPct, setOnLossPct] = useState(0);
   const [stopProfit, setStopProfit] = useState(0);
   const [stopLoss, setStopLoss] = useState(0);
+  const [autoSpeed, setAutoSpeed] = useState(2);
   const [running, setRunning] = useState(false);
   const [autoLeft, setAutoLeft] = useState(0);
   const [session, setSession] = useState({ profit: 0, wins: 0, losses: 0 });
@@ -220,7 +221,7 @@ export default function Mines() {
       setRevealedCount(k + 1);
       lastMult = Number(r.multiplier);
       setMultiplier(lastMult);
-      await sleep(120);
+      await sleep(Math.max(40, Math.round(120 / autoSpeed)));
     }
 
     // Cashout
@@ -281,7 +282,7 @@ export default function Mines() {
       }
       i++;
       if (!infinite) setAutoLeft(autoBets - i);
-      await sleep(600);
+      await sleep(Math.max(40, Math.round(600 / autoSpeed)));
     }
     setRunning(false);
     setBet(baseBetRef.current);
@@ -445,6 +446,25 @@ export default function Mines() {
                   </label>
                   <NumberField value={stopLoss} onChange={setStopLoss} min={0} max={1_000_000_000} disabled={running} className="mt-1" />
                 </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Auto speed
+                  </label>
+                  <span className="text-xs font-black tabular-nums">{autoSpeed.toFixed(1)}×</span>
+                </div>
+                <input
+                  type="range"
+                  min={2}
+                  max={5}
+                  step={0.1}
+                  value={autoSpeed}
+                  onChange={(e) => setAutoSpeed(Number(e.target.value))}
+                  disabled={running}
+                  className="mt-2 h-2 w-full cursor-pointer accent-primary disabled:cursor-not-allowed"
+                />
               </div>
 
               {(running || session.wins + session.losses > 0) && (

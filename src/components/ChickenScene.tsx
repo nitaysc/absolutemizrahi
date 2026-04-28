@@ -26,11 +26,11 @@ export function ChickenScene({
   const chickenLane = Math.max(0, Math.min(step, totalLanes - 1));
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border bg-[#071a2f] sm:rounded-3xl">
+    <div className="relative mx-auto w-full max-w-[760px] overflow-hidden rounded-2xl border border-border bg-[#071a2f] sm:rounded-3xl">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),transparent_40%)]" />
       <div className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-white/10" />
 
-      <div className="relative h-[230px] p-3 sm:h-[260px] sm:p-4">
+      <div className="relative h-[190px] p-3 sm:h-[220px] sm:p-4">
         <div className="absolute left-3 top-3 z-20 rounded-xl border border-primary/40 bg-background/70 px-3 py-1.5 text-xs font-black uppercase tracking-widest text-primary backdrop-blur-md sm:left-4 sm:top-4">
           {active && !dead && step > 0
             ? `${(multipliers[step - 1] ?? 1).toFixed(2)}×`
@@ -42,7 +42,7 @@ export function ChickenScene({
         </div>
 
         <div className="absolute bottom-4 left-2 right-2 overflow-x-auto [scrollbar-width:thin] sm:left-4 sm:right-4">
-          <div className="flex min-w-max items-end gap-2 pb-2">
+          <div className="flex min-w-max items-end gap-1.5 pb-2">
             {Array.from({ length: totalLanes }).map((_, i) => {
               const laneState = lanes[i] ?? "hidden";
               const isCurrent = active && !dead && i === step;
@@ -52,7 +52,7 @@ export function ChickenScene({
               return (
                 <div
                   key={i}
-                  className={`relative h-24 w-20 shrink-0 overflow-hidden rounded-xl border px-2 pt-2 text-center transition sm:h-28 sm:w-24 ${
+                  className={`relative h-20 w-16 shrink-0 overflow-hidden rounded-xl border px-1.5 pt-1.5 text-center transition sm:h-24 sm:w-20 ${
                     laneState === "death"
                       ? "border-destructive/70 bg-destructive/20"
                       : laneState === "safe"
@@ -63,7 +63,7 @@ export function ChickenScene({
                   <div className="text-[10px] font-black tabular-nums text-white/90 sm:text-xs">
                     {(multipliers[i] ?? 1).toFixed(2)}×
                   </div>
-                  <div className="mt-2 text-2xl leading-none sm:mt-3">
+                  <div className="mt-1.5 text-xl leading-none sm:mt-2.5 sm:text-2xl">
                     {laneState === "death" ? "🚗" : laneState === "safe" ? "✅" : "🕳️"}
                   </div>
 
@@ -89,8 +89,8 @@ export function ChickenScene({
         </div>
 
         <div
-          className="absolute bottom-[118px] z-30 text-3xl transition-all duration-300 sm:bottom-[138px]"
-          style={{ left: `calc(0.5rem + ${chickenLane * 5.5}rem)` }}
+          className="absolute bottom-[102px] z-30 text-2xl transition-all duration-300 sm:bottom-[122px] sm:text-3xl"
+          style={{ left: `calc(0.5rem + ${chickenLane * 4.5}rem)` }}
         >
           {dead ? "💥🐔" : "🐔"}
         </div>
