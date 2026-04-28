@@ -7,6 +7,7 @@ import { formatCoins } from "@/lib/format";
 import { Trophy } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { calculateDailyStreak, getStreakTimezone } from "@/lib/streak";
+import { LevelBadge } from "@/components/LevelBadge";
 
 interface Row {
   id: string;
@@ -14,6 +15,8 @@ interface Row {
   coins: number;
   total_won: number;
   streak: number;
+  level: number;
+  xp_total: number;
 }
 
 export default function Leaderboard() {
@@ -27,7 +30,7 @@ export default function Leaderboard() {
       const tz = getStreakTimezone();
       const { data } = await supabase
         .from("profiles")
-        .select("id, username, coins, total_won")
+        .select("id, username, coins, total_won, level, xp_total")
         .order("coins", { ascending: false })
         .limit(100);
 
@@ -53,6 +56,8 @@ export default function Leaderboard() {
           coins: Number(r.coins ?? 0),
           total_won: Number(r.total_won ?? 0),
           streak: calculateDailyStreak(byUser.get(r.id) ?? [], new Date(), tz),
+          level: Number((r as { level?: number }).level ?? 1),
+          xp_total: Number((r as { xp_total?: number }).xp_total ?? 0),
         })),
       );
       setLoading(false);
@@ -64,6 +69,10 @@ export default function Leaderboard() {
     .filter((r) => r.streak > 0)
     .sort((a, b) => b.streak - a.streak || b.coins - a.coins)
     .slice(0, 50);
+  const byLevel = [...rows]
+    .sort((a, b) => b.level - a.level || b.xp_total - a.xp_total)
+    .slice(0, 50);
+  const byXp = [...rows].sort((a, b) => b.xp_total - a.xp_total).slice(0, 50);
 
   return (
     <div className="space-y-6">
@@ -78,11 +87,15 @@ export default function Leaderboard() {
       {loading ? (
         <div className="text-center text-muted-foreground">Loading...</div>
       ) : (
-        <Tabs defaultValue="coins" className="space-y-3">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="level" className="space-y-3">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="level">Level</TabsTrigger>
+            <TabsTrigger value="xp">XP</TabsTrigger>
             <TabsTrigger value="coins">Coins</TabsTrigger>
             <TabsTrigger value="streak">Streak</TabsTrigger>
           </TabsList>
+          <LeaderboardList rows={byLevel} userId={user?.id} navigate={navigate} mode="level" />
+          <LeaderboardList rows={byXp} userId={user?.id} navigate={navigate} mode="xp" />
           <LeaderboardList rows={byCoins} userId={user?.id} navigate={navigate} mode="coins" />
           <LeaderboardList rows={byStreak} userId={user?.id} navigate={navigate} mode="streak" />
         </Tabs>
@@ -100,7 +113,7 @@ function LeaderboardList({
   rows: Row[];
   userId?: string;
   navigate: ReturnType<typeof useNavigate>;
-  mode: "coins" | "streak";
+  mode: "coins" | "streak" | "level" | "xp";
 }) {
   return (
     <TabsContent value={mode} className="space-y-2">
@@ -139,6 +152,7 @@ function LeaderboardList({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 truncate font-bold">
+                    <LevelBadge level={r.level} size="xs" />
                     <span className="truncate">{r.username ?? "anon"}</span>
                     {r.streak > 0 && (
                       <span
@@ -150,7 +164,13 @@ function LeaderboardList({
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {mode === "coins" ? `Won ${formatCoins(r.total_won)}` : `${r.streak} day streak`}
+                    {mode === "coins"
+                      ? `Won ${formatCoins(r.total_won)}`
+                      : mode === "streak"
+                        ? `${r.streak} day streak`
+                        : mode === "level"
+                          ? `${r.xp_total.toLocaleString()} lifetime XP`
+                          : `Lvl ${r.level}`}
                   </div>
                 </div>
                 {mode === "coins" ? (
@@ -158,8 +178,14 @@ function LeaderboardList({
                     <MizrahiCoin size={16} />
                     {formatCoins(r.coins)}
                   </div>
-                ) : (
+                ) : mode === "streak" ? (
                   <div className="font-black tabular-nums text-primary">{r.streak}🔥</div>
+                ) : mode === "level" ? (
+                  <div className="font-black tabular-nums text-primary">Lvl {r.level}</div>
+                ) : (
+                  <div className="font-black tabular-nums text-amber-300">
+                    {r.xp_total.toLocaleString()} XP
+                  </div>
                 )}
               </li>
             );
