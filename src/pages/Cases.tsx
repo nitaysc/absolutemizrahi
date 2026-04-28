@@ -95,12 +95,6 @@ export default function Cases() {
     const items = (data ?? []) as RolledItem[];
     setResults(items);
     setSpinKey((k) => k + 1);
-    // Mission progress: opened N cases. (XP for the wager comes via place_bet inside the RPC.)
-    void supabase.rpc("bump_mission" as never, {
-      _user_id: profile.id,
-      _kind: "open_cases",
-      _amount: count,
-    } as never);
     // NOTE: do NOT refetch the balance here, otherwise the user sees their
     // coins go up before the reel finishes — leaking the result. We refetch
     // after the final reel lands (in the onComplete callback below).
