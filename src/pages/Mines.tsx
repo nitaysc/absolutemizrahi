@@ -11,6 +11,7 @@ import { CashoutPop } from "@/components/CashoutPop";
 import { formatCoins } from "@/lib/format";
 import { Bomb, Gem, Target, Repeat } from "lucide-react";
 import { playGem, playBomb, playTileClick, playCashout } from "@/lib/sfx";
+import { triggerBigWin } from "@/components/WinBurst";
 
 type Tile = "hidden" | "gem" | "bomb";
 type Mode = "manual" | "auto";
