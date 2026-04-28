@@ -119,7 +119,6 @@ export default function Blackjack() {
   const { profile, setLocalCoins } = useUserProfile();
   const [bet, setBet] = useState(10);
   const [busy, setBusy] = useState(false);
-  const [autoJoin, setAutoJoin] = useState(false);
   const [state, setState] = useState<TableState | null>(null);
   const [now, setNow] = useState(Date.now());
   const lastResultRound = useRef<number>(-1);
@@ -194,15 +193,6 @@ export default function Blackjack() {
     if (d?.new_balance != null) setLocalCoins(Number(d.new_balance));
     refresh();
   }
-
-  useEffect(() => {
-    if (!autoJoin || busy || !profile || !state) return;
-    if (state.status !== "betting" || mySeat) return;
-    if (bet > profile.coins) return;
-
-    joinSeat();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoJoin, busy, state?.status, state?.round_seq, mySeat?.user_id, bet, profile?.coins]);
 
   async function act(action: "hit" | "stand" | "double" | "split") {
     setBusy(true);
@@ -349,33 +339,22 @@ export default function Blackjack() {
 
       {/* Controls */}
       <div className="space-y-3 rounded-2xl border border-border bg-card/70 p-3 backdrop-blur-xl sm:rounded-3xl sm:p-4">
-        <BetControls bet={bet} setBet={setBet} disabled={busy} />
-
-        <Button
-          type="button"
-          variant={autoJoin ? "default" : "outline"}
-          onClick={() => setAutoJoin((v) => !v)}
-          disabled={busy}
-          className="h-12 w-full text-base font-black tracking-wider"
-        >
-          AUTO JOIN: {autoJoin ? "ON" : "OFF"}
-        </Button>
-
-        {!mySeat && (
+        {!mySeat && state.status === "betting" && (
           <>
+            <BetControls bet={bet} setBet={setBet} disabled={busy} />
             <Button
               onClick={joinSeat}
-              disabled={busy || state.status !== "betting"}
+              disabled={busy}
               className="h-12 w-full text-base font-black tracking-wider"
             >
               JOIN TABLE — {formatCoins(bet)}
             </Button>
-            {state.status !== "betting" && (
-              <div className="rounded-xl bg-background/60 p-3 text-center text-sm text-muted-foreground">
-                Round in progress · next betting in {secondsLeft}s
-              </div>
-            )}
           </>
+        )}
+        {!mySeat && state.status !== "betting" && (
+          <div className="rounded-xl bg-background/60 p-3 text-center text-sm text-muted-foreground">
+            Round in progress · next betting in {secondsLeft}s
+          </div>
         )}
         {mySeat && state.status === "betting" && (
           <div className="rounded-xl bg-[hsl(var(--success))]/10 p-3 text-center text-sm font-bold text-[hsl(var(--success))]">

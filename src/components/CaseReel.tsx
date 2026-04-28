@@ -285,23 +285,17 @@ export function CaseReel({
 
     // STAGE 1: follow-up spin for specials
     if (isEmpire) {
-      // Empire = legendary/mythic only (matches backend roll rules)
-      const empirePool = sortedPool.filter((it) => ["legendary", "mythic"].includes(it.rarity));
+      // Empire = epic/legendary/mythic only (matches backend roll rules)
+      const empirePool = sortedPool.filter((it) => ["epic", "legendary", "mythic"].includes(it.rarity));
       const empireTop = empirePool.slice(0, Math.max(1, Math.ceil(empirePool.length * 0.45)));
-      const empireResult = ["legendary", "mythic"].includes(result.rarity)
-        ? result
-        : empirePool[0] ?? result;
       const upgraded = [...empireTop, ...empirePool];
-      const strictPool = upgraded.length ? upgraded : [empireResult];
-      const strictTop = empireTop.length ? empireTop : [empireResult];
-      return buildStrip(strictPool, empireResult, strictTop);
+      return buildStrip(upgraded.length ? upgraded : pool, result, empireTop.length ? empireTop : topItems);
     }
     if (isDuel) {
-      // Duel = strict 50/50 rarity lane between legendary and common.
+      // Duel = legendary-only lane (matches backend roll rules)
       const legendaryPool = sortedPool.filter((it) => it.rarity === "legendary");
-      const commonPool = sortedPool.filter((it) => it.rarity === "common");
       const high = legendaryPool[0] ?? result;
-      const low = commonPool[0] ?? result;
+      const low = legendaryPool[legendaryPool.length - 1] ?? result;
       const duelPool = [high, low];
       const out: ReelItem[] = [];
       for (let i = 0; i < STRIP_LEN; i++) {
@@ -309,7 +303,7 @@ export function CaseReel({
       }
       out[LANDING_INDEX] = result;
       // Make the neighbours visibly the OTHER outcome to tease
-      const other = result.rarity === "legendary" ? low : high;
+      const other = result.value >= high.value ? low : high;
       [-2, -1, 1, 2].forEach((off) => {
         const p = LANDING_INDEX + off;
         if (p >= 0 && p < STRIP_LEN) out[p] = other;
