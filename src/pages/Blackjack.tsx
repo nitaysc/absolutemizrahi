@@ -349,6 +349,8 @@ export default function Blackjack() {
 
       {/* Controls */}
       <div className="space-y-3 rounded-2xl border border-border bg-card/70 p-3 backdrop-blur-xl sm:rounded-3xl sm:p-4">
+        <BetControls bet={bet} setBet={setBet} disabled={busy} />
+
         <Button
           type="button"
           variant={autoJoin ? "default" : "outline"}
@@ -359,30 +361,8 @@ export default function Blackjack() {
           AUTO JOIN: {autoJoin ? "ON" : "OFF"}
         </Button>
 
-        {!mySeat && state.status === "betting" && (
         {!mySeat && (
           <>
-            <BetControls bet={bet} setBet={setBet} disabled={busy} />
-            <Button
-              type="button"
-              variant={autoJoin ? "default" : "outline"}
-              onClick={() => setAutoJoin((v) => !v)}
-              disabled={busy}
-              className="h-12 w-full text-base font-black tracking-wider"
-            >
-              AUTO JOIN: {autoJoin ? "ON" : "OFF"}
-            </Button>
-            {autoJoin && (
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => setAutoJoin(false)}
-                disabled={busy}
-                className="h-11 w-full font-black tracking-wider"
-              >
-                STOP AUTO JOIN
-              </Button>
-            )}
             <Button
               onClick={joinSeat}
               disabled={busy || state.status !== "betting"}
