@@ -124,3 +124,35 @@ export function playReelLand() {
   tone({ freq: 540, duration: 0.10, type: "sine", gain: 0.12 });
   tone({ freq: 810, duration: 0.14, type: "triangle", gain: 0.10, delay: 0.05 });
 }
+
+/** Whoosh as a dart leaves your hand (descending noise). */
+export function playDartThrow() {
+  noise(0.18, 0.18);
+  tone({ freq: 900, duration: 0.18, type: "sine", gain: 0.06, sweepTo: 280 });
+}
+
+/** Soft thud when a dart sticks in the board. */
+export function playDartHit() {
+  tone({ freq: 220, duration: 0.08, type: "triangle", gain: 0.18, sweepTo: 120 });
+  noise(0.06, 0.12);
+}
+
+/** Bright sparkle for a bullseye / huge multiplier. */
+export function playBullseye() {
+  tone({ freq: 880, duration: 0.10, type: "triangle", gain: 0.16 });
+  tone({ freq: 1320, duration: 0.12, type: "triangle", gain: 0.14, delay: 0.06 });
+  tone({ freq: 1760, duration: 0.16, type: "triangle", gain: 0.12, delay: 0.14 });
+  tone({ freq: 2349, duration: 0.20, type: "triangle", gain: 0.10, delay: 0.24 });
+}
+
+/** Card flip swoosh. */
+export function playCardFlip() {
+  tone({ freq: 360, duration: 0.06, type: "triangle", gain: 0.08, sweepTo: 720 });
+  noise(0.04, 0.05);
+}
+
+/** Card reveal chime (correct guess). */
+export function playCardReveal() {
+  tone({ freq: 660, duration: 0.10, type: "triangle", gain: 0.14 });
+  tone({ freq: 990, duration: 0.14, type: "triangle", gain: 0.12, delay: 0.06 });
+}
