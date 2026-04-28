@@ -197,11 +197,31 @@ export function CaseDetailsModal({
                       <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-black">
                         <MizrahiCoin size={8} /> {formatCoins(it.value)}
                       </div>
-                      <div className="mt-1.5 rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-black text-primary">
-                        {soloPct < 0.001 ? "<0.001" : soloPct.toFixed(soloPct < 1 ? 3 : 2)}% solo
+                      <div
+                        className="mt-1.5 rounded-full bg-black/50 px-2 py-0.5 text-[11px] font-black text-foreground"
+                        title={`1 in ${soloPct > 0 ? Math.round(100 / soloPct).toLocaleString() : "∞"} solo opens`}
+                      >
+                        {soloPct < 0.0001
+                          ? "<0.0001"
+                          : soloPct < 0.01
+                            ? soloPct.toFixed(4)
+                            : soloPct < 1
+                              ? soloPct.toFixed(3)
+                              : soloPct.toFixed(2)}
+                        % <span className="opacity-60">solo</span>
                       </div>
-                      <div className="mt-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-black text-primary">
-                        {battlePct < 0.001 ? "<0.001" : battlePct.toFixed(battlePct < 1 ? 3 : 2)}% battle
+                      <div
+                        className="mt-1 rounded-full bg-primary/25 px-2 py-0.5 text-[11px] font-black text-primary"
+                        title={`1 in ${battlePct > 0 ? Math.round(100 / battlePct).toLocaleString() : "∞"} battle opens`}
+                      >
+                        {battlePct < 0.0001
+                          ? "<0.0001"
+                          : battlePct < 0.01
+                            ? battlePct.toFixed(4)
+                            : battlePct < 1
+                              ? battlePct.toFixed(3)
+                              : battlePct.toFixed(2)}
+                        % <span className="opacity-70">battle</span>
                       </div>
                     </div>
                   );
@@ -210,7 +230,7 @@ export function CaseDetailsModal({
             )}
           </div>
           <p className="border-t border-border p-2 text-center text-[10px] text-muted-foreground">
-            * Solo odds use raw case weights. Battle odds include special spins (1% Empire: epic/legendary/mythic, 3% Duel: legendary only). RTP = expected solo return after 5% house edge
+            Odds are exact and match the server roll. Solo = raw weights. Battle adds a 1% Empire spin (epic / legendary / mythic) and a 3% Duel spin (legendary only). Hover an item to see "1 in N" odds. RTP = expected solo return after 5% house edge.
           </p>
         </motion.div>
       </motion.div>
