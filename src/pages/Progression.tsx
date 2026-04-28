@@ -136,44 +136,6 @@ export default function Progression() {
         </div>
       </section>
 
-      {/* DAILY STREAK CLAIM */}
-      <section className="rounded-3xl border border-orange-400/30 bg-gradient-to-br from-orange-500/10 to-rose-700/10 p-4 backdrop-blur-xl">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <motion.div
-              animate={{ scale: claimedToday ? 1 : [1, 1.12, 1] }}
-              transition={{ duration: 1.6, repeat: claimedToday ? 0 : Infinity }}
-              className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-400/25"
-            >
-              <Flame className="h-6 w-6 text-orange-300" />
-            </motion.div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-orange-200">
-                Daily login bonus
-              </p>
-              <p className="text-base font-black">
-                {claimedToday ? `Day ${stats.streak_days} claimed ✓` : `Claim day ${stats.streak_days + 1}`}
-              </p>
-              <p className="text-[11px] text-orange-200/70">
-                {claimedToday ? "Come back tomorrow to keep your streak" : `Reward: ${(200 * Math.min(stats.streak_days + 1, 7)).toLocaleString()} coins + ${50 * Math.min(stats.streak_days + 1, 7)} XP`}
-              </p>
-            </div>
-          </div>
-          <button
-            disabled={claimedToday || claiming}
-            onClick={onClaimStreak}
-            className={cn(
-              "rounded-full px-4 py-2 text-sm font-black transition",
-              claimedToday
-                ? "cursor-default bg-card text-muted-foreground"
-                : "bg-gradient-to-r from-orange-400 to-rose-500 text-white shadow-[0_0_20px_hsl(20_90%_55%/0.5)] hover:brightness-110",
-            )}
-          >
-            {claimedToday ? "Claimed" : "Claim"}
-          </button>
-        </div>
-      </section>
-
       {/* DAILY MISSIONS */}
       <section className="space-y-3">
         <header className="flex items-center justify-between">
