@@ -448,9 +448,10 @@ export default function Prediction() {
       if (winner.id !== openBet.pickedTeamId) continue;
 
       const payoutMultiplier = Math.max(MIN_MULTIPLIER, Number(openBet.multiplier) || 2);
-      // place_bet adds (multiplier - 1) * stake on a win, so we pass payoutMultiplier + 1
-      // to net out to payoutMultiplier × stake total return. We keep the simpler model:
-      // pass the full payout multiplier and let RPC apply it.
+      // The opening ticket already deducted the original stake.
+      // During settlement we must credit "stake * multiplier" in full,
+      // so we pass multiplier + 1 to place_bet where net delta is:
+      //   -stake + (stake * (multiplier + 1)) = stake * multiplier
       const { data, error } = await supabase.rpc("place_bet", {
         _game: "prediction",
         _bet_amount: openBet.amount,
@@ -474,6 +475,9 @@ export default function Prediction() {
         toast.success(
           `✅ ${openBet.eventName} — ${openBet.pickedTeamName} won! Paid ${payoutMultiplier.toFixed(2)}×`,
         );
+      } else if ((error as { code?: string }).code === "23505") {
+        // Settlement already exists (idempotency guard at DB level).
+        paidAny = true;
       }
     }
 
