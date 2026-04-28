@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { Layout } from "@/components/Layout";
 import { ProfileProvider } from "@/hooks/useUserProfile";
 import { PresenceProvider } from "@/hooks/usePresence";
+import { ProgressionProvider } from "@/hooks/useProgression";
+import { ProgressionOverlay } from "@/components/ProgressionOverlay";
 import AuthPage from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Lobby from "./pages/Lobby";
@@ -41,6 +43,7 @@ import CaseUpload from "./pages/CaseUpload";
 import CaseAdmin from "./pages/CaseAdmin";
 import Inventory from "./pages/Inventory";
 import Upgrader from "./pages/Upgrader";
+import Progression from "./pages/Progression";
 import NotFound from "./pages/NotFound";
 
 function Protected({ children }: { children: React.ReactNode }) {
@@ -58,6 +61,7 @@ function Protected({ children }: { children: React.ReactNode }) {
 const App = () => (
   <AuthProvider>
     <ProfileProvider>
+      <ProgressionProvider>
       <PresenceProvider>
       <BrowserRouter>
         <Routes>
@@ -94,6 +98,7 @@ const App = () => (
             <Route path="/chess/:gameId" element={<ChessGame />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/progression" element={<Progression />} />
             <Route path="/friends" element={<Friends />} />
             <Route path="/u/:username" element={<PlayerProfile />} />
             <Route path="/prediction" element={<Prediction />} />
@@ -108,9 +113,11 @@ const App = () => (
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <ProgressionOverlay />
         <Toaster />
       </BrowserRouter>
       </PresenceProvider>
+      </ProgressionProvider>
     </ProfileProvider>
   </AuthProvider>
 );
