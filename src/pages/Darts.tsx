@@ -9,6 +9,8 @@ import { useTrackGame } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCoins } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { playDartThrow, playDartHit, playBullseye } from "@/lib/sfx";
+import { triggerBigWin } from "@/components/WinBurst";
 
 type Difficulty = "easy" | "medium" | "hard" | "expert";
 
@@ -107,10 +109,12 @@ export default function Darts() {
     const point = randomPointInRing(idx, rings.length);
 
     // Animate the dart flying to the point
+    playDartThrow();
     setFlying(point);
 
     // Wait for flight animation
     await new Promise((r) => setTimeout(r, 750));
+    playDartHit();
 
     // Place the bet on the server
     const won = ring.mult > 0;
@@ -133,7 +137,11 @@ export default function Darts() {
     setThrows((t) => [{ x: point.x, y: point.y, mult: ring.mult, color: ring.ringColor }, ...t].slice(0, 6));
     setFlying(null);
     setLastResult({ mult: ring.mult, payout: Math.floor(bet * ring.mult) });
-    if (won && ring.mult >= 10) toast.success(`💥 ${ring.mult}× — ${formatCoins(Math.floor(bet * ring.mult))}!`);
+    if (won && ring.mult >= 5) {
+      playBullseye();
+      triggerBigWin(ring.mult, ring.mult >= 25 ? "Bullseye" : "Big hit");
+      toast.success(`💥 ${ring.mult}× — ${formatCoins(Math.floor(bet * ring.mult))}!`);
+    }
     setPending(false);
   }
 
