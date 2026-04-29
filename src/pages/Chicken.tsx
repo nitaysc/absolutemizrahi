@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
+import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel";
+import { NumberField } from "@/components/NumberField";
 import {
   Select,
   SelectContent,
@@ -52,8 +54,11 @@ type LaneState = "hidden" | "safe" | "death";
 export default function Chicken() {
   useTrackGame("chicken");
   const { profile, setLocalCoins } = useUserProfile();
+  const [mode, setMode] = useState<"manual" | "auto">("manual");
   const [bet, setBet] = useState(10);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  // Auto: cashout when reaching this many lanes (capped to lanes for the difficulty).
+  const [autoTarget, setAutoTarget] = useState(4);
   const [active, setActive] = useState(false);
   const [step, setStep] = useState(0); // lanes successfully crossed
   const [lanes, setLanes] = useState<LaneState[]>([]);
@@ -77,6 +82,84 @@ export default function Chicken() {
     ? multiplierFor(lockedDiffRef.current, step + 1)
     : multiplierFor(difficulty, 1);
   const profit = active ? Math.floor(lockedBetRef.current * currentMult) - lockedBetRef.current : 0;
+
+  async function playAutoRound(betOverride?: number): Promise<AutoBetRoundResult | null> {
+    if (!profile) return null;
+    const stake = betOverride ?? bet;
+    if (stake < 1 || stake > profile.coins) {
+      toast.error(stake < 1 ? "Bet at least 1 coin" : "Not enough coins");
+      return null;
+    }
+    const cfgNow = DIFFICULTY[difficulty];
+    const target = Math.max(1, Math.min(autoTarget, cfgNow.lanes));
+    // Pre-roll lanes for visualization + outcome.
+    const total = cfgNow.lanes;
+    const rand = new Uint32Array(total);
+    crypto.getRandomValues(rand);
+    const rolls = Array.from(rand, (n) => n / 0xffffffff < cfgNow.deathProb);
+    rollsRef.current = rolls;
+    lockedBetRef.current = stake;
+    lockedDiffRef.current = difficulty;
+    setLanes(Array(total).fill("hidden"));
+    setStep(0);
+    setDead(false);
+    setDeathLane(null);
+    setNextDeathLane(null);
+    setCashedOut(false);
+    setActive(true);
+
+    let safe = 0;
+    let died = false;
+    for (let i = 0; i < target; i++) {
+      if (rolls[i]) { died = true; break; }
+      safe++;
+    }
+    // Animate quickly
+    for (let i = 0; i < safe; i++) {
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((r) => setTimeout(r, 110));
+      setLanes((prev) => { const next = [...prev]; next[i] = "safe"; return next; });
+      setStep(i + 1);
+    }
+    if (died) {
+      await new Promise((r) => setTimeout(r, 140));
+      setLanes((prev) => { const next = [...prev]; next[safe] = "death"; return next; });
+      setDead(true);
+      setDeathLane(safe);
+    }
+    const won = !died;
+    const mult = won ? multiplierFor(difficulty, safe) : 0;
+    const { data, error } = await supabase.rpc("place_bet", {
+      _game: "chicken",
+      _bet_amount: stake,
+      _won: won,
+      _multiplier: won ? mult : 0,
+      _details: { difficulty, step: safe, outcome: won ? "auto-cashout" : "death", auto: true },
+    });
+    if (error) {
+      toast.error(error.message);
+      setActive(false);
+      return null;
+    }
+    if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
+    if (won) {
+      const nextDeath = rolls.findIndex((d, i) => i >= safe && d);
+      setNextDeathLane(nextDeath >= 0 ? nextDeath : null);
+      setCashedOut(true);
+      setLanes((prev) => prev.map((l, i) => (l === "hidden" ? (rolls[i] ? "death" : "safe") : l)));
+    }
+    setActive(false);
+    setTimeout(() => {
+      setLanes([]);
+      setStep(0);
+      setDead(false);
+      setDeathLane(null);
+      setNextDeathLane(null);
+      setCashedOut(false);
+    }, 1200);
+    const profitNow = won ? Math.floor(stake * mult) - stake : -stake;
+    return { won, profit: profitNow };
+  }
 
   function startRound() {
     if (!profile) return;
