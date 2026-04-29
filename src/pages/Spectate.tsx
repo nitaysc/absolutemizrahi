@@ -83,7 +83,10 @@ export default function Spectate() {
     let cancelled = false;
 
     async function fetchBets(initial: boolean) {
-      const args: Record<string, unknown> = { _friend_id: friend.id, _limit: 30 };
+      const args: { _friend_id: string; _limit: number; _since?: string } = {
+        _friend_id: friend.id,
+        _limit: 30,
+      };
       if (!initial && lastSeenRef.current) args._since = lastSeenRef.current;
       const { data, error: e } = await supabase.rpc("get_friend_recent_bets", args);
       if (cancelled) return;
