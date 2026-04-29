@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
@@ -76,13 +77,29 @@ export default function Leaderboard() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center gap-3">
-        <Trophy className="h-7 w-7 text-primary" />
-        <div>
-          <h1 className="text-3xl font-black tracking-tight">LEADERBOARD</h1>
-          <p className="text-sm text-muted-foreground">Top whales by Mizrahi Coins</p>
+      <motion.header
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="relative overflow-hidden rounded-3xl border border-primary/20 bg-card/40 p-5 backdrop-blur-xl"
+      >
+        <div
+          aria-hidden
+          className="absolute -right-10 -top-10 h-40 w-40 rounded-full opacity-30 blur-3xl"
+          style={{ background: "radial-gradient(closest-side, hsl(45 100% 60% / 0.7), transparent 70%)" }}
+        />
+        <div className="relative flex items-center gap-3">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 ring-1 ring-primary/30">
+            <Trophy className="h-6 w-6 text-primary" />
+          </span>
+          <div>
+            <h1 className="text-3xl font-black tracking-tight">
+              <span className="text-gradient">LEADERBOARD</span>
+            </h1>
+            <p className="text-sm text-muted-foreground">Top whales by Mizrahi Coins</p>
+          </div>
         </div>
-      </header>
+      </motion.header>
 
       {loading ? (
         <div className="text-center text-muted-foreground">Loading...</div>
