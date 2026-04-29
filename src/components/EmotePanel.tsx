@@ -82,6 +82,7 @@ export function EmotePanel({
   const [open, setOpen] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [text, setText] = useState("");
+  const [feed, setFeed] = useState<EmotePayload[]>([]);
   const subscribedRef = useRef(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const pendingRef = useRef<EmotePayload[]>([]);
@@ -128,6 +129,28 @@ export function EmotePanel({
     const t = setTimeout(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
     return () => clearTimeout(t);
   }, [cooldown]);
+
+  useEffect(() => {
+    const timers = new Map<string, ReturnType<typeof setTimeout>>();
+    const unsubscribe = subscribe(channelKey, (payload) => {
+      setFeed((items) => {
+        const withoutDuplicate = items.filter((item) => item.id !== payload.id);
+        return [payload, ...withoutDuplicate].slice(0, 3);
+      });
+      if (timers.has(payload.id)) clearTimeout(timers.get(payload.id));
+      timers.set(
+        payload.id,
+        setTimeout(() => {
+          setFeed((items) => items.filter((item) => item.id !== payload.id));
+          timers.delete(payload.id);
+        }, 3200),
+      );
+    });
+    return () => {
+      unsubscribe();
+      timers.forEach((timer) => clearTimeout(timer));
+    };
+  }, [channelKey]);
 
   const broadcast = (payload: EmotePayload) => {
     // Always show locally (instant feedback regardless of realtime echo)
@@ -176,7 +199,29 @@ export function EmotePanel({
   };
 
   return (
-    <div className={cn("absolute bottom-3 right-3 z-40", className)}>
+    <div className={cn("fixed bottom-24 right-4 z-[90] sm:bottom-6", className)}>
+      <div className="pointer-events-none absolute bottom-14 right-0 flex w-64 flex-col items-end gap-1.5">
+        <AnimatePresence initial={false}>
+          {feed.map((item) => (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, x: 24, scale: 0.86 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 18, scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 420, damping: 24 }}
+              className="max-w-full rounded-2xl border border-primary/40 bg-background/95 px-3 py-2 text-xs font-black shadow-[0_0_24px_hsl(var(--primary)/0.35)] backdrop-blur-xl"
+            >
+              <div className="mb-0.5 max-w-[13rem] truncate text-[10px] uppercase tracking-wider text-muted-foreground">
+                {item.username}
+              </div>
+              <div className="flex items-center gap-1.5 text-foreground">
+                {item.kind === "preset" && item.emoji && <span className="text-base leading-none">{item.emoji}</span>}
+                <span className={cn(item.kind === "preset" ? "text-gradient" : "break-words")}>{item.label}</span>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
       <AnimatePresence>
         {open && (
           <motion.div
