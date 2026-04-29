@@ -57,8 +57,8 @@ function getBus(channelKey: string): Set<Listener> {
 
 function emit(channelKey: string, payload: EmotePayload) {
   const b = buses.get(channelKey);
-  if (!b) return;
-  b.forEach((l) => l(payload));
+  b?.forEach((l) => l(payload));
+  window.dispatchEvent(new CustomEvent(`emote:${channelKey}`, { detail: payload }));
 }
 
 function subscribe(channelKey: string, listener: Listener) {
@@ -278,10 +278,14 @@ export function EmoteBubble({
       if (payload?.user_id === userId) show(payload);
     };
     window.addEventListener(`emote:${channelKey}`, localHandler);
-    return subscribe(channelKey, (p) => {
+    const unsubscribe = subscribe(channelKey, (p) => {
       if (p.user_id !== userId) return;
       show(p);
     });
+    return () => {
+      window.removeEventListener(`emote:${channelKey}`, localHandler);
+      unsubscribe();
+    };
   }, [channelKey, userId]);
 
   useEffect(
