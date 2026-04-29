@@ -84,6 +84,7 @@ export function EmotePanel({
   const [cooldown, setCooldown] = useState(0);
   const [text, setText] = useState("");
   const [feed, setFeed] = useState<EmotePayload[]>([]);
+  const feedTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const subscribedRef = useRef(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const pendingRef = useRef<EmotePayload[]>([]);
@@ -131,30 +132,35 @@ export function EmotePanel({
     return () => clearTimeout(t);
   }, [cooldown]);
 
-  useEffect(() => {
-    const timers = new Map<string, ReturnType<typeof setTimeout>>();
-    const unsubscribe = subscribe(channelKey, (payload) => {
+  const showInFeed = (payload: EmotePayload) => {
       setFeed((items) => {
         const withoutDuplicate = items.filter((item) => item.id !== payload.id);
         return [payload, ...withoutDuplicate].slice(0, 3);
       });
-      if (timers.has(payload.id)) clearTimeout(timers.get(payload.id));
-      timers.set(
+      if (feedTimersRef.current.has(payload.id)) clearTimeout(feedTimersRef.current.get(payload.id));
+      feedTimersRef.current.set(
         payload.id,
         setTimeout(() => {
           setFeed((items) => items.filter((item) => item.id !== payload.id));
-          timers.delete(payload.id);
+          feedTimersRef.current.delete(payload.id);
         }, 3200),
       );
+  };
+
+  useEffect(() => {
+    const unsubscribe = subscribe(channelKey, (payload) => {
+      showInFeed(payload);
     });
     return () => {
       unsubscribe();
-      timers.forEach((timer) => clearTimeout(timer));
+      feedTimersRef.current.forEach((timer) => clearTimeout(timer));
+      feedTimersRef.current.clear();
     };
   }, [channelKey]);
 
   const broadcast = (payload: EmotePayload) => {
     // Always show locally (instant feedback regardless of realtime echo)
+    showInFeed(payload);
     emit(channelKey, payload);
     // Then send to others
     if (channelRef.current && subscribedRef.current) {
