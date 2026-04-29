@@ -340,6 +340,21 @@ export default function Chicken() {
       {/* Controls */}
       <div className="rounded-2xl border border-border bg-card/70 p-3 backdrop-blur-xl sm:rounded-3xl sm:p-4">
         <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-1 rounded-full bg-background/60 p-1">
+            {(["manual", "auto"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => !active && setMode(m)}
+                disabled={active}
+                className={`rounded-full py-1.5 text-xs font-bold uppercase tracking-widest transition ${
+                  mode === m ? "bg-card text-foreground shadow" : "text-muted-foreground"
+                } disabled:opacity-50`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+
           <BetControls bet={bet} setBet={setBet} disabled={active} />
 
           <div>
@@ -364,6 +379,22 @@ export default function Chicken() {
             </Select>
           </div>
 
+          {mode === "auto" && (
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Auto cashout @ lane ({multiplierFor(difficulty, Math.min(autoTarget, cfg.lanes)).toFixed(2)}×)
+              </label>
+              <NumberField
+                value={autoTarget}
+                onChange={setAutoTarget}
+                min={1}
+                max={cfg.lanes}
+                disabled={active}
+                className="mt-1"
+              />
+            </div>
+          )}
+
           {active && (
             <div className="grid grid-cols-3 gap-2 text-center">
               <Stat label="Current" value={`${currentMult.toFixed(2)}×`} />
@@ -376,7 +407,15 @@ export default function Chicken() {
             </div>
           )}
 
-          {!active ? (
+          {mode === "auto" ? (
+            <AutoBetPanel
+              bet={bet}
+              setBet={setBet}
+              onBet={playAutoRound}
+              disabled={busy || active || !profile}
+              intervalMs={400}
+            />
+          ) : !active ? (
             <Button
               onClick={startRound}
               disabled={busy}
