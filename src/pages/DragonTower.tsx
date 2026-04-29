@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
 import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel";
-import { NumberField } from "@/components/NumberField";
 import { formatCoins } from "@/lib/format";
 import { Flame, Egg, Footprints } from "lucide-react";
 import { playGem, playBomb, playTileClick, playCashout } from "@/lib/sfx";
@@ -42,8 +41,6 @@ export default function DragonTower() {
   const [mode, setMode] = useState<"manual" | "auto">("manual");
   const [bet, setBet] = useState(10);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
-  // Auto cashout when reaching this floor (1..9). 9 means climb the whole tower.
-  const [autoTarget, setAutoTarget] = useState(4);
   const [active, setActive] = useState(false);
   const [progress, setProgress] = useState(0); // floors cleared (0..9)
   const [busy, setBusy] = useState(false);
@@ -51,6 +48,11 @@ export default function DragonTower() {
     Array.from({ length: FLOORS }, () => ({ cleared: false })),
   );
   const [exploded, setExploded] = useState<{ floor: number; tile: number } | null>(null);
+  // Auto-mode pre-picks: one tile index per floor. Players choose the path
+  // before starting; auto then walks it floor-by-floor like Mines.
+  const [autoPicks, setAutoPicks] = useState<(number | null)[]>(
+    Array.from({ length: FLOORS }, () => null),
+  );
 
   const cfg = CONFIG[difficulty];
   const currentMult = multAtFloor(cfg.step, progress);
@@ -98,6 +100,20 @@ export default function DragonTower() {
     setExploded(null);
   }
 
+  // Reset auto-picks when difficulty changes (tile counts differ per diff).
+  useEffect(() => {
+    setAutoPicks(Array.from({ length: FLOORS }, () => null));
+  }, [difficulty]);
+
+  function toggleAutoPick(floor: number, tile: number) {
+    if (active || mode !== "auto") return;
+    setAutoPicks((prev) => {
+      const next = prev.slice();
+      next[floor] = next[floor] === tile ? null : tile;
+      return next;
+    });
+  }
+
   async function start() {
     if (!profile) return;
     if (bet < 1) return toast.error("Bet at least 1 coin");
@@ -117,6 +133,7 @@ export default function DragonTower() {
 
   async function pick(floor: number, tile: number) {
     if (!active || busy) return;
+    if (mode === "auto") return; // auto runs the pre-picked path
     if (floor !== progress) return; // can only act on current floor
     setBusy(true);
     playTileClick();
@@ -200,8 +217,20 @@ export default function DragonTower() {
       return null;
     }
     if (active) return null;
-    const target = Math.max(1, Math.min(autoTarget, FLOORS));
     const cfgNow = CONFIG[difficulty];
+    // Path is the pre-picked tiles. Stop at the first un-picked floor (acts
+    // as the player's chosen cashout target).
+    const path: number[] = [];
+    for (let i = 0; i < FLOORS; i++) {
+      const t = autoPicks[i];
+      if (t === null || t < 0 || t >= cfgNow.tiles) break;
+      path.push(t);
+    }
+    if (path.length === 0) {
+      toast.error("Pick at least one tile to set your auto path");
+      return null;
+    }
+    const target = path.length;
     setBusy(true);
     const startRes = await supabase.rpc("dragontower_start", { _bet_amount: stake, _difficulty: difficulty });
     if (startRes.error) {
@@ -218,7 +247,7 @@ export default function DragonTower() {
     let burned = false;
     let lastBalance: number | null = null;
     while (!burned && curProgress < target) {
-      const tile = Math.floor(Math.random() * cfgNow.tiles);
+      const tile = path[curProgress];
       playTileClick();
       // eslint-disable-next-line no-await-in-loop
       const { data, error } = await supabase.rpc("dragontower_pick", { _tile: tile });
@@ -314,6 +343,7 @@ export default function DragonTower() {
 
   // Render floors top-down (highest floor at top)
   const orderedFloors = floors.map((f, i) => ({ ...f, floor: i })).reverse();
+  const isAutoPicking = mode === "auto" && !active;
 
   return (
     <div className="space-y-4">
@@ -365,12 +395,16 @@ export default function DragonTower() {
                       const showSafe = isRevealed && !isEgg;
                       const exploding =
                         exploded?.floor === floor && exploded?.tile === t && isEgg;
-                      const baseDisabled =
-                        !isCurrent || busy || pickedTile !== undefined;
+                      const isAutoMarked = isAutoPicking && autoPicks[floor] === t;
+                      const baseDisabled = isAutoPicking
+                        ? false
+                        : !isCurrent || busy || pickedTile !== undefined;
                       return (
                         <button
                           key={t}
-                          onClick={() => pick(floor, t)}
+                          onClick={() =>
+                            isAutoPicking ? toggleAutoPick(floor, t) : pick(floor, t)
+                          }
                           disabled={baseDisabled}
                           className={`relative h-9 rounded-lg border transition active:scale-95 ${
                             isEgg
@@ -381,7 +415,11 @@ export default function DragonTower() {
                                 ? isPicked
                                   ? "border-emerald-500 bg-emerald-500/30 ring-2 ring-emerald-400"
                                   : "border-emerald-500/40 bg-emerald-500/10"
-                                : isCurrent
+                                : isAutoMarked
+                                  ? "border-primary bg-primary/30 ring-2 ring-primary cursor-pointer"
+                                  : isAutoPicking
+                                    ? "border-primary/40 bg-secondary hover:bg-accent cursor-pointer"
+                                    : isCurrent
                                   ? "border-primary/50 bg-secondary hover:bg-accent cursor-pointer"
                                   : isFuture
                                     ? "border-border bg-secondary/40 cursor-default"
@@ -427,6 +465,11 @@ export default function DragonTower() {
                           {isCurrent && pickedTile === undefined && (
                             <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-primary/60">
                               ?
+                            </span>
+                          )}
+                          {isAutoMarked && (
+                            <span className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-primary">
+                              ★
                             </span>
                           )}
                         </button>
@@ -487,21 +530,46 @@ export default function DragonTower() {
             </div>
           </div>
 
-          {mode === "auto" && (
-            <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                Auto cashout @ floor ({multAtFloor(cfg.step, Math.min(autoTarget, FLOORS)).toFixed(2)}×)
-              </label>
-              <NumberField
-                value={autoTarget}
-                onChange={setAutoTarget}
-                min={1}
-                max={FLOORS}
-                disabled={active}
-                className="mt-1"
-              />
-            </div>
-          )}
+          {mode === "auto" && (() => {
+            // Determine the target as the first contiguous run of picks from F1.
+            let pathLen = 0;
+            for (let i = 0; i < FLOORS; i++) {
+              if (autoPicks[i] === null) break;
+              pathLen++;
+            }
+            const targetMult = pathLen > 0 ? multAtFloor(cfg.step, pathLen) : 0;
+            return (
+              <div className="rounded-xl border border-border bg-background/60 p-2.5 text-[11px]">
+                <div className="font-bold uppercase tracking-widest text-muted-foreground">
+                  Auto path
+                </div>
+                <div className="mt-1 text-foreground">
+                  {pathLen === 0 ? (
+                    <span className="text-muted-foreground">
+                      Tap a tile on each floor to set your auto path.
+                    </span>
+                  ) : (
+                    <>
+                      Climbing <span className="font-black">{pathLen}</span> floor
+                      {pathLen > 1 ? "s" : ""} → cashout at{" "}
+                      <span className="font-black">{targetMult.toFixed(2)}×</span>
+                    </>
+                  )}
+                </div>
+                {pathLen > 0 && (
+                  <button
+                    onClick={() =>
+                      setAutoPicks(Array.from({ length: FLOORS }, () => null))
+                    }
+                    disabled={active}
+                    className="mt-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground underline-offset-2 hover:text-foreground hover:underline disabled:opacity-50"
+                  >
+                    Clear path
+                  </button>
+                )}
+              </div>
+            );
+          })()}
 
           {active && (
             <div className="grid grid-cols-2 gap-2 text-center">
