@@ -231,7 +231,7 @@ export function CaseDetailsModal({
             )}
           </div>
           <p className="border-t border-border p-2 text-center text-[10px] text-muted-foreground">
-            Odds are exact and match the server roll. Solo = raw weights. Battle adds a 1% Empire spin (epic / legendary / mythic) and a 3% Duel spin (legendary only). Hover an item to see "1 in N" odds. RTP = expected solo return after 5% house edge.
+            Odds are exact and match the server roll. Solo = raw weights. Battle adds a 1% Empire spin (legendary / mythic, legendary favored) and a 3% Duel spin (legendary / common, 50/50 rarity split). Hover an item to see "1 in N" odds. RTP = expected solo return after 5% house edge.
           </p>
         </motion.div>
       </motion.div>
