@@ -8,7 +8,7 @@ import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { formatCoins } from "@/lib/format";
 import { toast } from "sonner";
-import { Bot, Crown, Play, LogOut, Swords, X, RotateCcw, Pencil, Trophy, UserPlus, Package, Coins, ChevronLeft, ChevronRight } from "lucide-react";
+import { Bot, Crown, Play, LogOut, Swords, X, RotateCcw, Pencil, Trophy, UserPlus, Package, Coins, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { CaseReel, type ReelItem } from "@/components/CaseReel";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -245,6 +245,8 @@ export default function CaseBattleRoom() {
 
   const isHost = battle?.host_id === profile?.id;
   const inBattle = !!players.find((p) => p.user_id === profile?.id);
+  // Lets us hide the end overlay so the user can browse the lanes / history.
+  const [endHidden, setEndHidden] = useState(false);
 
   // Auto-start: when bots-fill is enabled and there's at least one human, run a 3s countdown
   // and then auto-call start_case_battle. Only the host triggers the RPC to avoid races.
@@ -384,6 +386,7 @@ export default function CaseBattleRoom() {
   if (!battle) return <p className="text-muted-foreground">Loading battle...</p>;
 
   const showFinishedUI = battle.status === "finished" && revealComplete;
+  const showEndOverlay = showFinishedUI && !endHidden;
   const visibleSpinIdx = currentSpin; // round currently spinning across all lanes
   const visibleCase = bcases[visibleSpinIdx] ?? bcases[0];
 
@@ -479,12 +482,23 @@ export default function CaseBattleRoom() {
             </>
           )}
           {showFinishedUI && (
-            <button
-              onClick={() => navigate("/cases/battles")}
-              className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-1.5 text-sm font-bold text-primary-foreground"
-            >
-              <X className="h-3 w-3" /> Exit
-            </button>
+            <>
+              {endHidden && (
+                <button
+                  onClick={() => setEndHidden(false)}
+                  className="inline-flex items-center gap-1 rounded-full border border-primary/50 bg-primary/15 px-3 py-1.5 text-sm font-bold text-primary"
+                  title="Show the end-of-battle summary again"
+                >
+                  <Trophy className="h-3 w-3" /> Show summary
+                </button>
+              )}
+              <button
+                onClick={() => navigate("/cases/battles")}
+                className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-1.5 text-sm font-bold text-primary-foreground"
+              >
+                <X className="h-3 w-3" /> Exit
+              </button>
+            </>
           )}
         </div>
       </header>
@@ -747,7 +761,7 @@ export default function CaseBattleRoom() {
 
       {/* Winner end screen */}
       <AnimatePresence>
-        {showFinishedUI && battle.winner_team !== null && (
+        {showEndOverlay && battle.winner_team !== null && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -848,9 +862,14 @@ export default function CaseBattleRoom() {
                           {p.is_bot && <Bot className="h-3 w-3 shrink-0 text-muted-foreground" />}
                         </div>
                         {p.is_bot ? (
-                          <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-background/60 px-2 py-0.5 text-[11px] font-black text-muted-foreground">
-                            BOT · no payout
-                          </div>
+                          <>
+                            <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-background/60 px-2 py-0.5 text-sm font-black text-muted-foreground line-through opacity-80">
+                              <MizrahiCoin size={12} /> {formatCoins(perSeat)}
+                            </div>
+                            <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                              BOT · forfeited
+                            </div>
+                          </>
                         ) : (
                           <>
                             <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-background/60 px-2 py-0.5 text-sm font-black text-amber-300">
@@ -930,12 +949,19 @@ export default function CaseBattleRoom() {
                   );
                 })()}
                 <button
+                  onClick={() => setEndHidden(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/70 px-4 py-2 text-sm font-bold text-foreground hover:border-primary/50"
+                  title="Close this overlay and view the battle history"
+                >
+                  <Eye className="h-4 w-4" /> View battle
+                </button>
+                <button
                   onClick={recreate}
                   disabled={busy}
                   className="inline-flex items-center gap-1.5 rounded-full bg-primary px-5 py-2 text-sm font-black text-primary-foreground shadow-[0_0_20px_hsl(var(--primary)/0.6)] disabled:opacity-50"
                 >
                   <RotateCcw className="h-4 w-4" />
-                  Recreate for {formatCoins(battle.per_player_cost)}
+                  {isHost ? "Recreate" : "Rejoin"} for {formatCoins(battle.per_player_cost)}
                 </button>
                 {isHost && (
                   <button

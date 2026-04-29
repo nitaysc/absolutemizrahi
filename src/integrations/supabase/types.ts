@@ -1143,6 +1143,15 @@ export type Database = {
           recipient_username: string
         }[]
       }
+      admin_grant_xp: {
+        Args: { _amount: number; _recipient_username: string }
+        Returns: {
+          amount: number
+          recipient_level: number
+          recipient_username: string
+          recipient_xp_total: number
+        }[]
+      }
       admin_reset_player: { Args: { _username: string }; Returns: Json }
       approve_case: { Args: { _case_id: string }; Returns: undefined }
       award_xp: {
@@ -1400,6 +1409,19 @@ export type Database = {
       friend_decline: { Args: { _other: string }; Returns: Json }
       friend_remove: { Args: { _other: string }; Returns: Json }
       friend_request: { Args: { _target: string }; Returns: Json }
+      get_friend_recent_bets: {
+        Args: { _friend_id: string; _limit?: number; _since?: string }
+        Returns: {
+          bet_amount: number
+          created_at: string
+          details: Json
+          game: string
+          id: string
+          multiplier: number
+          payout: number
+          won: boolean
+        }[]
+      }
       get_player_profile: {
         Args: { _username: string }
         Returns: {
