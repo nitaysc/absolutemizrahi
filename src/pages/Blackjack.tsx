@@ -10,7 +10,7 @@ import { BetControls } from "@/components/BetControls";
 import { formatCoins } from "@/lib/format";
 import { Spade, Users, Clock, Trophy } from "lucide-react";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
-import { EmotePanel } from "@/components/EmotePanel";
+import { EmotePanel, EmoteBubble } from "@/components/EmotePanel";
 
 type Card = { s: "S" | "H" | "D" | "C"; r: string };
 type Hand = {
