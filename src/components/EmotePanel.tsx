@@ -249,6 +249,7 @@ export function EmotePanel({
                     e.preventDefault();
                     sendPreset(p);
                   }}
+                  onClick={() => sendPreset(p)}
                   disabled={cooldown > 0}
                   className="flex flex-col items-center gap-0.5 rounded-lg border border-transparent bg-card/60 px-1.5 py-2 text-[11px] font-bold transition hover:border-primary/40 hover:bg-primary/10 disabled:opacity-50"
                 >
@@ -279,6 +280,7 @@ export function EmotePanel({
                   e.preventDefault();
                   sendText();
                 }}
+                onClick={sendText}
                 disabled={cooldown > 0 || !text.trim()}
                 className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground disabled:opacity-40"
                 aria-label="Send message"
