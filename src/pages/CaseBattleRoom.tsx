@@ -862,9 +862,14 @@ export default function CaseBattleRoom() {
                           {p.is_bot && <Bot className="h-3 w-3 shrink-0 text-muted-foreground" />}
                         </div>
                         {p.is_bot ? (
-                          <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-background/60 px-2 py-0.5 text-[11px] font-black text-muted-foreground">
-                            BOT · no payout
-                          </div>
+                          <>
+                            <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-background/60 px-2 py-0.5 text-sm font-black text-muted-foreground line-through opacity-80">
+                              <MizrahiCoin size={12} /> {formatCoins(perSeat)}
+                            </div>
+                            <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                              BOT · forfeited
+                            </div>
+                          </>
                         ) : (
                           <>
                             <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-background/60 px-2 py-0.5 text-sm font-black text-amber-300">
