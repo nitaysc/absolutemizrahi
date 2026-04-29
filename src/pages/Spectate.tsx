@@ -6,6 +6,7 @@ import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { formatCoins } from "@/lib/format";
 import { ArrowLeft, Circle, Eye, TrendingUp, TrendingDown } from "lucide-react";
+import { SpectateChessBoard } from "@/components/SpectateChessBoard";
 
 /**
  * Live spectate page: shows what an accepted friend is currently doing — their
@@ -215,6 +216,12 @@ export default function Spectate() {
           tone={totals.profit >= 0 ? "win" : "loss"}
         />
       </section>
+
+      {presence === "chess" && (
+        <section>
+          <SpectateChessBoard friendId={friend.id} friendUsername={friend.username} />
+        </section>
+      )}
 
       <section>
         <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
