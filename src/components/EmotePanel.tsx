@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Smile, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -198,7 +199,7 @@ export function EmotePanel({
     setCooldown(2);
   };
 
-  return (
+  return createPortal(
     <div className={cn("fixed bottom-24 right-4 z-[90] sm:bottom-6", className)}>
       <div className="pointer-events-none absolute bottom-14 right-0 flex w-64 flex-col items-end gap-1.5">
         <AnimatePresence initial={false}>
@@ -291,7 +292,8 @@ export function EmotePanel({
           <Smile className="h-5 w-5" />
         )}
       </motion.button>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
