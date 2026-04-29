@@ -329,6 +329,8 @@ export default function ChessGame() {
     chess.load(after);
     setFen(after);
     force((x) => x + 1);
+    setSelectedSquare(null);
+    setLegalSquares({});
     const next = local.turn();
     const det = detectResult(local);
     const uci = mv.from + mv.to + (mv.promotion ?? "");
@@ -450,6 +452,10 @@ export default function ChessGame() {
             const promotion = piece?.[1]?.toLowerCase() ?? "q";
             return sourceSquare ? makeMove(sourceSquare, targetSquare ?? null, promotion) : false;
           }}
+          onSquareClick={handleSquareClick}
+          onPieceDragBegin={handlePieceDragBegin}
+          onPieceDragEnd={handlePieceDragEnd}
+          customSquareStyles={customSquareStyles}
           isDraggablePiece={({ piece }) =>
             !!myColor && game.status === "active" && game.turn === myColor && piece.startsWith(myColor)
           }
