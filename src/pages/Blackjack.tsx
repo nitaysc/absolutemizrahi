@@ -10,7 +10,7 @@ import { BetControls } from "@/components/BetControls";
 import { formatCoins } from "@/lib/format";
 import { Spade, Users, Clock, Trophy } from "lucide-react";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
-import { EmotePanel } from "@/components/EmotePanel";
+import { EmotePanel, EmoteBubble } from "@/components/EmotePanel";
 
 type Card = { s: "S" | "H" | "D" | "C"; r: string };
 type Hand = {
@@ -480,10 +480,11 @@ function SeatCard({
       }`}
     >
       <div className="flex items-center justify-between text-[11px] font-bold">
-        <span className="truncate">
+        <span className="relative truncate">
           <PlayerAvatar avatar={seat.avatar} size={18} className="mr-1 align-middle" />
           {isMe ? "You" : seat.username}
           <span className="ml-1 text-muted-foreground">· seat {seatIndex + 1}</span>
+          <EmoteBubble channelKey={`bj:${TABLE_ID}`} userId={seat.user_id} side="top" />
         </span>
         <span className="rounded bg-background/60 px-1.5 py-0.5 tabular-nums">
           {formatCoins(seat.bet)}

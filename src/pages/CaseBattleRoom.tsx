@@ -10,7 +10,7 @@ import { formatCoins } from "@/lib/format";
 import { toast } from "sonner";
 import { Bot, Crown, Play, LogOut, Swords, X, RotateCcw, Pencil, Trophy, UserPlus, Package, Coins, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { CaseReel, type ReelItem } from "@/components/CaseReel";
-import { EmotePanel } from "@/components/EmotePanel";
+import { EmotePanel, EmoteBubble } from "@/components/EmotePanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 type Battle = {
@@ -679,7 +679,10 @@ export default function CaseBattleRoom() {
                   <PlayerAvatar avatar={p?.avatar} size={isMobile ? 24 : 32} ring />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1 truncate text-[11px] sm:text-sm font-bold">
-                      <span className="truncate">{p?.display_name ?? "Empty"}</span>
+                      <span className="relative truncate">
+                        {p?.display_name ?? "Empty"}
+                        <EmoteBubble channelKey={`battle:${id}`} userId={p?.user_id} side="top" />
+                      </span>
                       {p?.is_bot && <Bot className="h-3 w-3 shrink-0 text-muted-foreground" />}
                       {isWinnerTeam && <Crown className="h-3 w-3 shrink-0 text-amber-400" />}
                     </div>

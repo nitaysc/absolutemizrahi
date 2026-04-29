@@ -13,7 +13,7 @@ import { formatCoins } from "@/lib/format";
 import { Spade, Clock, LogOut, ArrowLeft, Eye } from "lucide-react";
 import { Trophy } from "lucide-react";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
-import { EmotePanel } from "@/components/EmotePanel";
+import { EmotePanel, EmoteBubble } from "@/components/EmotePanel";
 
 type Card = { s: "S" | "H" | "D" | "C"; r: string };
 type Seat = {
@@ -462,9 +462,10 @@ export default function Poker() {
                     )}
                   </div>
                   {/* Name + stack */}
-                  <div className={`flex flex-col items-center rounded-lg border px-2 py-1 text-center text-[10px] font-bold backdrop-blur ${
+                  <div className={`relative flex flex-col items-center rounded-lg border px-2 py-1 text-center text-[10px] font-bold backdrop-blur ${
                     isCurrent ? "border-primary bg-primary/30 shadow-[0_0_20px_hsl(var(--primary)/0.6)] ring-2 ring-primary" : "border-border bg-black/60"
                   }`}>
+                    <EmoteBubble channelKey={`poker:${TABLE_ID}`} userId={seat.user_id} side="top" />
                     <span className="flex items-center gap-1 text-white">
                       <PlayerAvatar avatar={seat.avatar} size={18} />
                       {seat.username}
