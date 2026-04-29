@@ -8,7 +8,7 @@ import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { formatCoins } from "@/lib/format";
 import { toast } from "sonner";
-import { Bot, Crown, Play, LogOut, Swords, X, RotateCcw, Pencil, Trophy, UserPlus, Package, Coins, ChevronLeft, ChevronRight } from "lucide-react";
+import { Bot, Crown, Play, LogOut, Swords, X, RotateCcw, Pencil, Trophy, UserPlus, Package, Coins, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { CaseReel, type ReelItem } from "@/components/CaseReel";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -245,6 +245,8 @@ export default function CaseBattleRoom() {
 
   const isHost = battle?.host_id === profile?.id;
   const inBattle = !!players.find((p) => p.user_id === profile?.id);
+  // Lets us hide the end overlay so the user can browse the lanes / history.
+  const [endHidden, setEndHidden] = useState(false);
 
   // Auto-start: when bots-fill is enabled and there's at least one human, run a 3s countdown
   // and then auto-call start_case_battle. Only the host triggers the RPC to avoid races.
@@ -384,6 +386,7 @@ export default function CaseBattleRoom() {
   if (!battle) return <p className="text-muted-foreground">Loading battle...</p>;
 
   const showFinishedUI = battle.status === "finished" && revealComplete;
+  const showEndOverlay = showFinishedUI && !endHidden;
   const visibleSpinIdx = currentSpin; // round currently spinning across all lanes
   const visibleCase = bcases[visibleSpinIdx] ?? bcases[0];
 
