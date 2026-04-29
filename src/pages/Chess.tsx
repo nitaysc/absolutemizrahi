@@ -73,6 +73,8 @@ export default function ChessGame() {
   const [fen, setFen] = useState(chess.fen());
   const [, force] = useState(0);
   const [now, setNow] = useState(Date.now());
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  const [legalSquares, setLegalSquares] = useState<Record<string, { capture: boolean }>>({});
   const engineRef = useRef<StockfishEngine | null>(null);
   const aiThinkingRef = useRef(false);
   const settledRef = useRef(false);
@@ -238,6 +240,71 @@ export default function ChessGame() {
     return { w: game.white_time_ms, b: Math.max(0, game.black_time_ms - elapsed) };
   }
 
+  function getLegalMovesFrom(square: string): Record<string, { capture: boolean }> {
+    if (!game) return {};
+    const local = new Chess(game.fen);
+    const piece = local.get(square as never);
+    if (!piece || piece.color !== myColor || game.turn !== myColor) return {};
+    const moves = local.moves({ square: square as never, verbose: true }) as Move[];
+    const map: Record<string, { capture: boolean }> = {};
+    for (const m of moves) {
+      map[m.to] = { capture: !!m.captured || m.flags.includes("e") };
+    }
+    return map;
+  }
+
+  function handleSquareClick(square: string) {
+    if (!game || !myColor || game.status !== "active") return;
+    if (selectedSquare && legalSquares[square]) {
+      const moved = makeMove(selectedSquare, square);
+      setSelectedSquare(null);
+      setLegalSquares({});
+      if (moved) return;
+    }
+    const legal = getLegalMovesFrom(square);
+    if (Object.keys(legal).length > 0) {
+      setSelectedSquare(square);
+      setLegalSquares(legal);
+    } else {
+      setSelectedSquare(null);
+      setLegalSquares({});
+    }
+  }
+
+  function handlePieceDragBegin(_piece: string, sourceSquare: string) {
+    const legal = getLegalMovesFrom(sourceSquare);
+    setSelectedSquare(sourceSquare);
+    setLegalSquares(legal);
+  }
+
+  function handlePieceDragEnd() {
+    setSelectedSquare(null);
+    setLegalSquares({});
+  }
+
+  const customSquareStyles = useMemo(() => {
+    const styles: Record<string, React.CSSProperties> = {};
+    if (selectedSquare) {
+      styles[selectedSquare] = {
+        background: "hsl(var(--primary) / 0.45)",
+        boxShadow: "inset 0 0 0 3px hsl(var(--primary))",
+      };
+    }
+    for (const sq of Object.keys(legalSquares)) {
+      const isCapture = legalSquares[sq].capture;
+      styles[sq] = isCapture
+        ? {
+            background:
+              "radial-gradient(circle, transparent 58%, hsl(var(--destructive) / 0.75) 60%, hsl(var(--destructive) / 0.75) 70%, transparent 72%)",
+          }
+        : {
+            background:
+              "radial-gradient(circle, hsl(var(--primary) / 0.55) 22%, transparent 24%)",
+          };
+    }
+    return styles;
+  }, [selectedSquare, legalSquares]);
+
   function makeMove(sourceSquare: string, targetSquare: string | null, promotion = "q"): boolean {
     if (!game || !myColor || game.status !== "active") return false;
     if (game.turn !== myColor) return false;
@@ -262,6 +329,8 @@ export default function ChessGame() {
     chess.load(after);
     setFen(after);
     force((x) => x + 1);
+    setSelectedSquare(null);
+    setLegalSquares({});
     const next = local.turn();
     const det = detectResult(local);
     const uci = mv.from + mv.to + (mv.promotion ?? "");
@@ -383,6 +452,10 @@ export default function ChessGame() {
             const promotion = piece?.[1]?.toLowerCase() ?? "q";
             return sourceSquare ? makeMove(sourceSquare, targetSquare ?? null, promotion) : false;
           }}
+          onSquareClick={handleSquareClick}
+          onPieceDragBegin={handlePieceDragBegin}
+          onPieceDragEnd={handlePieceDragEnd}
+          customSquareStyles={customSquareStyles}
           isDraggablePiece={({ piece }) =>
             !!myColor && game.status === "active" && game.turn === myColor && piece.startsWith(myColor)
           }
