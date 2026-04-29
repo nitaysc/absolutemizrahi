@@ -482,12 +482,23 @@ export default function CaseBattleRoom() {
             </>
           )}
           {showFinishedUI && (
-            <button
-              onClick={() => navigate("/cases/battles")}
-              className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-1.5 text-sm font-bold text-primary-foreground"
-            >
-              <X className="h-3 w-3" /> Exit
-            </button>
+            <>
+              {endHidden && (
+                <button
+                  onClick={() => setEndHidden(false)}
+                  className="inline-flex items-center gap-1 rounded-full border border-primary/50 bg-primary/15 px-3 py-1.5 text-sm font-bold text-primary"
+                  title="Show the end-of-battle summary again"
+                >
+                  <Trophy className="h-3 w-3" /> Show summary
+                </button>
+              )}
+              <button
+                onClick={() => navigate("/cases/battles")}
+                className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-1.5 text-sm font-bold text-primary-foreground"
+              >
+                <X className="h-3 w-3" /> Exit
+              </button>
+            </>
           )}
         </div>
       </header>
