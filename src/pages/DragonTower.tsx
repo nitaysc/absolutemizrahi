@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
 import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel";
-import { NumberField } from "@/components/NumberField";
 import { formatCoins } from "@/lib/format";
 import { Flame, Egg, Footprints } from "lucide-react";
 import { playGem, playBomb, playTileClick, playCashout } from "@/lib/sfx";
@@ -42,8 +41,6 @@ export default function DragonTower() {
   const [mode, setMode] = useState<"manual" | "auto">("manual");
   const [bet, setBet] = useState(10);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
-  // Auto cashout when reaching this floor (1..9). 9 means climb the whole tower.
-  const [autoTarget, setAutoTarget] = useState(4);
   const [active, setActive] = useState(false);
   const [progress, setProgress] = useState(0); // floors cleared (0..9)
   const [busy, setBusy] = useState(false);
