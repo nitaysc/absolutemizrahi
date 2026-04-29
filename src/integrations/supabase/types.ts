@@ -1107,11 +1107,57 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_missions: {
+        Row: {
+          completed: boolean
+          created_at: string
+          description: string
+          expires_at: string
+          id: string
+          kind: string
+          progress: number
+          reward_coins: number
+          reward_xp: number
+          target: number
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          description: string
+          expires_at: string
+          id?: string
+          kind: string
+          progress?: number
+          reward_coins?: number
+          reward_xp?: number
+          target: number
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          description?: string
+          expires_at?: string
+          id?: string
+          kind?: string
+          progress?: number
+          reward_coins?: number
+          reward_xp?: number
+          target?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      _bump_missions: {
+        Args: { _amount?: number; _kind: string; _user_id: string }
+        Returns: undefined
+      }
       _distribute_battle_payout: {
         Args: { _battle_id: string }
         Returns: undefined
@@ -1221,6 +1267,10 @@ export type Database = {
       }
       bj_table_state: { Args: { _table_id: string }; Returns: Json }
       bump_mission: {
+        Args: { _amount?: number; _kind: string; _user_id: string }
+        Returns: undefined
+      }
+      bump_weekly_mission: {
         Args: { _amount?: number; _kind: string; _user_id: string }
         Returns: undefined
       }
@@ -1615,6 +1665,28 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "daily_missions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      roll_weekly_missions: {
+        Args: never
+        Returns: {
+          completed: boolean
+          created_at: string
+          description: string
+          expires_at: string
+          id: string
+          kind: string
+          progress: number
+          reward_coins: number
+          reward_xp: number
+          target: number
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "weekly_missions"
           isOneToOne: false
           isSetofReturn: true
         }
