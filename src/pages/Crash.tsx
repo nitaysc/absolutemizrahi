@@ -11,6 +11,7 @@ import { NumberField } from "@/components/NumberField";
 import { formatCoins } from "@/lib/format";
 import { triggerBigWin } from "@/components/WinBurst";
 import { Rocket, TrendingUp } from "lucide-react";
+import { EmotePanel } from "@/components/EmotePanel";
 
 type Round = {
   id: string;
