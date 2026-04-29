@@ -73,18 +73,13 @@ export function CaseDetailsModal({
   const totalWeight = items?.reduce((s, i) => s + Number(i.weight), 0) ?? 0;
   const empireRate = 0.01;
   const duelRate = 0.03;
-  const empireRarities = ["epic", "legendary", "mythic"];
-  const duelRarities = ["legendary"];
-  const empireWeight = items?.reduce(
-    (s, i) => (empireRarities.includes(i.rarity) ? s + Number(i.weight) : s),
-    0,
-  ) ?? 0;
-  const duelWeight = items?.reduce(
-    (s, i) => (duelRarities.includes(i.rarity) ? s + Number(i.weight) : s),
-    0,
-  ) ?? 0;
-  const empireActiveRate = empireWeight > 0 ? empireRate : 0;
-  const duelActiveRate = duelWeight > 0 ? duelRate : 0;
+  const weightFor = (rarity: string) =>
+    items?.reduce((s, i) => (i.rarity === rarity ? s + Number(i.weight) : s), 0) ?? 0;
+  const legendaryWeight = weightFor("legendary");
+  const mythicWeight = weightFor("mythic");
+  const commonWeight = weightFor("common");
+  const empireActiveRate = legendaryWeight > 0 || mythicWeight > 0 ? empireRate : 0;
+  const duelActiveRate = legendaryWeight > 0 || commonWeight > 0 ? duelRate : 0;
   const normalRate = 1 - empireActiveRate - duelActiveRate;
 
   // Theoretical RTP (95% house cut applied on solo opens)
