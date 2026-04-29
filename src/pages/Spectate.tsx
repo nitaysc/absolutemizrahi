@@ -200,7 +200,7 @@ export default function Spectate() {
                       : "fill-muted text-muted"
                   }`}
                 />
-                {online ? (presence ? `Playing ${presence}` : "In the lobby") : "Offline"}
+                {online ? (presence ? `Playing ${presence.split(":")[0]}` : "In the lobby") : "Offline"}
               </span>
             </div>
           </div>
@@ -217,9 +217,13 @@ export default function Spectate() {
         />
       </section>
 
-      {presence === "chess" && (
+      {presence?.startsWith("chess") && (
         <section>
-          <SpectateChessBoard friendId={friend.id} friendUsername={friend.username} />
+          <SpectateChessBoard
+            friendId={friend.id}
+            friendUsername={friend.username}
+            liveGameId={presence.includes(":") ? presence.split(":")[1] : null}
+          />
         </section>
       )}
 
