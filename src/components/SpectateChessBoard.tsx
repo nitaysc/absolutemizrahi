@@ -194,6 +194,7 @@ export function SpectateChessBoard({ friendId, friendUsername }: { friendId: str
 
       <div className="overflow-hidden rounded-2xl">
         <Chessboard
+          id={`spectate-${game.id}`}
           position={safeFen}
           boardOrientation={orientation}
           arePiecesDraggable={false}
