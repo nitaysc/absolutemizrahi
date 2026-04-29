@@ -6,6 +6,7 @@ import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { formatCoins } from "@/lib/format";
 import { ArrowLeft, Circle, Eye, TrendingUp, TrendingDown } from "lucide-react";
+import { SpectateChessBoard } from "@/components/SpectateChessBoard";
 
 /**
  * Live spectate page: shows what an accepted friend is currently doing — their
