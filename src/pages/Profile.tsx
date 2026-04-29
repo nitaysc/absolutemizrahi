@@ -171,48 +171,6 @@ export default function Profile() {
     setCode("");
   }
 
-  async function grantCoins() {
-    const u = grantTo.trim();
-    const amt = Math.floor(Number(grantAmount));
-    if (!u) return toast.error("Enter a username");
-    if (!Number.isFinite(amt) || amt === 0) return toast.error("Enter a valid amount");
-    setGranting(true);
-    const { data, error } = await supabase.rpc("admin_grant_coins", {
-      _recipient_username: u,
-      _amount: amt,
-    });
-    setGranting(false);
-    if (error) return toast.error(error.message);
-    const r = data?.[0];
-    if (r) {
-      toast.success(
-        `${amt > 0 ? "+" : ""}${formatCoins(Number(r.amount))} → ${r.recipient_username} (now ${formatCoins(Number(r.recipient_balance))})`,
-      );
-      // If we granted to ourselves, refresh local balance
-      if (u.toLowerCase() === (profile?.username ?? "").toLowerCase()) {
-        setLocalCoins(Number(r.recipient_balance));
-      }
-      setGrantTo("");
-      setGrantAmount("");
-    }
-  }
-
-  async function resetPlayer() {
-    const u = resetTo.trim();
-    if (!u) return toast.error("Enter a username");
-    const ok = window.confirm(
-      `Reset EVERYTHING for "${u}"?\n\nThis wipes coins, level, XP, streaks, missions, achievements, predictions and bet history. This cannot be undone.`,
-    );
-    if (!ok) return;
-    setResetting(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.rpc as any)("admin_reset_player", { _username: u });
-    setResetting(false);
-    if (error) return toast.error(error.message);
-    toast.success(`${u} has been fully reset`);
-    setResetTo("");
-  }
-
   async function sendCoins() {
     const u = sendTo.trim();
     const amt = Math.floor(Number(sendAmount));
