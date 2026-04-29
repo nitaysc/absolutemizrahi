@@ -287,16 +287,29 @@ export function EmoteBubble({
               transition: { type: "spring", stiffness: 520, damping: 18 },
             }}
             exit={{ opacity: 0, scale: 0.7, y: side === "top" ? -10 : 10, transition: { duration: 0.2 } }}
-            className="flex items-center gap-1 whitespace-nowrap rounded-full border border-primary/50 bg-background/95 px-2.5 py-1 text-xs font-black shadow-[0_0_18px_hsl(var(--primary)/0.45)] backdrop-blur-md"
+            className={cn(
+              "flex max-w-[220px] items-center gap-1 rounded-2xl border bg-background/95 px-2.5 py-1 text-xs font-black shadow-[0_0_18px_hsl(var(--primary)/0.45)] backdrop-blur-md",
+              active.kind === "text"
+                ? "border-primary/40 whitespace-normal text-left"
+                : "border-primary/50 whitespace-nowrap",
+            )}
           >
-            <motion.span
-              animate={{ rotate: [0, -12, 12, -8, 0], scale: [1, 1.25, 1.1, 1] }}
-              transition={{ duration: 0.6 }}
-              className="text-sm leading-none"
+            {active.kind === "preset" && active.emoji && (
+              <motion.span
+                animate={{ rotate: [0, -12, 12, -8, 0], scale: [1, 1.25, 1.1, 1] }}
+                transition={{ duration: 0.6 }}
+                className="text-sm leading-none"
+              >
+                {active.emoji}
+              </motion.span>
+            )}
+            <span
+              className={cn(
+                active.kind === "preset" ? "text-gradient" : "break-words text-foreground",
+              )}
             >
-              {active.emoji}
-            </motion.span>
-            <span className="text-gradient">{active.label}</span>
+              {active.label}
+            </span>
           </motion.span>
         )}
       </AnimatePresence>
