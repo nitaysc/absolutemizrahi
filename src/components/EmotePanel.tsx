@@ -241,10 +241,14 @@ export function EmotePanel({
             <div className="grid grid-cols-3 gap-1.5">
               {PRESETS.map((p) => (
                 <motion.button
+                  type="button"
                   key={p.id}
                   whileHover={{ scale: 1.06 }}
                   whileTap={{ scale: 0.92 }}
-                  onClick={() => sendPreset(p)}
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    sendPreset(p);
+                  }}
                   disabled={cooldown > 0}
                   className="flex flex-col items-center gap-0.5 rounded-lg border border-transparent bg-card/60 px-1.5 py-2 text-[11px] font-bold transition hover:border-primary/40 hover:bg-primary/10 disabled:opacity-50"
                 >
@@ -268,9 +272,13 @@ export function EmotePanel({
                 className="flex-1 bg-transparent px-2 py-2 text-xs font-medium outline-none placeholder:text-muted-foreground"
               />
               <motion.button
+                type="button"
                 whileTap={{ scale: 0.88 }}
                 whileHover={{ scale: 1.08 }}
-                onClick={sendText}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  sendText();
+                }}
                 disabled={cooldown > 0 || !text.trim()}
                 className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground disabled:opacity-40"
                 aria-label="Send message"
@@ -283,6 +291,7 @@ export function EmotePanel({
       </AnimatePresence>
 
       <motion.button
+        type="button"
         whileTap={{ scale: 0.9 }}
         whileHover={{ scale: 1.08 }}
         onClick={() => setOpen((o) => !o)}
