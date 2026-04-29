@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
+import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel";
+import { NumberField } from "@/components/NumberField";
 import { formatCoins } from "@/lib/format";
 import { Dices, Play, Sparkles } from "lucide-react";
 
@@ -113,8 +115,11 @@ function gridToRing(row: number, col: number): number | null {
 export default function Snakes() {
   useTrackGame("snakes");
   const { profile, setLocalCoins } = useUserProfile();
+  const [mode, setMode] = useState<"manual" | "auto">("manual");
   const [bet, setBet] = useState(10);
   const [diff, setDiff] = useState<Difficulty>("medium");
+  // Auto cashout when cumulative multiplier ≥ this value.
+  const [autoTarget, setAutoTarget] = useState(2);
   const [active, setActive] = useState(false);
   const [board, setBoard] = useState<Tile[]>([]);
   const [revealed, setRevealed] = useState<boolean[]>([]);
@@ -232,6 +237,90 @@ export default function Snakes() {
       setHistory((h) => [{ mult: 0, won: false }, ...h].slice(0, 10));
       toast.error(`Snake on tile ${landed}!`);
     }
+  }
+
+  async function playAutoRound(betOverride?: number): Promise<AutoBetRoundResult | null> {
+    if (!profile) return null;
+    const stake = betOverride ?? bet;
+    if (stake < 1 || stake > profile.coins) {
+      toast.error(stake < 1 ? "Bet at least 1 coin" : "Not enough coins");
+      return null;
+    }
+    // Build a fresh ring locally; deduct stake optimistically.
+    setLocalCoins(profile.coins - stake);
+    const ring = buildRing(diff);
+    setBoard(ring);
+    setRevealed(Array(RING).fill(false));
+    setPos(0);
+    setMult(1);
+    setDice(null);
+    setDice2(null);
+    settledRef.current = false;
+    setActive(true);
+    setBusy(true);
+
+    let cur = 0;
+    let curMult = 1;
+    let landed = 0;
+    let busted = false;
+    let cashed = false;
+    // Safety bound: at most 8 rolls per auto round so it doesn't loop forever.
+    for (let r = 0; r < 8 && !busted && !cashed; r++) {
+      setRolling(true);
+      const d1 = 1 + Math.floor(Math.random() * 6);
+      const d2 = 1 + Math.floor(Math.random() * 6);
+      setDice(d1);
+      setDice2(d2);
+      const steps = d1 + d2;
+      for (let s = 0; s < steps; s++) {
+        cur = (cur + 1) % RING;
+        if (cur === 0) cur = 1;
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((res) => setTimeout(res, 70));
+        setPos(cur);
+      }
+      landed = cur;
+      setRevealed((arr) => { const next = arr.slice(); next[landed] = true; return next; });
+      const tile = ring[landed];
+      if (tile.kind === "snake") {
+        busted = true;
+      } else {
+        curMult = +(curMult * tile.mult).toFixed(4);
+        setMult(curMult);
+        if (curMult >= autoTarget) cashed = true;
+      }
+      setRolling(false);
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((res) => setTimeout(res, 160));
+    }
+
+    const won = !busted;
+    const finalMult = won ? curMult : 0;
+    settledRef.current = true;
+    const { data, error } = await supabase.rpc("place_bet", {
+      _game: "snakes",
+      _bet_amount: stake,
+      _won: won && finalMult > 0,
+      _multiplier: won ? finalMult : 0,
+      _details: { difficulty: diff, tile: landed, hit_snake: !won, auto: true },
+    });
+    setActive(false);
+    setBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return null;
+    }
+    if (data?.[0]) setLocalCoins(Number(data[0].new_balance));
+    if (won) {
+      const payout = Number(data?.[0]?.payout ?? 0);
+      setHistory((h) => [{ mult: finalMult, won: true }, ...h].slice(0, 10));
+      toast.success(`+${formatCoins(payout - stake)} @ ${finalMult.toFixed(2)}×`);
+    } else {
+      setHistory((h) => [{ mult: 0, won: false }, ...h].slice(0, 10));
+      toast.error(`Snake on tile ${landed}!`);
+    }
+    const profitNow = won ? Math.floor(stake * finalMult) - stake : -stake;
+    return { won, profit: profitNow };
   }
 
   // Build a 5×5 grid; null cells in the middle 3×3 belong to the dice/center area.
@@ -354,6 +443,21 @@ export default function Snakes() {
       {/* Controls */}
       <div className="rounded-2xl border border-border bg-card/70 p-3 backdrop-blur-xl sm:rounded-3xl sm:p-4">
         <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-1 rounded-full bg-background/60 p-1">
+            {(["manual", "auto"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => !active && setMode(m)}
+                disabled={active}
+                className={`rounded-full py-1.5 text-xs font-bold uppercase tracking-widest transition ${
+                  mode === m ? "bg-card text-foreground shadow" : "text-muted-foreground"
+                } disabled:opacity-50`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+
           <BetControls bet={bet} setBet={setBet} disabled={active} />
 
           <div>
@@ -376,7 +480,32 @@ export default function Snakes() {
             </div>
           </div>
 
-          {!active ? (
+          {mode === "auto" && (
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Auto cashout @ ≥ multiplier
+              </label>
+              <NumberField
+                value={autoTarget}
+                onChange={setAutoTarget}
+                min={1}
+                max={1000}
+                decimal
+                disabled={active}
+                className="mt-1"
+              />
+            </div>
+          )}
+
+          {mode === "auto" ? (
+            <AutoBetPanel
+              bet={bet}
+              setBet={setBet}
+              onBet={playAutoRound}
+              disabled={busy || active || !profile}
+              intervalMs={500}
+            />
+          ) : !active ? (
             <Button
               onClick={start}
               className="h-11 w-full text-base font-black tracking-wider shadow-[0_0_24px_hsl(var(--primary)/0.4)] sm:h-12"

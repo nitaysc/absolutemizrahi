@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
+import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel";
+import { NumberField } from "@/components/NumberField";
 import { formatCoins } from "@/lib/format";
 import { Flame, Egg, Footprints } from "lucide-react";
 import { playGem, playBomb, playTileClick, playCashout } from "@/lib/sfx";
@@ -37,8 +39,11 @@ function multAtFloor(step: number, floor: number) {
 export default function DragonTower() {
   useTrackGame("dragontower");
   const { profile, setLocalCoins } = useUserProfile();
+  const [mode, setMode] = useState<"manual" | "auto">("manual");
   const [bet, setBet] = useState(10);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  // Auto cashout when reaching this floor (1..9). 9 means climb the whole tower.
+  const [autoTarget, setAutoTarget] = useState(4);
   const [active, setActive] = useState(false);
   const [progress, setProgress] = useState(0); // floors cleared (0..9)
   const [busy, setBusy] = useState(false);
@@ -187,6 +192,126 @@ export default function DragonTower() {
     setTimeout(() => resetBoard(), 2200);
   }
 
+  async function playAutoRound(betOverride?: number): Promise<AutoBetRoundResult | null> {
+    if (!profile) return null;
+    const stake = betOverride ?? bet;
+    if (stake < 1 || stake > profile.coins) {
+      toast.error(stake < 1 ? "Bet at least 1 coin" : "Not enough coins");
+      return null;
+    }
+    if (active) return null;
+    const target = Math.max(1, Math.min(autoTarget, FLOORS));
+    const cfgNow = CONFIG[difficulty];
+    setBusy(true);
+    const startRes = await supabase.rpc("dragontower_start", { _bet_amount: stake, _difficulty: difficulty });
+    if (startRes.error) {
+      setBusy(false);
+      toast.error(startRes.error.message);
+      return null;
+    }
+    if (startRes.data?.[0]) setLocalCoins(Number(startRes.data[0].new_balance));
+    resetBoard();
+    setActive(true);
+    playTileClick();
+
+    let curProgress = 0;
+    let burned = false;
+    let lastBalance: number | null = null;
+    while (!burned && curProgress < target) {
+      const tile = Math.floor(Math.random() * cfgNow.tiles);
+      playTileClick();
+      // eslint-disable-next-line no-await-in-loop
+      const { data, error } = await supabase.rpc("dragontower_pick", { _tile: tile });
+      if (error) {
+        setBusy(false);
+        setActive(false);
+        toast.error(error.message);
+        return null;
+      }
+      const r = data?.[0];
+      if (!r) break;
+      const eggs = (r.eggs as number[]) ?? [];
+      const allFloors = (r.all_floors as number[][] | null) ?? null;
+      const floor = curProgress;
+      if (r.hit_egg) {
+        playBomb();
+        setExploded({ floor, tile });
+        setFloors((prev) => {
+          const next = [...prev];
+          for (let i = 0; i < FLOORS; i++) {
+            const floorEggs = allFloors?.[i] ?? (i === floor ? eggs : undefined);
+            next[i] = {
+              pick: i === floor ? tile : next[i]?.pick,
+              revealedEggs: floorEggs ?? next[i]?.revealedEggs,
+              cleared: i < floor,
+            };
+          }
+          return next;
+        });
+        burned = true;
+        if (typeof r.new_balance === "number") lastBalance = Number(r.new_balance);
+        break;
+      }
+      playGem();
+      setFloors((prev) => {
+        const next = [...prev];
+        next[floor] = { pick: tile, revealedEggs: eggs, cleared: true };
+        return next;
+      });
+      curProgress = Number(r.progress);
+      setProgress(curProgress);
+      if (r.ended) {
+        // Tower complete — server already paid out.
+        playCashout();
+        if (typeof r.new_balance === "number") lastBalance = Number(r.new_balance);
+        const payout = Number(r.payout ?? 0);
+        if (lastBalance !== null) setLocalCoins(lastBalance);
+        setActive(false);
+        setBusy(false);
+        const profitNow = Math.max(payout - stake, 0);
+        toast.success(`Tower complete! +${formatCoins(profitNow)}`);
+        setTimeout(() => resetBoard(), 1500);
+        return { won: true, profit: profitNow };
+      }
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((res) => setTimeout(res, 220));
+    }
+
+    if (burned) {
+      setActive(false);
+      setBusy(false);
+      if (lastBalance !== null) setLocalCoins(lastBalance);
+      toast.error(`Burned! -${formatCoins(stake)}`);
+      setTimeout(() => resetBoard(), 1800);
+      return { won: false, profit: -stake };
+    }
+
+    // Reached target — cash out
+    const cashRes = await supabase.rpc("dragontower_cashout");
+    setBusy(false);
+    if (cashRes.error) {
+      setActive(false);
+      toast.error(cashRes.error.message);
+      return null;
+    }
+    const cr = cashRes.data?.[0];
+    if (!cr) {
+      setActive(false);
+      return null;
+    }
+    playCashout();
+    setLocalCoins(Number(cr.new_balance));
+    const mult = Number(cr.multiplier);
+    const pay = Number(cr.payout);
+    const profitNow = Math.max(pay - stake, 0);
+    toast.success(`+${formatCoins(profitNow)} (${mult.toFixed(2)}×)`);
+    const fullFloors = (cr.floors as number[][]) ?? [];
+    setFloors((prev) => prev.map((f, i) => ({ ...f, revealedEggs: fullFloors[i] ?? f.revealedEggs })));
+    setActive(false);
+    setTimeout(() => resetBoard(), 1500);
+    return { won: true, profit: profitNow };
+  }
+
   // Render floors top-down (highest floor at top)
   const orderedFloors = floors.map((f, i) => ({ ...f, floor: i })).reverse();
 
@@ -316,6 +441,20 @@ export default function DragonTower() {
 
         {/* Controls */}
         <div className="space-y-4 rounded-3xl border border-border bg-card/70 p-5 backdrop-blur-xl">
+          <div className="grid grid-cols-2 gap-1 rounded-full bg-background/60 p-1">
+            {(["manual", "auto"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => !active && setMode(m)}
+                disabled={active}
+                className={`rounded-full py-1.5 text-xs font-bold uppercase tracking-widest transition ${
+                  mode === m ? "bg-card text-foreground shadow" : "text-muted-foreground"
+                } disabled:opacity-50`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
           <BetControls bet={bet} setBet={setBet} disabled={active} />
 
           <div>
@@ -348,6 +487,22 @@ export default function DragonTower() {
             </div>
           </div>
 
+          {mode === "auto" && (
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Auto cashout @ floor ({multAtFloor(cfg.step, Math.min(autoTarget, FLOORS)).toFixed(2)}×)
+              </label>
+              <NumberField
+                value={autoTarget}
+                onChange={setAutoTarget}
+                min={1}
+                max={FLOORS}
+                disabled={active}
+                className="mt-1"
+              />
+            </div>
+          )}
+
           {active && (
             <div className="grid grid-cols-2 gap-2 text-center">
               <Stat
@@ -361,7 +516,15 @@ export default function DragonTower() {
             </div>
           )}
 
-          {active ? (
+          {mode === "auto" ? (
+            <AutoBetPanel
+              bet={bet}
+              setBet={setBet}
+              onBet={playAutoRound}
+              disabled={busy || active || !profile}
+              intervalMs={500}
+            />
+          ) : active ? (
             <Button
               onClick={cashout}
               disabled={progress === 0 || busy}

@@ -1112,6 +1112,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _distribute_battle_payout: {
+        Args: { _battle_id: string }
+        Returns: undefined
+      }
       _roll_case_item: {
         Args: { _case_id: string }
         Returns: {
