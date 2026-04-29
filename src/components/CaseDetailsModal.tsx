@@ -79,7 +79,7 @@ export function CaseDetailsModal({
   const mythicWeight = weightFor("mythic");
   const commonWeight = weightFor("common");
   const empireActiveRate = legendaryWeight > 0 || mythicWeight > 0 ? empireRate : 0;
-  const duelActiveRate = legendaryWeight > 0 || commonWeight > 0 ? duelRate : 0;
+  const duelActiveRate = legendaryWeight > 0 && commonWeight > 0 ? duelRate : 0;
   const normalRate = 1 - empireActiveRate - duelActiveRate;
 
   // Theoretical RTP (95% house cut applied on solo opens)
@@ -161,9 +161,9 @@ export function CaseDetailsModal({
                       ? (legendaryWeight > 0 && mythicWeight > 0 ? 0.4 : mythicWeight > 0 ? 1 : 0)
                       : 0;
                   const duelRarityChance = it.rarity === "legendary"
-                    ? (legendaryWeight > 0 && commonWeight > 0 ? 0.5 : legendaryWeight > 0 ? 1 : 0)
+                    ? (legendaryWeight > 0 && commonWeight > 0 ? 0.5 : 0)
                     : it.rarity === "common"
-                      ? (legendaryWeight > 0 && commonWeight > 0 ? 0.5 : commonWeight > 0 ? 1 : 0)
+                      ? (legendaryWeight > 0 && commonWeight > 0 ? 0.5 : 0)
                       : 0;
                   const empireChance = empireActiveRate * empireRarityChance * (Number(it.weight) / Math.max(1, weightFor(it.rarity)));
                   const duelChance = duelActiveRate * duelRarityChance * (Number(it.weight) / Math.max(1, weightFor(it.rarity)));
