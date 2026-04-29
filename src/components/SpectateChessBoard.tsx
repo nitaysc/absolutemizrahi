@@ -38,7 +38,15 @@ function fmtClock(ms: number) {
  * vs another player). Finds the friend's most recent active game and subscribes
  * to realtime updates of `chess_games`.
  */
-export function SpectateChessBoard({ friendId, friendUsername }: { friendId: string; friendUsername: string | null }) {
+export function SpectateChessBoard({
+  friendId,
+  friendUsername,
+  liveGameId,
+}: {
+  friendId: string;
+  friendUsername: string | null;
+  liveGameId?: string | null;
+}) {
   const [game, setGame] = useState<GameRow | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -46,26 +54,30 @@ export function SpectateChessBoard({ friendId, friendUsername }: { friendId: str
     let cancelled = false;
 
     const findActiveGame = async () => {
-      // Prefer an in-progress game; if none, fall back to the most recently
-      // updated game (so a just-finished game still shows briefly, but a
-      // newly created game replaces it as soon as it appears).
+      if (liveGameId) {
+        const exact = await supabase.from("chess_games").select("*").eq("id", liveGameId).maybeSingle();
+        const exactRow = (exact.data as unknown as GameRow) ?? null;
+        if (cancelled) return;
+        if (exactRow && (exactRow.white_id === friendId || exactRow.black_id === friendId)) {
+          setGame(exactRow);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Prefer genuinely current games and ignore abandoned active rows from
+      // older sessions, which were causing spectate to show a stuck board.
+      const recentCutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
       const live = await supabase
         .from("chess_games")
         .select("*")
         .or(`white_id.eq.${friendId},black_id.eq.${friendId}`)
         .in("status", ["waiting", "active"])
+        .gte("updated_at", recentCutoff)
         .order("updated_at", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(1);
       let row = (live.data?.[0] as unknown as GameRow) ?? null;
-      if (!row) {
-        const recent = await supabase
-          .from("chess_games")
-          .select("*")
-          .or(`white_id.eq.${friendId},black_id.eq.${friendId}`)
-          .order("updated_at", { ascending: false })
-          .limit(1);
-        row = (recent.data?.[0] as unknown as GameRow) ?? null;
-      }
       if (cancelled) return;
       setGame((prev) => {
         // Always swap when the id changes (new game started).
@@ -109,7 +121,7 @@ export function SpectateChessBoard({ friendId, friendUsername }: { friendId: str
       clearInterval(poll);
       supabase.removeChannel(ch);
     };
-  }, [friendId]);
+  }, [friendId, liveGameId]);
 
   // Subscribe to realtime updates for the active game
   useEffect(() => {
