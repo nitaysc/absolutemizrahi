@@ -10,9 +10,13 @@ import { MizrahiCoin } from "@/components/MizrahiCoin";
 import { Flame, Sparkles, Target, Trophy, Lock, Gift, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
+import { useAuth } from "@/contexts/AuthContext";
+import { useBetStreak } from "@/hooks/useBetStreak";
 
 export default function Progression() {
   const { stats, missions, achievements, unlockedCodes } = useProgression();
+  const { user } = useAuth();
+  const betStreak = useBetStreak(user?.id ?? null);
   const [boosterRemaining, setBoosterRemaining] = useState<string | null>(null);
 
   // tick countdown for booster
@@ -100,7 +104,7 @@ export default function Progression() {
           <Stat
             icon={<Flame className="h-4 w-4 text-orange-300" />}
             label="Streak"
-            value={`${stats.streak_days}d`}
+            value={`${betStreak}d`}
             tone="orange"
           />
           <Stat
