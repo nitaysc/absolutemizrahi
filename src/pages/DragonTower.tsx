@@ -303,7 +303,9 @@ export default function DragonTower() {
         return { won: true, profit: profitNow };
       }
       // eslint-disable-next-line no-await-in-loop
-      await new Promise((res) => setTimeout(res, 220));
+      // Pause long enough on each floor so the egg/footprint reveal is visible
+      // during auto runs (especially on small mobile viewports).
+      await new Promise((res) => setTimeout(res, 700));
     }
 
     if (burned) {
