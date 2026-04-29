@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { MizrahiCoin } from "./MizrahiCoin";
 import { formatCoins } from "@/lib/format";
-import { Trophy, User, LogOut, Home, Type, Users, Activity } from "lucide-react";
+import { Trophy, User, LogOut, Home, Type, Users, Activity, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import mizrahi from "@/assets/absolute-mizrahi.gif";
 import { LiveStatsWindow } from "./LiveStatsWindow";
@@ -13,6 +13,7 @@ import { LevelBar } from "./LevelBar";
 import { LevelBadge } from "./LevelBadge";
 import { useProgression } from "@/hooks/useProgression";
 import { Trophy as TrophyIcon, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const navItems = [
   { to: "/", label: "Lobby", icon: Home, end: true },
@@ -25,10 +26,26 @@ const navItems = [
 ];
 
 export function Layout() {
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const { profile } = useUserProfile();
   const { stats } = useProgression();
   const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.rpc("is_admin");
+      if (!cancelled) setIsAdmin(Boolean(data));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden text-foreground">
@@ -80,6 +97,16 @@ export function Layout() {
               onClick={() => navigate("/profile")}
             />
             <BalancePill coins={profile?.coins ?? 0} />
+            {isAdmin && (
+              <button
+                onClick={() => navigate("/admin")}
+                className="touch-target flex items-center justify-center rounded-full border border-destructive/40 bg-destructive/15 p-2 text-destructive shadow-[0_0_12px_hsl(var(--destructive)/0.3)] transition hover:bg-destructive/25"
+                aria-label="Open admin dashboard"
+                title="Admin dashboard"
+              >
+                <Crown className="h-4 w-4" />
+              </button>
+            )}
             <button
               onClick={() => signOut()}
               className="touch-target flex items-center justify-center rounded-full border border-border bg-card/80 p-2 text-muted-foreground hover:text-foreground"
