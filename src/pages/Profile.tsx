@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { AVATAR_OPTIONS } from "@/lib/avatars";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { Link } from "react-router-dom";
-import { Package } from "lucide-react";
+import { Package, Crown } from "lucide-react";
 import {
   calculateDailyStreak,
   getStreakTimezone,
@@ -42,11 +42,6 @@ export default function Profile() {
   const [streak, setStreak] = useState(0);
   const [code, setCode] = useState("");
   const [redeeming, setRedeeming] = useState(false);
-  const [grantTo, setGrantTo] = useState("");
-  const [grantAmount, setGrantAmount] = useState("");
-  const [granting, setGranting] = useState(false);
-  const [resetTo, setResetTo] = useState("");
-  const [resetting, setResetting] = useState(false);
   const [sendTo, setSendTo] = useState("");
   const [sendAmount, setSendAmount] = useState("");
   const [sending, setSending] = useState(false);
@@ -174,48 +169,6 @@ export default function Profile() {
       toast.success(`+${formatCoins(Number(r.awarded))} coins!`);
     }
     setCode("");
-  }
-
-  async function grantCoins() {
-    const u = grantTo.trim();
-    const amt = Math.floor(Number(grantAmount));
-    if (!u) return toast.error("Enter a username");
-    if (!Number.isFinite(amt) || amt === 0) return toast.error("Enter a valid amount");
-    setGranting(true);
-    const { data, error } = await supabase.rpc("admin_grant_coins", {
-      _recipient_username: u,
-      _amount: amt,
-    });
-    setGranting(false);
-    if (error) return toast.error(error.message);
-    const r = data?.[0];
-    if (r) {
-      toast.success(
-        `${amt > 0 ? "+" : ""}${formatCoins(Number(r.amount))} → ${r.recipient_username} (now ${formatCoins(Number(r.recipient_balance))})`,
-      );
-      // If we granted to ourselves, refresh local balance
-      if (u.toLowerCase() === (profile?.username ?? "").toLowerCase()) {
-        setLocalCoins(Number(r.recipient_balance));
-      }
-      setGrantTo("");
-      setGrantAmount("");
-    }
-  }
-
-  async function resetPlayer() {
-    const u = resetTo.trim();
-    if (!u) return toast.error("Enter a username");
-    const ok = window.confirm(
-      `Reset EVERYTHING for "${u}"?\n\nThis wipes coins, level, XP, streaks, missions, achievements, predictions and bet history. This cannot be undone.`,
-    );
-    if (!ok) return;
-    setResetting(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.rpc as any)("admin_reset_player", { _username: u });
-    setResetting(false);
-    if (error) return toast.error(error.message);
-    toast.success(`${u} has been fully reset`);
-    setResetTo("");
   }
 
   async function sendCoins() {
@@ -416,67 +369,18 @@ export default function Profile() {
       </section>
 
       {isAdmin && (
-        <section className="rounded-3xl border border-destructive/40 bg-gradient-to-br from-destructive/10 to-transparent p-5">
-          <h2 className="text-sm font-black uppercase tracking-widest text-destructive">
-            👑 Admin · Grant coins
-          </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Add (or subtract with a negative amount) coins to any player by username.
-          </p>
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_140px_auto]">
-            <Input
-              value={grantTo}
-              onChange={(e) => setGrantTo(e.target.value)}
-              placeholder="Username"
-              disabled={granting}
-            />
-            <Input
-              type="number"
-              inputMode="numeric"
-              value={grantAmount}
-              onChange={(e) => setGrantAmount(e.target.value)}
-              placeholder="Amount"
-              disabled={granting}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") grantCoins();
-              }}
-            />
-            <Button
-              onClick={grantCoins}
-              disabled={granting || !grantTo.trim() || !grantAmount}
-              variant="destructive"
-            >
-              {granting ? "..." : "Grant"}
-            </Button>
-          </div>
-        </section>
-      )}
-
-      {isAdmin && (
-        <section className="rounded-3xl border border-destructive/40 bg-gradient-to-br from-destructive/10 to-transparent p-5">
-          <h2 className="text-sm font-black uppercase tracking-widest text-destructive">
-            👑 Admin · Reset player
-          </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Wipes coins, level, XP, streaks, missions, achievements, predictions and bet
-            history for the given username. This cannot be undone.
-          </p>
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
-            <Input
-              value={resetTo}
-              onChange={(e) => setResetTo(e.target.value)}
-              placeholder="Username"
-              disabled={resetting}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") resetPlayer();
-              }}
-            />
-            <Button
-              onClick={resetPlayer}
-              disabled={resetting || !resetTo.trim()}
-              variant="destructive"
-            >
-              {resetting ? "Resetting..." : "Reset everything"}
+        <section className="rounded-3xl border border-destructive/40 bg-gradient-to-br from-destructive/10 via-card/60 to-transparent p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-destructive">
+                <Crown className="h-4 w-4" /> Admin tools
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Grant coins or XP, reset players, manage cases — all in one place.
+              </p>
+            </div>
+            <Button asChild variant="destructive" className="shrink-0">
+              <Link to="/admin">Open dashboard</Link>
             </Button>
           </div>
         </section>

@@ -9,7 +9,7 @@ import { formatCoins } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Search, UserPlus, UserCheck, UserX, Circle, Users, Inbox } from "lucide-react";
+import { Search, UserPlus, UserCheck, UserX, Circle, Users, Inbox, Eye } from "lucide-react";
 import { calculateDailyStreak, getStreakTimezone } from "@/lib/streak";
 
 type Friend = { id: string; username: string | null; avatar: string; coins: number };
@@ -395,6 +395,16 @@ export default function Friends() {
                     <MizrahiCoin size={14} />
                     {formatCoins(f.coins)}
                   </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!f.username}
+                    onClick={() => f.username && navigate(`/spectate/${encodeURIComponent(f.username)}`)}
+                    aria-label="Spectate friend"
+                    title="Spectate live"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
                   <Button
                     size="sm"
                     variant="ghost"

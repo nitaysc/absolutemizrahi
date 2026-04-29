@@ -48,6 +48,8 @@ import Progression from "./pages/Progression";
 import NotFound from "./pages/NotFound";
 import HiLo from "./pages/HiLo";
 import Darts from "./pages/Darts";
+import Admin from "./pages/Admin";
+import Spectate from "./pages/Spectate";
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -106,6 +108,8 @@ const App = () => (
             <Route path="/progression" element={<Progression />} />
             <Route path="/friends" element={<Friends />} />
             <Route path="/u/:username" element={<PlayerProfile />} />
+            <Route path="/spectate/:username" element={<Spectate />} />
+            <Route path="/admin" element={<Admin />} />
             <Route path="/prediction" element={<Prediction />} />
             <Route path="/cases" element={<Cases />} />
             <Route path="/cases/upload" element={<CaseUpload />} />
