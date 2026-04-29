@@ -62,8 +62,8 @@ function detectResult(c: Chess): { result: string; reason: string } | null {
 }
 
 export default function ChessGame() {
-  useTrackGame("chess");
   const { gameId } = useParams<{ gameId: string }>();
+  useTrackGame(gameId ? `chess:${gameId}` : "chess");
   const { user } = useAuth();
   const { refetch } = useUserProfile();
   const navigate = useNavigate();
