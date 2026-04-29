@@ -679,8 +679,10 @@ export default function CaseBattleRoom() {
                   <PlayerAvatar avatar={p?.avatar} size={isMobile ? 24 : 32} ring />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1 truncate text-[11px] sm:text-sm font-bold">
-                      <span className="relative truncate">
+                      <span className="relative inline-flex min-w-0 overflow-visible">
+                        <span className="truncate">
                         {p?.display_name ?? "Empty"}
+                        </span>
                         <EmoteBubble channelKey={`battle:${id}`} userId={p?.user_id} side="top" />
                       </span>
                       {p?.is_bot && <Bot className="h-3 w-3 shrink-0 text-muted-foreground" />}
