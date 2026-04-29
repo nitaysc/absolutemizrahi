@@ -762,6 +762,8 @@ export default function CaseBattleRoom() {
       {/* Winner end screen */}
       <AnimatePresence>
         {showFinishedUI && battle.winner_team !== null && (
+          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+          showEndOverlay && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
