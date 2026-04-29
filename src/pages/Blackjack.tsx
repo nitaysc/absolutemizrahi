@@ -121,7 +121,9 @@ export default function Blackjack() {
   const [busy, setBusy] = useState(false);
   const [state, setState] = useState<TableState | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [autoJoin, setAutoJoin] = useState(false);
   const lastResultRound = useRef<number>(-1);
+  const autoAttemptRound = useRef<number | null>(null);
   const [winBanner, setWinBanner] = useState<{ id: number; profit: number; bj: boolean } | null>(null);
   const winIdRef = useRef(0);
 
@@ -182,13 +184,19 @@ export default function Blackjack() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.round_seq, mySeat?.settled]);
 
-  async function joinSeat() {
+  async function joinSeat(auto = false) {
     if (!profile) return;
-    if (bet > profile.coins) return toast.error("Not enough coins");
+    if (bet > profile.coins) {
+      if (auto) setAutoJoin(false);
+      return toast.error("Not enough coins");
+    }
     setBusy(true);
     const { data, error } = await supabase.rpc("bj_join_seat", { _table_id: TABLE_ID, _bet: bet });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      if (auto) setAutoJoin(false);
+      return toast.error(error.message);
+    }
     const d = data as { new_balance?: number } | null;
     if (d?.new_balance != null) setLocalCoins(Number(d.new_balance));
     refresh();
@@ -232,6 +240,13 @@ export default function Blackjack() {
     0,
     Math.ceil((new Date(state.phase_ends_at).getTime() - now) / 1000),
   );
+
+  useEffect(() => {
+    if (!autoJoin || !state || !profile || busy || mySeat || state.status !== "betting") return;
+    if (autoAttemptRound.current === state.round_seq) return;
+    autoAttemptRound.current = state.round_seq;
+    void joinSeat(true);
+  }, [autoJoin, state?.status, state?.round_seq, profile?.coins, busy, mySeat?.seat_index, bet]);
 
   return (
     <div className="space-y-3 sm:space-y-4">
