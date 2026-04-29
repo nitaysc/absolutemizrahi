@@ -42,11 +42,6 @@ export default function Profile() {
   const [streak, setStreak] = useState(0);
   const [code, setCode] = useState("");
   const [redeeming, setRedeeming] = useState(false);
-  const [grantTo, setGrantTo] = useState("");
-  const [grantAmount, setGrantAmount] = useState("");
-  const [granting, setGranting] = useState(false);
-  const [resetTo, setResetTo] = useState("");
-  const [resetting, setResetting] = useState(false);
   const [sendTo, setSendTo] = useState("");
   const [sendAmount, setSendAmount] = useState("");
   const [sending, setSending] = useState(false);
