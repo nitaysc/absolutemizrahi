@@ -381,7 +381,7 @@ export default function Friends() {
                       {online ? (
                         game ? (
                           <>
-                            Playing <span className="capitalize text-foreground">{game}</span>
+                            Playing <span className="capitalize text-foreground">{game.split(":")[0]}</span>
                           </>
                         ) : (
                           "In the lobby"
