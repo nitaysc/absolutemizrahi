@@ -13,7 +13,7 @@ import { Rabbit } from "lucide-react";
 import { playGem, playBomb, playTileClick, playCashout } from "@/lib/sfx";
 
 const HOLES = 7;
-const HOUSE_EDGE_PER_HIT = 0.98;
+const HOUSE_EDGE_PER_HIT = 0.965;
 
 type Tile = "hidden" | "empty" | "mole";
 
@@ -53,7 +53,6 @@ export default function Moles() {
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const multiplier = useMemo(() => molesMultiplier(moles, hitCount), [moles, hitCount]);
-  const molesLeft = moles - hitCount;
   const profit = Math.floor(bet * multiplier) - bet;
 
   useEffect(() => {
@@ -178,16 +177,6 @@ export default function Moles() {
       return next;
     });
     setHitCount(newCount);
-
-    if (newCount >= moles) {
-      const finalMult = molesMultiplier(moles, newCount);
-      setActive(false);
-      playCashout();
-      showResolvedBoard(molePositions);
-      await settle({ won: true, mult: finalMult, stake: bet, hits: newCount, positions: molePositions });
-      resetBoard();
-      return;
-    }
 
     setBusy(true);
     showResolvedBoard(molePositions);
@@ -349,7 +338,7 @@ export default function Moles() {
           {mode === "manual" && active && (
             <div className="grid grid-cols-2 gap-2 text-center">
               <Stat label="Multiplier" value={`${multiplier.toFixed(2)}×`} />
-              <Stat label="Moles left" value={molesLeft > 0 ? `${molesLeft}` : "0"} />
+              <Stat label="Hits" value={`${hitCount}`} />
             </div>
           )}
 
