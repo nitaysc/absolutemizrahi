@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -67,17 +67,12 @@ function handValue(hand: Card[]): number {
   return v;
 }
 
-function PlayingCard({
-  card,
-  hidden,
-  idx,
-  size = "md",
-}: {
+const PlayingCard = forwardRef<HTMLDivElement, {
   card?: Card;
   hidden?: boolean;
   idx: number;
   size?: "sm" | "md" | "lg";
-}) {
+}>(function PlayingCard({ card, hidden, idx, size = "md" }, ref) {
   const sz =
     size === "sm"
       ? "h-14 w-10 p-1 text-xs"
@@ -89,6 +84,7 @@ function PlayingCard({
   if (hidden || !card) {
     return (
       <motion.div
+        ref={ref}
         initial={{ y: -30, opacity: 0, rotateY: 90 }}
         animate={{ y: 0, opacity: 1, rotateY: 0 }}
         transition={{ delay: idx * 0.06, type: "spring", stiffness: 240, damping: 22 }}
@@ -100,6 +96,7 @@ function PlayingCard({
   }
   return (
     <motion.div
+      ref={ref}
       initial={{ y: -30, opacity: 0, rotateY: 90 }}
       animate={{ y: 0, opacity: 1, rotateY: 0 }}
       transition={{ delay: idx * 0.06, type: "spring", stiffness: 240, damping: 22 }}
@@ -112,7 +109,7 @@ function PlayingCard({
       <div className="self-end rotate-180 font-black leading-none">{card.r}</div>
     </motion.div>
   );
-}
+});
 
 export default function Blackjack() {
   useTrackGame("blackjack");
