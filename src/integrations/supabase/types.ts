@@ -1275,6 +1275,7 @@ export type Database = {
         Returns: undefined
       }
       chess_accept_draw: { Args: { _game_id: string }; Returns: undefined }
+      chess_ai_accept_draw: { Args: { _game_id: string }; Returns: undefined }
       chess_ai_move: {
         Args: {
           _fen_after: string

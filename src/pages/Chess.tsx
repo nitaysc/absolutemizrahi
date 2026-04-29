@@ -369,8 +369,15 @@ export default function ChessGame() {
   async function offerDraw() {
     if (!game) return;
     const { error } = await supabase.rpc("chess_offer_draw", { _game_id: game.id });
-    if (error) toast.error(error.message);
-    else toast.success("Draw offered");
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    if (game.mode === "ai") {
+      toast.message("Draw offered — Stockfish is thinking…");
+    } else {
+      toast.success("Draw offered");
+    }
   }
 
   async function acceptDraw() {
@@ -378,6 +385,87 @@ export default function ChessGame() {
     const { error } = await supabase.rpc("chess_accept_draw", { _game_id: game.id });
     if (error) toast.error(error.message);
   }
+
+  // AI draw decision: when the human offers a draw in an AI game, evaluate
+  // the position with Stockfish and decide whether the bot accepts. The bot
+  // will accept when the position is roughly balanced, when the bot itself
+  // is worse, or in late dead-drawn endings — matching how a real opponent
+  // would behave. Otherwise it politely declines and clears the offer.
+  const aiDrawDecidingRef = useRef(false);
+  useEffect(() => {
+    if (!game || game.mode !== "ai" || game.status !== "active") return;
+    if (!game.draw_offered_by || game.draw_offered_by !== user?.id) return;
+    if (!engineReady || !engineRef.current) return;
+    if (aiDrawDecidingRef.current) return;
+    aiDrawDecidingRef.current = true;
+    const eng = engineRef.current;
+    const aiColor = game.ai_color;
+    const fenAtOffer = game.fen;
+    const gameId = game.id;
+    const elo = game.ai_elo ?? 1600;
+    (async () => {
+      // Small delay so it feels like the bot is "thinking".
+      await new Promise((r) => setTimeout(r, 600 + Math.random() * 800));
+      let accept = false;
+      let reasonLog = "";
+      try {
+        // Evaluate position. Score is from side-to-move's POV.
+        const sideToMove = new Chess(fenAtOffer).turn();
+        const cp = await eng.evaluate(fenAtOffer, 500);
+        // Convert to AI's POV: positive = AI is winning.
+        const cpAi = sideToMove === aiColor ? cp : -cp;
+        const ply = new Chess(fenAtOffer).history().length;
+        const board = new Chess(fenAtOffer);
+        const insufficient = board.isInsufficientMaterial();
+        // Count non-king/non-pawn material
+        const fenPieces = fenAtOffer.split(" ")[0];
+        const heavyPieces = (fenPieces.match(/[qrbnQRBN]/g) || []).length;
+
+        if (insufficient) { accept = true; reasonLog = "insufficient material"; }
+        else if (cpAi <= -150) { accept = true; reasonLog = `AI is worse (${cpAi}cp)`; }
+        else if (Math.abs(cpAi) <= 30 && ply >= 30 && heavyPieces <= 6) {
+          accept = true; reasonLog = `dead equal endgame (${cpAi}cp, ${heavyPieces} pieces)`;
+        }
+        else if (Math.abs(cpAi) <= 15 && ply >= 50) {
+          accept = true; reasonLog = `long balanced game (${cpAi}cp, ply ${ply})`;
+        }
+        // Stronger bots are more stubborn when slightly winning.
+        else if (cpAi <= -50 && elo <= 1200) {
+          accept = true; reasonLog = `low-elo bot is worse (${cpAi}cp)`;
+        }
+      } catch (e) {
+        console.error("AI draw eval failed", e);
+      }
+
+      // Re-check the offer is still open before acting.
+      const { data: fresh } = await supabase
+        .from("chess_games")
+        .select("status, draw_offered_by")
+        .eq("id", gameId)
+        .maybeSingle();
+      if (!fresh || fresh.status !== "active" || !fresh.draw_offered_by) {
+        aiDrawDecidingRef.current = false;
+        return;
+      }
+
+      if (accept) {
+        const { error } = await supabase.rpc("chess_ai_accept_draw", { _game_id: gameId });
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success(`Stockfish accepted the draw — ${reasonLog || "agreed"}`);
+        }
+      } else {
+        // Decline: clear the offer flag.
+        await supabase
+          .from("chess_games")
+          .update({ draw_offered_by: null, updated_at: new Date().toISOString() })
+          .eq("id", gameId);
+        toast.message("Stockfish declined the draw — play on.");
+      }
+      aiDrawDecidingRef.current = false;
+    })();
+  }, [game?.draw_offered_by, game?.status, game?.mode, game?.id, game?.ai_color, game?.ai_elo, engineReady, user?.id]);
 
   if (!game) {
     return (
@@ -401,8 +489,12 @@ export default function ChessGame() {
   const drawOfferToMe = game.status === "active" && !!game.draw_offered_by && game.draw_offered_by !== user?.id;
 
   let resultBanner: string | null = null;
+  let resultSubtext: string | null = null;
   if (game.status === "finished" && game.result) {
-    if (game.result === "1/2-1/2") resultBanner = `Draw — ${game.result_reason}`;
+    if (game.result === "1/2-1/2") {
+      resultBanner = `Draw — ${game.result_reason}`;
+      if (game.bet > 0) resultSubtext = `Your ${formatCoins(game.bet)} bet was refunded.`;
+    }
     else if (myColor) {
       const won = (game.result === "1-0" && myColor === "w") || (game.result === "0-1" && myColor === "b");
       resultBanner = won ? `You won by ${game.result_reason}!` : `You lost by ${game.result_reason}`;
@@ -505,6 +597,9 @@ export default function ChessGame() {
       {resultBanner && (
         <div className="rounded-xl border-2 border-primary bg-primary/15 p-4 text-center">
           <p className="text-lg font-black">{resultBanner}</p>
+          {resultSubtext && (
+            <p className="mt-1 text-sm font-semibold text-muted-foreground">{resultSubtext}</p>
+          )}
           <Button className="mt-3" onClick={() => navigate("/chess")}>
             New Game
           </Button>
