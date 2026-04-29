@@ -354,17 +354,23 @@ export default function Blackjack() {
 
       {/* Controls */}
       <div className="space-y-3 rounded-2xl border border-border bg-card/70 p-3 backdrop-blur-xl sm:rounded-3xl sm:p-4">
+        <BetControls bet={bet} setBet={setBet} />
+        <Button
+          type="button"
+          onClick={() => setAutoJoin((v) => !v)}
+          variant={autoJoin ? "destructive" : "secondary"}
+          className="h-11 w-full text-sm font-black uppercase tracking-wider"
+        >
+          {autoJoin ? "Stop auto next rounds" : `Auto join next rounds — ${formatCoins(bet)}`}
+        </Button>
         {!mySeat && state.status === "betting" && (
-          <>
-            <BetControls bet={bet} setBet={setBet} disabled={busy} />
-            <Button
-              onClick={joinSeat}
-              disabled={busy}
-              className="h-12 w-full text-base font-black tracking-wider"
-            >
-              JOIN TABLE — {formatCoins(bet)}
-            </Button>
-          </>
+          <Button
+            onClick={() => void joinSeat(false)}
+            disabled={busy}
+            className="h-12 w-full text-base font-black tracking-wider"
+          >
+            JOIN TABLE — {formatCoins(bet)}
+          </Button>
         )}
         {!mySeat && state.status !== "betting" && (
           <div className="rounded-xl bg-background/60 p-3 text-center text-sm text-muted-foreground">
