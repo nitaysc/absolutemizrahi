@@ -200,7 +200,7 @@ export function EmotePanel({
   };
 
   return createPortal(
-    <div className={cn("fixed bottom-24 right-4 z-[90] sm:bottom-6", className)}>
+    <div className={cn("fixed bottom-24 right-4 z-[9999] sm:bottom-6", className)}>
       <div className="pointer-events-none absolute bottom-14 right-0 flex w-64 flex-col items-end gap-1.5">
         <AnimatePresence initial={false}>
           {feed.map((item) => (
