@@ -2,7 +2,10 @@ import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { ButtonHTMLAttributes, forwardRef, useRef } from "react";
 import { cn } from "@/lib/utils";
 
-type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
+type Props = Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  "onAnimationStart" | "onAnimationEnd" | "onAnimationIteration" | "onDragStart" | "onDrag" | "onDragEnd"
+> & {
   /** Strength of magnetic pull in px (default 12) */
   strength?: number;
   /** Add a subtle shimmer sweep on hover */
