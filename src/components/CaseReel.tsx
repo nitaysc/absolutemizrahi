@@ -285,17 +285,16 @@ export function CaseReel({
 
     // STAGE 1: follow-up spin for specials
     if (isEmpire) {
-      // Empire = epic/legendary/mythic only (matches backend roll rules)
-      const empirePool = sortedPool.filter((it) => ["epic", "legendary", "mythic"].includes(it.rarity));
-      const empireTop = empirePool.slice(0, Math.max(1, Math.ceil(empirePool.length * 0.45)));
-      const upgraded = [...empireTop, ...empirePool];
-      return buildStrip(upgraded.length ? upgraded : pool, result, empireTop.length ? empireTop : topItems);
+      // Empire = legendary/mythic only, with the result forced at the landing slot.
+      const empirePool = sortedPool.filter((it) => ["legendary", "mythic"].includes(it.rarity));
+      return buildStrip(empirePool.length ? empirePool : [result], result, empirePool.length ? empirePool : [result]);
     }
     if (isDuel) {
-      // Duel = legendary-only lane (matches backend roll rules)
+      // Duel = legendary/common 50/50 visual lane, matching the server rarity pool.
       const legendaryPool = sortedPool.filter((it) => it.rarity === "legendary");
+      const commonPool = sortedPool.filter((it) => it.rarity === "common");
       const high = legendaryPool[0] ?? result;
-      const low = legendaryPool[legendaryPool.length - 1] ?? result;
+      const low = commonPool[commonPool.length - 1] ?? result;
       const duelPool = [high, low];
       const out: ReelItem[] = [];
       for (let i = 0; i < STRIP_LEN; i++) {
