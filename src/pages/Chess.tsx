@@ -489,8 +489,12 @@ export default function ChessGame() {
   const drawOfferToMe = game.status === "active" && !!game.draw_offered_by && game.draw_offered_by !== user?.id;
 
   let resultBanner: string | null = null;
+  let resultSubtext: string | null = null;
   if (game.status === "finished" && game.result) {
-    if (game.result === "1/2-1/2") resultBanner = `Draw — ${game.result_reason}`;
+    if (game.result === "1/2-1/2") {
+      resultBanner = `Draw — ${game.result_reason}`;
+      if (game.bet > 0) resultSubtext = `Your ${formatCoins(game.bet)} bet was refunded.`;
+    }
     else if (myColor) {
       const won = (game.result === "1-0" && myColor === "w") || (game.result === "0-1" && myColor === "b");
       resultBanner = won ? `You won by ${game.result_reason}!` : `You lost by ${game.result_reason}`;
@@ -593,6 +597,9 @@ export default function ChessGame() {
       {resultBanner && (
         <div className="rounded-xl border-2 border-primary bg-primary/15 p-4 text-center">
           <p className="text-lg font-black">{resultBanner}</p>
+          {resultSubtext && (
+            <p className="mt-1 text-sm font-semibold text-muted-foreground">{resultSubtext}</p>
+          )}
           <Button className="mt-3" onClick={() => navigate("/chess")}>
             New Game
           </Button>
