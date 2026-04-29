@@ -84,19 +84,36 @@ export function EmotePanel({
   const [text, setText] = useState("");
   const subscribedRef = useRef(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const pendingRef = useRef<EmotePayload[]>([]);
+
+  const username =
+    profile?.username ||
+    (user?.user_metadata?.username as string | undefined) ||
+    (user?.user_metadata?.full_name as string | undefined) ||
+    user?.email?.split("@")[0] ||
+    "player";
 
   // Single Supabase broadcast channel per mount. Re-broadcasts onto the local
   // bus so any <EmoteBubble> listeners can render bubbles by user_id.
   useEffect(() => {
     subscribedRef.current = false;
     const ch = supabase.channel(`emotes:${channelKey}`, {
-      config: { broadcast: { self: false, ack: false } },
+      config: { broadcast: { self: true, ack: true } },
     });
     ch.on("broadcast", { event: "emote" }, ({ payload }) => {
       emit(channelKey, payload as EmotePayload);
     });
     ch.subscribe((status) => {
-      if (status === "SUBSCRIBED") subscribedRef.current = true;
+      if (status === "SUBSCRIBED") {
+        subscribedRef.current = true;
+        const queued = pendingRef.current.splice(0);
+        queued.forEach((payload) => {
+          ch.send({ type: "broadcast", event: "emote", payload }).catch(() => {});
+        });
+      }
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        subscribedRef.current = false;
+      }
     });
     channelRef.current = ch;
     return () => {
@@ -120,15 +137,17 @@ export function EmotePanel({
       channelRef.current
         .send({ type: "broadcast", event: "emote", payload })
         .catch(() => {});
+    } else {
+      pendingRef.current.push(payload);
     }
   };
 
   const sendPreset = (preset: (typeof PRESETS)[number]) => {
-    if (!user || !profile || cooldown > 0) return;
+    if (!user || cooldown > 0) return;
     broadcast({
       id: `${user.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       user_id: user.id,
-      username: profile.username ?? "player",
+      username,
       kind: "preset",
       preset: preset.id,
       label: preset.label,
@@ -140,13 +159,13 @@ export function EmotePanel({
   };
 
   const sendText = () => {
-    if (!user || !profile || cooldown > 0) return;
+    if (!user || cooldown > 0) return;
     const trimmed = text.trim().slice(0, 80);
     if (!trimmed) return;
     broadcast({
       id: `${user.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       user_id: user.id,
-      username: profile.username ?? "player",
+      username,
       kind: "text",
       label: trimmed,
       ts: Date.now(),
