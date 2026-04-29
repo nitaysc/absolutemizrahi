@@ -250,7 +250,8 @@ export default function Blackjack() {
   );
 
   return (
-    <div className="space-y-3 sm:space-y-4">
+    <div className="relative space-y-3 sm:space-y-4">
+      <EmotePanel channelKey={`bj:${TABLE_ID}`} />
       <header className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">
