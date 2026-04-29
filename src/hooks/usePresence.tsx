@@ -44,8 +44,10 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
         let totalUsers = 0;
         for (const userId of Object.keys(state)) {
           totalUsers += 1;
-          const meta = state[userId]?.[0];
-          const g = meta?.game ?? null;
+          const metas = state[userId] ?? [];
+          const detailed = metas.find((meta) => typeof meta.game === "string" && meta.game.includes(":"));
+          const active = detailed ?? metas.find((meta) => meta.game);
+          const g = active?.game ?? null;
           map[userId] = g;
           if (g) next[g] = (next[g] ?? 0) + 1;
         }
