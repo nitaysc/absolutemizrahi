@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { StockfishEngine, moveTimeForElo } from "@/lib/stockfish";
 import { formatCoins } from "@/lib/format";
 import { MizrahiCoin } from "@/components/MizrahiCoin";
+import { EmotePanel, EmoteBubble } from "@/components/EmotePanel";
 
 type GameRow = {
   id: string;
@@ -322,6 +323,8 @@ export default function ChessGame() {
   const topAvatar = top === "w" ? game.white_avatar : game.black_avatar;
   const bottomName = bottom === "w" ? game.white_username : game.black_username;
   const bottomAvatar = bottom === "w" ? game.white_avatar : game.black_avatar;
+  const topUserId = top === "w" ? game.white_id : game.black_id;
+  const bottomUserId = bottom === "w" ? game.white_id : game.black_id;
   const topClock = top === "w" ? c.w : c.b;
   const bottomClock = bottom === "w" ? c.w : c.b;
   const topActive = game.status === "active" && game.turn === top;
@@ -340,7 +343,8 @@ export default function ChessGame() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="relative space-y-3">
+      <EmotePanel channelKey={`chess:${game.id}`} />
       <div className="flex items-center justify-between">
         <Link to="/chess" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Lobby
@@ -355,9 +359,10 @@ export default function ChessGame() {
 
       {/* Top player */}
       <div className="flex items-center justify-between rounded-xl border border-border bg-card p-2">
-        <div className="flex items-center gap-2">
+        <div className="relative flex items-center gap-2">
           <span className="text-2xl">{topAvatar ?? "🎰"}</span>
           <span className="text-sm font-bold">{topName ?? "waiting…"}</span>
+          <EmoteBubble channelKey={`chess:${game.id}`} userId={topUserId} side="right" />
         </div>
         <div className={`flex items-center gap-1 rounded-md px-3 py-1 font-mono text-lg font-black tabular-nums ${topActive ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
           <Clock className="h-4 w-4" />
@@ -389,9 +394,10 @@ export default function ChessGame() {
 
       {/* Bottom player */}
       <div className="flex items-center justify-between rounded-xl border border-border bg-card p-2">
-        <div className="flex items-center gap-2">
+        <div className="relative flex items-center gap-2">
           <span className="text-2xl">{bottomAvatar ?? "🎰"}</span>
           <span className="text-sm font-bold">{bottomName ?? "you"}</span>
+          <EmoteBubble channelKey={`chess:${game.id}`} userId={bottomUserId} side="right" />
         </div>
         <div className={`flex items-center gap-1 rounded-md px-3 py-1 font-mono text-lg font-black tabular-nums ${bottomActive ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
           <Clock className="h-4 w-4" />
