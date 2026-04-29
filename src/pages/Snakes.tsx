@@ -34,11 +34,13 @@ const DIFF_CFG: Record<
   Difficulty,
   { snakes: number; maxMult: number; highCount: number; label: string }
 > = {
-  easy:   { snakes: 1, maxMult: 1.4,   highCount: 1, label: "Easy" },
-  medium: { snakes: 3, maxMult: 4.0,   highCount: 1, label: "Medium" },
-  hard:   { snakes: 5, maxMult: 7.5,   highCount: 1, label: "Hard" },
-  expert: { snakes: 7, maxMult: 10.0,  highCount: 1, label: "Expert" },
-  master: { snakes: 9, maxMult: 17.64, highCount: 1, label: "Master" },
+  // Snake counts bumped so the ring is genuinely dangerous — the previous
+  // values let auto-mode coast to the target multiplier almost every round.
+  easy:   { snakes: 3, maxMult: 1.4,   highCount: 1, label: "Easy" },
+  medium: { snakes: 6, maxMult: 4.0,   highCount: 1, label: "Medium" },
+  hard:   { snakes: 8, maxMult: 7.5,   highCount: 1, label: "Hard" },
+  expert: { snakes: 10, maxMult: 10.0, highCount: 1, label: "Expert" },
+  master: { snakes: 12, maxMult: 17.64, highCount: 1, label: "Master" },
 };
 
 type Tile =
@@ -72,11 +74,12 @@ function buildRing(diff: Difficulty): Tile[] {
   // House edge: shave per-step multipliers so the cumulative product undershoots
   // maxMult on average. Easy mode uses a tight 1% house edge; harder modes keep
   // the original 6% to compensate for their much larger headline payouts.
-  const HOUSE_EDGE = diff === "easy" ? 0.99 : 0.94;
+  const HOUSE_EDGE = diff === "easy" ? 0.97 : 0.90;
   const perStep = Math.pow(cfg.maxMult, 1 / Math.max(1, n)) * HOUSE_EDGE;
   multIdxs.forEach((idx, k) => {
-    // Steeper ramp: earlier tiles much lower, later tiles ramp up to the headline.
-    const ramp = 0.78 + (k / Math.max(1, n - 1)) * 0.34;
+    // Tighter ramp around perStep so the cumulative product stays near the
+    // intended headline instead of overshooting after a few lucky rolls.
+    const ramp = 0.85 + (k / Math.max(1, n - 1)) * 0.20;
     const v = +(perStep * ramp).toFixed(2);
     tiles[idx] = { kind: "mult", mult: Math.max(1.01, v) };
   });
@@ -264,8 +267,9 @@ export default function Snakes() {
     let landed = 0;
     let busted = false;
     let cashed = false;
-    // Safety bound: at most 8 rolls per auto round so it doesn't loop forever.
-    for (let r = 0; r < 8 && !busted && !cashed; r++) {
+    // Safety bound: at most 5 rolls per auto round — matches a realistic
+    // manual session and stops auto from grinding to the target every time.
+    for (let r = 0; r < 5 && !busted && !cashed; r++) {
       setRolling(true);
       const d1 = 1 + Math.floor(Math.random() * 6);
       const d2 = 1 + Math.floor(Math.random() * 6);
