@@ -73,18 +73,13 @@ export function CaseDetailsModal({
   const totalWeight = items?.reduce((s, i) => s + Number(i.weight), 0) ?? 0;
   const empireRate = 0.01;
   const duelRate = 0.03;
-  const empireRarities = ["epic", "legendary", "mythic"];
-  const duelRarities = ["legendary"];
-  const empireWeight = items?.reduce(
-    (s, i) => (empireRarities.includes(i.rarity) ? s + Number(i.weight) : s),
-    0,
-  ) ?? 0;
-  const duelWeight = items?.reduce(
-    (s, i) => (duelRarities.includes(i.rarity) ? s + Number(i.weight) : s),
-    0,
-  ) ?? 0;
-  const empireActiveRate = empireWeight > 0 ? empireRate : 0;
-  const duelActiveRate = duelWeight > 0 ? duelRate : 0;
+  const weightFor = (rarity: string) =>
+    items?.reduce((s, i) => (i.rarity === rarity ? s + Number(i.weight) : s), 0) ?? 0;
+  const legendaryWeight = weightFor("legendary");
+  const mythicWeight = weightFor("mythic");
+  const commonWeight = weightFor("common");
+  const empireActiveRate = legendaryWeight > 0 || mythicWeight > 0 ? empireRate : 0;
+  const duelActiveRate = legendaryWeight > 0 && commonWeight > 0 ? duelRate : 0;
   const normalRate = 1 - empireActiveRate - duelActiveRate;
 
   // Theoretical RTP (95% house cut applied on solo opens)
@@ -160,12 +155,18 @@ export function CaseDetailsModal({
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                 {items.map((it) => {
                   const baseChance = totalWeight > 0 ? Number(it.weight) / totalWeight : 0;
-                  const empireChance = empireWeight > 0 && empireRarities.includes(it.rarity)
-                    ? empireActiveRate * (Number(it.weight) / empireWeight)
-                    : 0;
-                  const duelChance = duelWeight > 0 && duelRarities.includes(it.rarity)
-                    ? duelActiveRate * (Number(it.weight) / duelWeight)
-                    : 0;
+                  const empireRarityChance = it.rarity === "legendary"
+                    ? (legendaryWeight > 0 && mythicWeight > 0 ? 0.6 : legendaryWeight > 0 ? 1 : 0)
+                    : it.rarity === "mythic"
+                      ? (legendaryWeight > 0 && mythicWeight > 0 ? 0.4 : mythicWeight > 0 ? 1 : 0)
+                      : 0;
+                  const duelRarityChance = it.rarity === "legendary"
+                    ? (legendaryWeight > 0 && commonWeight > 0 ? 0.5 : 0)
+                    : it.rarity === "common"
+                      ? (legendaryWeight > 0 && commonWeight > 0 ? 0.5 : 0)
+                      : 0;
+                  const empireChance = empireActiveRate * empireRarityChance * (Number(it.weight) / Math.max(1, weightFor(it.rarity)));
+                  const duelChance = duelActiveRate * duelRarityChance * (Number(it.weight) / Math.max(1, weightFor(it.rarity)));
                   const battleChance = normalRate * baseChance + empireChance + duelChance;
                   const soloPct = baseChance * 100;
                   const battlePct = battleChance * 100;
@@ -230,7 +231,7 @@ export function CaseDetailsModal({
             )}
           </div>
           <p className="border-t border-border p-2 text-center text-[10px] text-muted-foreground">
-            Odds are exact and match the server roll. Solo = raw weights. Battle adds a 1% Empire spin (epic / legendary / mythic) and a 3% Duel spin (legendary only). Hover an item to see "1 in N" odds. RTP = expected solo return after 5% house edge.
+            Odds are exact and match the server roll. Solo = raw weights. Battle adds a 1% Empire spin (legendary / mythic, legendary favored) and a 3% Duel spin (legendary / common, 50/50 rarity split). Hover an item to see "1 in N" odds. RTP = expected solo return after 5% house edge.
           </p>
         </motion.div>
       </motion.div>

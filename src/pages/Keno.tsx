@@ -184,7 +184,6 @@ export default function Keno() {
     return {
       won: profit > 0,
       profit,
-      multiplier: roundMultiplier,
     };
   }
 

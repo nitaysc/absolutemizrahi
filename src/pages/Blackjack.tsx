@@ -121,7 +121,9 @@ export default function Blackjack() {
   const [busy, setBusy] = useState(false);
   const [state, setState] = useState<TableState | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [autoJoin, setAutoJoin] = useState(false);
   const lastResultRound = useRef<number>(-1);
+  const autoAttemptRound = useRef<number | null>(null);
   const [winBanner, setWinBanner] = useState<{ id: number; profit: number; bj: boolean } | null>(null);
   const winIdRef = useRef(0);
 
@@ -182,13 +184,19 @@ export default function Blackjack() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.round_seq, mySeat?.settled]);
 
-  async function joinSeat() {
+  async function joinSeat(auto = false) {
     if (!profile) return;
-    if (bet > profile.coins) return toast.error("Not enough coins");
+    if (bet > profile.coins) {
+      if (auto) setAutoJoin(false);
+      return toast.error("Not enough coins");
+    }
     setBusy(true);
     const { data, error } = await supabase.rpc("bj_join_seat", { _table_id: TABLE_ID, _bet: bet });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      if (auto) setAutoJoin(false);
+      return toast.error(error.message);
+    }
     const d = data as { new_balance?: number } | null;
     if (d?.new_balance != null) setLocalCoins(Number(d.new_balance));
     refresh();
@@ -201,6 +209,13 @@ export default function Blackjack() {
     if (error) return toast.error(error.message);
     refresh();
   }
+
+  useEffect(() => {
+    if (!autoJoin || !state || !profile || busy || mySeat || state.status !== "betting") return;
+    if (autoAttemptRound.current === state.round_seq) return;
+    autoAttemptRound.current = state.round_seq;
+    void joinSeat(true);
+  }, [autoJoin, state?.status, state?.round_seq, profile?.coins, busy, mySeat?.seat_index, bet]);
 
   if (!state) {
     return (
@@ -339,17 +354,23 @@ export default function Blackjack() {
 
       {/* Controls */}
       <div className="space-y-3 rounded-2xl border border-border bg-card/70 p-3 backdrop-blur-xl sm:rounded-3xl sm:p-4">
+        <BetControls bet={bet} setBet={setBet} />
+        <Button
+          type="button"
+          onClick={() => setAutoJoin((v) => !v)}
+          variant={autoJoin ? "destructive" : "secondary"}
+          className="h-11 w-full text-sm font-black uppercase tracking-wider"
+        >
+          {autoJoin ? "Stop auto next rounds" : `Auto join next rounds — ${formatCoins(bet)}`}
+        </Button>
         {!mySeat && state.status === "betting" && (
-          <>
-            <BetControls bet={bet} setBet={setBet} disabled={busy} />
-            <Button
-              onClick={joinSeat}
-              disabled={busy}
-              className="h-12 w-full text-base font-black tracking-wider"
-            >
-              JOIN TABLE — {formatCoins(bet)}
-            </Button>
-          </>
+          <Button
+            onClick={() => void joinSeat(false)}
+            disabled={busy}
+            className="h-12 w-full text-base font-black tracking-wider"
+          >
+            JOIN TABLE — {formatCoins(bet)}
+          </Button>
         )}
         {!mySeat && state.status !== "betting" && (
           <div className="rounded-xl bg-background/60 p-3 text-center text-sm text-muted-foreground">
