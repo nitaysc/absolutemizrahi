@@ -276,9 +276,10 @@ export default function Snakes() {
     let landed = 0;
     let busted = false;
     let cashed = false;
-    // Safety bound: at most 5 rolls per auto round — matches a realistic
-    // manual session and stops auto from grinding to the target every time.
-    for (let r = 0; r < 5 && !busted && !cashed; r++) {
+    // Keep rolling until the target multiplier is reached or a snake busts.
+    // Hard upper bound of 50 rolls to avoid an infinite loop on an
+    // unreachable target.
+    for (let r = 0; r < 50 && !busted && !cashed; r++) {
       setRolling(true);
       const d1 = 1 + Math.floor(Math.random() * 6);
       const d2 = 1 + Math.floor(Math.random() * 6);
