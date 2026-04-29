@@ -90,6 +90,7 @@ export function badgeColorForLevel(level: number): string {
 interface Ctx {
   stats: ProgressionStats | null;
   missions: Mission[];
+  weeklyMissions: Mission[];
   achievements: Achievement[]; // catalog + unlocked merged
   unlockedCodes: Set<string>;
   /** Pending visual events to show (level ups, achievements, missions, streak). */
@@ -101,6 +102,7 @@ interface Ctx {
   consumeTick: (id: string) => void;
   refresh: () => Promise<void>;
   rollMissions: () => Promise<void>;
+  rollWeeklyMissions: () => Promise<void>;
   claimStreak: () => Promise<{ already: boolean; coins: number; day: number } | null>;
 }
 
@@ -110,6 +112,7 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [stats, setStats] = useState<ProgressionStats | null>(null);
   const [missions, setMissions] = useState<Mission[]>([]);
+  const [weeklyMissions, setWeeklyMissions] = useState<Mission[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [unlockedCodes, setUnlockedCodes] = useState<Set<string>>(new Set());
   const [popQueue, setPopQueue] = useState<ProgressionEvent[]>([]);
@@ -163,11 +166,33 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
     } else {
       setMissions(msn as Mission[]);
     }
+
+    // Weekly missions: load active, auto-roll if fewer than 3
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sb: any = supabase;
+    const { data: wmsn } = await sb
+      .from("weekly_missions")
+      .select("*")
+      .eq("user_id", user.id)
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at");
+    if (!wmsn || wmsn.length < 3) {
+      const { data: rolled } = await sb.rpc("roll_weekly_missions");
+      setWeeklyMissions((rolled ?? []) as Mission[]);
+    } else {
+      setWeeklyMissions(wmsn as Mission[]);
+    }
   }, [user]);
 
   const rollMissions = useCallback(async () => {
     const { data } = await supabase.rpc("roll_daily_missions");
     if (data) setMissions(data as Mission[]);
+  }, []);
+
+  const rollWeeklyMissions = useCallback(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any).rpc("roll_weekly_missions");
+    if (data) setWeeklyMissions(data as Mission[]);
   }, []);
 
   const claimStreak = useCallback(async () => {
@@ -203,6 +228,7 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
     if (!user) {
       setStats(null);
       setMissions([]);
+      setWeeklyMissions([]);
       setAchievements([]);
       setUnlockedCodes(new Set());
       setPopQueue([]);
@@ -295,6 +321,7 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
     () => ({
       stats,
       missions,
+      weeklyMissions,
       achievements,
       unlockedCodes,
       popQueue,
@@ -303,11 +330,13 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
       consumeTick,
       refresh,
       rollMissions,
+      rollWeeklyMissions,
       claimStreak,
     }),
     [
       stats,
       missions,
+      weeklyMissions,
       achievements,
       unlockedCodes,
       popQueue,
@@ -316,6 +345,7 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
       consumeTick,
       refresh,
       rollMissions,
+      rollWeeklyMissions,
       claimStreak,
     ],
   );
