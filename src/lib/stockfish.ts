@@ -92,6 +92,40 @@ export class StockfishEngine {
     return parts[1]; // e.g. "e2e4" or "e7e8q"
   }
 
+  /**
+   * Quick evaluation in centipawns from the side-to-move's POV.
+   * Returns +99999 / -99999 for forced mates. Briefly sets full strength
+   * so the eval reflects actual position strength, then restores prior options.
+   */
+  async evaluate(fen: string, moveTimeMs = 400): Promise<number> {
+    if (!this.ready) await this.init();
+    this.cmd("setoption name UCI_LimitStrength value false");
+    this.cmd("setoption name Skill Level value 20");
+    this.cmd("ucinewgame");
+    this.cmd(`position fen ${fen}`);
+    const lines = await this.send(`go movetime ${Math.max(100, moveTimeMs)}`, (l) =>
+      l.startsWith("bestmove"),
+      Math.max(5000, moveTimeMs * 4),
+    );
+    let cp = 0;
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const l = lines[i];
+      if (!l.startsWith("info")) continue;
+      const mateMatch = /score mate (-?\d+)/.exec(l);
+      if (mateMatch) {
+        const m = parseInt(mateMatch[1], 10);
+        cp = m >= 0 ? 99999 : -99999;
+        break;
+      }
+      const cpMatch = /score cp (-?\d+)/.exec(l);
+      if (cpMatch) {
+        cp = parseInt(cpMatch[1], 10);
+        break;
+      }
+    }
+    return cp;
+  }
+
   quit() {
     try {
       this.worker?.postMessage("quit");
