@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTrackGame } from "@/hooks/usePresence";
@@ -135,6 +135,14 @@ export default function Snakes() {
   const [rolling, setRolling] = useState(false);
   const [history, setHistory] = useState<{ mult: number; won: boolean }[]>([]);
   const settledRef = useRef(false);
+
+  // Pre-populate the ring layout (multipliers + snakes) so tiles always show
+  // their values, even before a round starts and when difficulty changes.
+  useEffect(() => {
+    if (active) return;
+    setBoard(buildRing(diff));
+    setRevealed(Array(RING).fill(false));
+  }, [diff, active]);
 
   // Dot pagination = number of rolls/steps taken so far (cap 5 for visual).
   const dots = Math.min(5, pos);
