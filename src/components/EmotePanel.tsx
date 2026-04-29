@@ -303,6 +303,3 @@ export function EmoteBubble({
     </span>
   );
 }
-
-// Suppress unused import warning when no bubble subscribers exist.
-void useSyncExternalStore;
