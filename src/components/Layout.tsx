@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { MizrahiCoin } from "./MizrahiCoin";
@@ -14,6 +15,8 @@ import { LevelBadge } from "./LevelBadge";
 import { useProgression } from "@/hooks/useProgression";
 import { Trophy as TrophyIcon, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { CinematicBackground } from "./CinematicBackground";
+import { PageTransition } from "./PageTransition";
 
 const navItems = [
   { to: "/", label: "Lobby", icon: Home, end: true },
@@ -30,6 +33,7 @@ export function Layout() {
   const { profile } = useUserProfile();
   const { stats } = useProgression();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -49,22 +53,17 @@ export function Layout() {
 
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden text-foreground">
-      {/* Tiled mizrahi background */}
+      {/* Cinematic background (aurora orbs + grid + vignette) */}
+      <CinematicBackground />
+      {/* Faint mizrahi tile texture on top of aurora */}
       <div
         aria-hidden
-        className="fixed inset-0 -z-10 opacity-[0.07]"
+        className="pointer-events-none fixed inset-0 -z-10 opacity-[0.04]"
         style={{
           backgroundImage: `url(${mizrahi})`,
           backgroundRepeat: "repeat",
           backgroundSize: "180px",
-        }}
-      />
-      <div
-        aria-hidden
-        className="fixed inset-0 -z-10"
-        style={{
-          background:
-            "radial-gradient(1200px 600px at 50% -10%, hsl(25 95% 53% / 0.12), transparent), var(--gradient-dark)",
+          mixBlendMode: "overlay",
         }}
       />
 
@@ -130,7 +129,11 @@ export function Layout() {
 
       {/* Page */}
       <main className="mx-auto max-w-5xl px-4 pb-28 pt-6">
-        <Outlet />
+        <AnimatePresence mode="wait">
+          <PageTransition key={location.pathname}>
+            <Outlet />
+          </PageTransition>
+        </AnimatePresence>
       </main>
 
       {/* Floating live-stats window (drag by title bar) */}
@@ -146,15 +149,26 @@ export function Layout() {
                 end={end}
                 className={({ isActive }) =>
                   cn(
-                    "flex flex-col items-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-medium transition-colors",
+                    "relative flex flex-col items-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-medium transition-colors",
                     isActive
                       ? "text-primary"
                       : "text-muted-foreground hover:text-foreground",
                   )
                 }
               >
-                <Icon className="h-5 w-5" />
-                {label}
+                {({ isActive }) => (
+                  <>
+                    {isActive && (
+                      <motion.span
+                        layoutId="bottom-nav-indicator"
+                        className="absolute inset-0 -z-10 rounded-xl bg-primary/15 ring-1 ring-primary/30 shadow-[0_0_18px_hsl(var(--primary)/0.35)]"
+                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                    <Icon className="h-5 w-5" />
+                    <span>{label}</span>
+                  </>
+                )}
               </NavLink>
             </li>
           ))}
