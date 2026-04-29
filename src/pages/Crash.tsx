@@ -11,7 +11,7 @@ import { NumberField } from "@/components/NumberField";
 import { formatCoins } from "@/lib/format";
 import { triggerBigWin } from "@/components/WinBurst";
 import { Rocket, TrendingUp } from "lucide-react";
-import { EmotePanel } from "@/components/EmotePanel";
+import { EmotePanel, EmoteBubble } from "@/components/EmotePanel";
 
 type Round = {
   id: string;
@@ -385,7 +385,10 @@ export default function Crash() {
           <ul className="divide-y divide-border">
             {bets.filter(b => b.round_id === round?.id).map((b) => (
               <li key={b.id} className="flex items-center justify-between py-2 text-sm">
-                <span className="font-bold">{b.username}</span>
+                <span className="relative font-bold">
+                  {b.username}
+                  <EmoteBubble channelKey={`crash:${round?.id ?? "lobby"}`} userId={b.user_id} side="right" />
+                </span>
                 <span className="tabular-nums text-muted-foreground">{formatCoins(b.bet_amount)}</span>
                 {b.cashed_out_at ? (
                   <span className="font-black text-[hsl(var(--success))]">
