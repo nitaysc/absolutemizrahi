@@ -10,6 +10,7 @@ import { MagneticButton } from "@/components/MagneticButton";
 import { Gift, TrendingUp, Package, Swords, Zap, Sparkles } from "lucide-react";
 import { formatCoins } from "@/lib/format";
 import mizrahi from "@/assets/absolute-mizrahi.gif";
+import { cn } from "@/lib/utils";
 import diceImg from "@/assets/games/dice.jpg";
 import crashImg from "@/assets/games/crash.jpg";
 import limboImg from "@/assets/games/limbo.jpg";
