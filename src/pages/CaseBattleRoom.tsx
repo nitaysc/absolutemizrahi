@@ -949,12 +949,19 @@ export default function CaseBattleRoom() {
                   );
                 })()}
                 <button
+                  onClick={() => setEndHidden(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/70 px-4 py-2 text-sm font-bold text-foreground hover:border-primary/50"
+                  title="Close this overlay and view the battle history"
+                >
+                  <Eye className="h-4 w-4" /> View battle
+                </button>
+                <button
                   onClick={recreate}
                   disabled={busy}
                   className="inline-flex items-center gap-1.5 rounded-full bg-primary px-5 py-2 text-sm font-black text-primary-foreground shadow-[0_0_20px_hsl(var(--primary)/0.6)] disabled:opacity-50"
                 >
                   <RotateCcw className="h-4 w-4" />
-                  Recreate for {formatCoins(battle.per_player_cost)}
+                  {isHost ? "Recreate" : "Rejoin"} for {formatCoins(battle.per_player_cost)}
                 </button>
                 {isHost && (
                   <button
