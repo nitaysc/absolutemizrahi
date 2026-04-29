@@ -13,6 +13,7 @@ import { formatCoins } from "@/lib/format";
 import { Spade, Clock, LogOut, ArrowLeft, Eye } from "lucide-react";
 import { Trophy } from "lucide-react";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { EmotePanel } from "@/components/EmotePanel";
 
 type Card = { s: "S" | "H" | "D" | "C"; r: string };
 type Seat = {
@@ -336,7 +337,8 @@ export default function Poker() {
     : null;
 
   return (
-    <div className="space-y-4">
+    <div className="relative space-y-4">
+      <EmotePanel channelKey={`poker:${TABLE_ID}`} />
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <Link to="/poker" className="mb-1 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">
