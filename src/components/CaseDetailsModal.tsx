@@ -155,12 +155,18 @@ export function CaseDetailsModal({
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                 {items.map((it) => {
                   const baseChance = totalWeight > 0 ? Number(it.weight) / totalWeight : 0;
-                  const empireChance = empireWeight > 0 && empireRarities.includes(it.rarity)
-                    ? empireActiveRate * (Number(it.weight) / empireWeight)
-                    : 0;
-                  const duelChance = duelWeight > 0 && duelRarities.includes(it.rarity)
-                    ? duelActiveRate * (Number(it.weight) / duelWeight)
-                    : 0;
+                  const empireRarityChance = it.rarity === "legendary"
+                    ? (legendaryWeight > 0 && mythicWeight > 0 ? 0.6 : legendaryWeight > 0 ? 1 : 0)
+                    : it.rarity === "mythic"
+                      ? (legendaryWeight > 0 && mythicWeight > 0 ? 0.4 : mythicWeight > 0 ? 1 : 0)
+                      : 0;
+                  const duelRarityChance = it.rarity === "legendary"
+                    ? (legendaryWeight > 0 && commonWeight > 0 ? 0.5 : legendaryWeight > 0 ? 1 : 0)
+                    : it.rarity === "common"
+                      ? (legendaryWeight > 0 && commonWeight > 0 ? 0.5 : commonWeight > 0 ? 1 : 0)
+                      : 0;
+                  const empireChance = empireActiveRate * empireRarityChance * (Number(it.weight) / Math.max(1, weightFor(it.rarity)));
+                  const duelChance = duelActiveRate * duelRarityChance * (Number(it.weight) / Math.max(1, weightFor(it.rarity)));
                   const battleChance = normalRate * baseChance + empireChance + duelChance;
                   const soloPct = baseChance * 100;
                   const battlePct = battleChance * 100;
