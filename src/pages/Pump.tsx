@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BetControls } from "@/components/BetControls";
+import { AutoBetPanel, type AutoBetRoundResult } from "@/components/AutoBetPanel";
+import { NumberField } from "@/components/NumberField";
 import { CashoutPop } from "@/components/CashoutPop";
 import { formatCoins } from "@/lib/format";
 import {
@@ -60,8 +62,11 @@ function multForPump(diff: Difficulty, pumps: number) {
 export default function Pump() {
   useTrackGame("pump");
   const { profile, setLocalCoins } = useUserProfile();
+  const [mode, setMode] = useState<"manual" | "auto">("manual");
   const [bet, setBet] = useState(10);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  // Auto cashout when multiplier ≥ this value.
+  const [autoTarget, setAutoTarget] = useState(2);
   const [active, setActive] = useState(false);
   const [pumps, setPumps] = useState(0);
   const [pendingPump, setPendingPump] = useState(false);
@@ -236,6 +241,98 @@ export default function Pump() {
     }
   }
 
+  async function playAutoRound(betOverride?: number): Promise<AutoBetRoundResult | null> {
+    if (!profile) return null;
+    const stake = betOverride ?? bet;
+    if (stake < 1 || stake > profile.coins) {
+      toast.error(stake < 1 ? "Bet at least 1 coin" : "Not enough coins");
+      return null;
+    }
+    if (activeRef.current) return null;
+    // Start round
+    const startRes = await supabase.rpc("pump_start", { _bet_amount: stake, _difficulty: difficulty });
+    if (startRes.error) {
+      toast.error(startRes.error.message);
+      return null;
+    }
+    if (startRes.data?.[0]) setLocalCoins(Number(startRes.data[0].new_balance));
+    setActive(true);
+    activeRef.current = true;
+    setPumps(0);
+    setPopped(false);
+    setPopAt(null);
+
+    let curPumps = 0;
+    let popped = false;
+    let popAtVal: number | null = null;
+    // Cap pumps for safety
+    while (!popped && multForPump(difficulty, curPumps) < autoTarget && curPumps < 200) {
+      // eslint-disable-next-line no-await-in-loop
+      const { data, error } = await supabase.rpc("pump_pump");
+      if (error) {
+        toast.error(error.message);
+        setActive(false);
+        activeRef.current = false;
+        return null;
+      }
+      const r = data?.[0];
+      if (!r) break;
+      curPumps = Number(r.pumps);
+      setPumps(curPumps);
+      if (r.popped) {
+        popped = true;
+        popAtVal = Number(r.pop_at);
+        playBomb();
+        setPopped(true);
+        setPopAt(popAtVal);
+      } else {
+        playGem();
+      }
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((res) => setTimeout(res, 140));
+    }
+
+    if (!popped) {
+      const { data, error } = await supabase.rpc("pump_cashout");
+      if (error) {
+        toast.error(error.message);
+        setActive(false);
+        activeRef.current = false;
+        return null;
+      }
+      const r = data?.[0];
+      if (!r) {
+        setActive(false);
+        activeRef.current = false;
+        return null;
+      }
+      playCashout();
+      setLocalCoins(Number(r.new_balance));
+      const mult = Number(r.multiplier);
+      const payout = Number(r.payout ?? 0);
+      setActive(false);
+      activeRef.current = false;
+      setPopAt(Number(r.pop_at));
+      setCashoutPop({ show: true, multiplier: mult, payout });
+      if (hideCashoutTimerRef.current) window.clearTimeout(hideCashoutTimerRef.current);
+      hideCashoutTimerRef.current = window.setTimeout(
+        () => setCashoutPop((prev) => ({ ...prev, show: false })),
+        1200,
+      );
+      const profitNow = Math.max(payout - stake, 0);
+      return { won: true, profit: profitNow };
+    } else {
+      setActive(false);
+      activeRef.current = false;
+      if (resetStageTimerRef.current) window.clearTimeout(resetStageTimerRef.current);
+      resetStageTimerRef.current = window.setTimeout(() => {
+        setPumps(0);
+        setPopped(false);
+      }, 1500);
+      return { won: false, profit: -stake };
+    }
+  }
+
   return (
     <div className="space-y-4">
       <header>
@@ -314,6 +411,20 @@ export default function Pump() {
 
         {/* Controls */}
         <div className="space-y-3 rounded-3xl border border-border bg-card/70 p-5 backdrop-blur-xl">
+          <div className="grid grid-cols-2 gap-1 rounded-full bg-background/60 p-1">
+            {(["manual", "auto"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => !active && setMode(m)}
+                disabled={active}
+                className={`rounded-full py-1.5 text-xs font-bold uppercase tracking-widest transition ${
+                  mode === m ? "bg-card text-foreground shadow" : "text-muted-foreground"
+                } disabled:opacity-50`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
           <BetControls bet={bet} setBet={setBet} disabled={active} />
           <div>
             <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
@@ -341,6 +452,23 @@ export default function Pump() {
             </Select>
           </div>
 
+          {mode === "auto" && (
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Auto cashout @ ≥ multiplier
+              </label>
+              <NumberField
+                value={autoTarget}
+                onChange={setAutoTarget}
+                min={1.01}
+                max={10000}
+                decimal
+                disabled={active}
+                className="mt-1"
+              />
+            </div>
+          )}
+
           {active && (
             <div className="grid grid-cols-2 gap-2 text-center">
               <Stat label="Current" value={`${currentMult.toFixed(2)}×`} />
@@ -360,7 +488,15 @@ export default function Pump() {
             active={active}
           />
 
-          {!active ? (
+          {mode === "auto" ? (
+            <AutoBetPanel
+              bet={bet}
+              setBet={setBet}
+              onBet={playAutoRound}
+              disabled={busy || active || !profile}
+              intervalMs={500}
+            />
+          ) : !active ? (
             <Button
               onClick={start}
               disabled={busy}
