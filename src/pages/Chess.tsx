@@ -73,6 +73,8 @@ export default function ChessGame() {
   const [fen, setFen] = useState(chess.fen());
   const [, force] = useState(0);
   const [now, setNow] = useState(Date.now());
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  const [legalSquares, setLegalSquares] = useState<Record<string, { capture: boolean }>>({});
   const engineRef = useRef<StockfishEngine | null>(null);
   const aiThinkingRef = useRef(false);
   const settledRef = useRef(false);
