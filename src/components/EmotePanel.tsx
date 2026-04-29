@@ -173,10 +173,10 @@ export function EmotePanel({
   };
 
   const sendPreset = (preset: (typeof PRESETS)[number]) => {
-    if (!user || cooldown > 0) return;
+    if (cooldown > 0) return;
     broadcast({
-      id: `${user.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      user_id: user.id,
+      id: `${user?.id ?? "local"}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      user_id: user?.id ?? "local",
       username,
       kind: "preset",
       preset: preset.id,
@@ -189,12 +189,12 @@ export function EmotePanel({
   };
 
   const sendText = () => {
-    if (!user || cooldown > 0) return;
+    if (cooldown > 0) return;
     const trimmed = text.trim().slice(0, 80);
     if (!trimmed) return;
     broadcast({
-      id: `${user.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      user_id: user.id,
+      id: `${user?.id ?? "local"}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      user_id: user?.id ?? "local",
       username,
       kind: "text",
       label: trimmed,
