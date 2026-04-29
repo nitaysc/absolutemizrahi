@@ -46,24 +46,68 @@ export function SpectateChessBoard({ friendId, friendUsername }: { friendId: str
     let cancelled = false;
 
     const findActiveGame = async () => {
-      const { data } = await supabase
+      // Prefer an in-progress game; if none, fall back to the most recently
+      // updated game (so a just-finished game still shows briefly, but a
+      // newly created game replaces it as soon as it appears).
+      const live = await supabase
         .from("chess_games")
         .select("*")
         .or(`white_id.eq.${friendId},black_id.eq.${friendId}`)
         .in("status", ["waiting", "active"])
         .order("updated_at", { ascending: false })
         .limit(1);
+      let row = (live.data?.[0] as unknown as GameRow) ?? null;
+      if (!row) {
+        const recent = await supabase
+          .from("chess_games")
+          .select("*")
+          .or(`white_id.eq.${friendId},black_id.eq.${friendId}`)
+          .order("updated_at", { ascending: false })
+          .limit(1);
+        row = (recent.data?.[0] as unknown as GameRow) ?? null;
+      }
       if (cancelled) return;
-      const row = (data?.[0] as unknown as GameRow) ?? null;
-      setGame(row);
+      setGame((prev) => {
+        // Always swap when the id changes (new game started).
+        if (!prev || !row || prev.id !== row.id) return row;
+        // Same id: keep newer data.
+        return row;
+      });
       setLoading(false);
     };
     findActiveGame();
-    const poll = setInterval(findActiveGame, 5000);
+    const poll = setInterval(findActiveGame, 2000);
+
+    // Realtime: any insert/update on chess_games triggers a quick refetch so
+    // newly created games (vs AI or vs another player) show up instantly.
+    const ch = supabase
+      .channel(`spectate-friend-chess-${friendId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chess_games" },
+        (payload) => {
+          const row = payload.new as Partial<GameRow>;
+          if (row?.white_id === friendId || row?.black_id === friendId) {
+            findActiveGame();
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "chess_games" },
+        (payload) => {
+          const row = payload.new as Partial<GameRow>;
+          if (row?.white_id === friendId || row?.black_id === friendId) {
+            findActiveGame();
+          }
+        },
+      )
+      .subscribe();
 
     return () => {
       cancelled = true;
       clearInterval(poll);
+      supabase.removeChannel(ch);
     };
   }, [friendId]);
 
@@ -150,6 +194,7 @@ export function SpectateChessBoard({ friendId, friendUsername }: { friendId: str
 
       <div className="overflow-hidden rounded-2xl">
         <Chessboard
+          id={`spectate-${game.id}`}
           position={safeFen}
           boardOrientation={orientation}
           arePiecesDraggable={false}
