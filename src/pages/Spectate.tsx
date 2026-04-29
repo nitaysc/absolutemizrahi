@@ -217,6 +217,12 @@ export default function Spectate() {
         />
       </section>
 
+      {presence === "chess" && (
+        <section>
+          <SpectateChessBoard friendId={friend.id} friendUsername={friend.username} />
+        </section>
+      )}
+
       <section>
         <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
           Live bet feed (refreshes every 2.5s)
