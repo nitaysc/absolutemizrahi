@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useBetStreak } from "@/hooks/useBetStreak";
 
 export default function Progression() {
-  const { stats, missions, achievements, unlockedCodes } = useProgression();
+  const { stats, missions, weeklyMissions, achievements, unlockedCodes } = useProgression();
   const { user } = useAuth();
   const betStreak = useBetStreak(user?.id ?? null);
   const [boosterRemaining, setBoosterRemaining] = useState<string | null>(null);
