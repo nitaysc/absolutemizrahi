@@ -196,6 +196,65 @@ export default function Progression() {
         </div>
       </section>
 
+      {/* WEEKLY MISSIONS */}
+      <section className="space-y-3">
+        <header className="flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-lg font-black">
+            <Sparkles className="h-5 w-5 text-fuchsia-300" /> Weekly missions
+            <span className="rounded-full bg-fuchsia-500/20 px-2 py-0.5 text-[10px] font-black text-fuchsia-200">
+              HARD
+            </span>
+          </h2>
+          <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Clock className="h-3 w-3" /> resets every Monday
+          </p>
+        </header>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {weeklyMissions.map((m) => {
+            const pct = Math.min(100, (Number(m.progress) / Number(m.target)) * 100);
+            return (
+              <div
+                key={m.id}
+                className={cn(
+                  "rounded-2xl border p-3 backdrop-blur transition",
+                  m.completed
+                    ? "border-fuchsia-400/60 bg-fuchsia-500/10"
+                    : "border-fuchsia-500/30 bg-gradient-to-br from-fuchsia-500/5 to-purple-700/5",
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-bold">{m.description}</p>
+                  {m.completed && (
+                    <span className="rounded-full bg-fuchsia-400/25 px-2 py-0.5 text-[10px] font-black text-fuchsia-200">
+                      DONE
+                    </span>
+                  )}
+                </div>
+                <div className="mt-2">
+                  <Progress value={pct} className="h-2" />
+                </div>
+                <div className="mt-1.5 flex items-center justify-between text-[11px]">
+                  <span className="font-mono text-muted-foreground">
+                    {Number(m.progress).toLocaleString()} / {Number(m.target).toLocaleString()}
+                  </span>
+                  <span className="flex items-center gap-2 font-bold">
+                    <span className="flex items-center gap-0.5 text-emerald-300">
+                      <MizrahiCoin size={10} /> {m.reward_coins.toLocaleString()}
+                    </span>
+                    <span className="text-amber-300">+{m.reward_xp.toLocaleString()} XP</span>
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+          {weeklyMissions.length === 0 && (
+            <p className="col-span-full text-center text-sm text-muted-foreground">
+              Loading weekly missions…
+            </p>
+          )}
+        </div>
+      </section>
+
       {/* ACHIEVEMENTS */}
       <section className="space-y-3">
         <header className="flex items-center justify-between">
