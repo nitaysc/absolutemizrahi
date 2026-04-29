@@ -210,6 +210,13 @@ export default function Blackjack() {
     refresh();
   }
 
+  useEffect(() => {
+    if (!autoJoin || !state || !profile || busy || mySeat || state.status !== "betting") return;
+    if (autoAttemptRound.current === state.round_seq) return;
+    autoAttemptRound.current = state.round_seq;
+    void joinSeat(true);
+  }, [autoJoin, state?.status, state?.round_seq, profile?.coins, busy, mySeat?.seat_index, bet]);
+
   if (!state) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
@@ -240,13 +247,6 @@ export default function Blackjack() {
     0,
     Math.ceil((new Date(state.phase_ends_at).getTime() - now) / 1000),
   );
-
-  useEffect(() => {
-    if (!autoJoin || !state || !profile || busy || mySeat || state.status !== "betting") return;
-    if (autoAttemptRound.current === state.round_seq) return;
-    autoAttemptRound.current = state.round_seq;
-    void joinSeat(true);
-  }, [autoJoin, state?.status, state?.round_seq, profile?.coins, busy, mySeat?.seat_index, bet]);
 
   return (
     <div className="space-y-3 sm:space-y-4">
