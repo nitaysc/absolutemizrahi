@@ -280,7 +280,7 @@ export default function Snakes() {
         cur = (cur + 1) % RING;
         if (cur === 0) cur = 1;
         // eslint-disable-next-line no-await-in-loop
-        await new Promise((res) => setTimeout(res, 70));
+        await new Promise((res) => setTimeout(res, 130));
         setPos(cur);
       }
       landed = cur;
@@ -295,7 +295,8 @@ export default function Snakes() {
       }
       setRolling(false);
       // eslint-disable-next-line no-await-in-loop
-      await new Promise((res) => setTimeout(res, 160));
+      // Pause long enough on the landed tile so the reveal flip is visible.
+      await new Promise((res) => setTimeout(res, busted ? 900 : 650));
     }
 
     const won = !busted;
@@ -559,8 +560,19 @@ function RingTile({
   // Keycap-style tile: rounded, soft inner shadow, slight top highlight.
   const base =
     "relative flex aspect-square items-center justify-center rounded-xl text-sm font-black tabular-nums ring-1 ring-border/80 sm:rounded-2xl sm:text-base";
-  const surface =
-    "bg-gradient-to-b from-[hsl(220_25%_22%)] to-[hsl(220_30%_15%)] text-foreground shadow-[inset_0_-3px_0_hsl(220_40%_8%),inset_0_1px_0_hsl(220_25%_30%)]";
+  // Closed (default) tiles use the dark keycap surface. Once revealed they
+  // "open" to a brighter colored surface so it's obvious which tiles have
+  // been landed on — important during fast auto rounds.
+  const closedSurface =
+    "bg-gradient-to-b from-[hsl(220_25%_22%)] to-[hsl(220_30%_15%)] text-foreground/80 shadow-[inset_0_-3px_0_hsl(220_40%_8%),inset_0_1px_0_hsl(220_25%_30%)]";
+  const openMult =
+    "bg-[hsl(var(--success))]/20 ring-2 ring-[hsl(var(--success))] text-[hsl(var(--success))] shadow-[0_0_14px_hsl(var(--success)/0.45)]";
+  const openSnake =
+    "bg-destructive/25 ring-2 ring-destructive text-destructive shadow-[0_0_14px_hsl(var(--destructive)/0.5)]";
+  let surface = closedSurface;
+  if (isRevealed && !isStart) {
+    surface = tile?.kind === "snake" ? openSnake : openMult;
+  }
   const dim = "text-muted-foreground/70";
   const playerRing = isPlayer ? "ring-2 ring-primary shadow-[0_0_18px_hsl(var(--primary)/0.55)]" : "";
 
