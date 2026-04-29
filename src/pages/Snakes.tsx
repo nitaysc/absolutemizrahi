@@ -34,13 +34,14 @@ const DIFF_CFG: Record<
   Difficulty,
   { snakes: number; maxMult: number; highCount: number; label: string }
 > = {
-  // Snake counts bumped so the ring is genuinely dangerous — the previous
-  // values let auto-mode coast to the target multiplier almost every round.
-  easy:   { snakes: 3, maxMult: 1.4,   highCount: 1, label: "Easy" },
-  medium: { snakes: 6, maxMult: 4.0,   highCount: 1, label: "Medium" },
-  hard:   { snakes: 8, maxMult: 7.5,   highCount: 1, label: "Hard" },
-  expert: { snakes: 10, maxMult: 10.0, highCount: 1, label: "Expert" },
-  master: { snakes: 12, maxMult: 17.64, highCount: 1, label: "Master" },
+  // Original snake counts restored so the ring still shows plenty of
+  // multiplier numbers / snake positions to the player. Auto difficulty is
+  // controlled instead via tighter per-step multipliers and the 5-roll cap.
+  easy:   { snakes: 1, maxMult: 1.4,   highCount: 1, label: "Easy" },
+  medium: { snakes: 3, maxMult: 4.0,   highCount: 1, label: "Medium" },
+  hard:   { snakes: 5, maxMult: 7.5,   highCount: 1, label: "Hard" },
+  expert: { snakes: 7, maxMult: 10.0,  highCount: 1, label: "Expert" },
+  master: { snakes: 9, maxMult: 17.64, highCount: 1, label: "Master" },
 };
 
 type Tile =
