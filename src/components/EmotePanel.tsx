@@ -268,11 +268,19 @@ export function EmoteBubble({
 
   useEffect(() => {
     if (!userId) return;
-    return subscribe(channelKey, (p) => {
-      if (p.user_id !== userId) return;
+    const show = (p: EmotePayload) => {
       setActive({ ...p });
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => setActive(null), 2600);
+    };
+    const localHandler = (event: Event) => {
+      const payload = (event as CustomEvent<EmotePayload>).detail;
+      if (payload?.user_id === userId) show(payload);
+    };
+    window.addEventListener(`emote:${channelKey}`, localHandler);
+    return subscribe(channelKey, (p) => {
+      if (p.user_id !== userId) return;
+      show(p);
     });
   }, [channelKey, userId]);
 
