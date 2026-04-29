@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -67,17 +67,12 @@ function handValue(hand: Card[]): number {
   return v;
 }
 
-function PlayingCard({
-  card,
-  hidden,
-  idx,
-  size = "md",
-}: {
+const PlayingCard = forwardRef<HTMLDivElement, {
   card?: Card;
   hidden?: boolean;
   idx: number;
   size?: "sm" | "md" | "lg";
-}) {
+}>(function PlayingCard({ card, hidden, idx, size = "md" }, ref) {
   const sz =
     size === "sm"
       ? "h-14 w-10 p-1 text-xs"
@@ -89,6 +84,7 @@ function PlayingCard({
   if (hidden || !card) {
     return (
       <motion.div
+        ref={ref}
         initial={{ y: -30, opacity: 0, rotateY: 90 }}
         animate={{ y: 0, opacity: 1, rotateY: 0 }}
         transition={{ delay: idx * 0.06, type: "spring", stiffness: 240, damping: 22 }}
@@ -100,6 +96,7 @@ function PlayingCard({
   }
   return (
     <motion.div
+      ref={ref}
       initial={{ y: -30, opacity: 0, rotateY: 90 }}
       animate={{ y: 0, opacity: 1, rotateY: 0 }}
       transition={{ delay: idx * 0.06, type: "spring", stiffness: 240, damping: 22 }}
@@ -112,7 +109,7 @@ function PlayingCard({
       <div className="self-end rotate-180 font-black leading-none">{card.r}</div>
     </motion.div>
   );
-}
+});
 
 export default function Blackjack() {
   useTrackGame("blackjack");
@@ -480,10 +477,10 @@ function SeatCard({
       }`}
     >
       <div className="flex items-center justify-between text-[11px] font-bold">
-        <span className="relative truncate">
-          <PlayerAvatar avatar={seat.avatar} size={18} className="mr-1 align-middle" />
-          {isMe ? "You" : seat.username}
-          <span className="ml-1 text-muted-foreground">· seat {seatIndex + 1}</span>
+        <span className="relative inline-flex min-w-0 items-center gap-1 overflow-visible pr-2">
+          <PlayerAvatar avatar={seat.avatar} size={18} className="shrink-0" />
+          <span className="truncate">{isMe ? "You" : seat.username}</span>
+          <span className="shrink-0 text-muted-foreground">· seat {seatIndex + 1}</span>
           <EmoteBubble channelKey={`bj:${TABLE_ID}`} userId={seat.user_id} side="top" />
         </span>
         <span className="rounded bg-background/60 px-1.5 py-0.5 tabular-nums">
