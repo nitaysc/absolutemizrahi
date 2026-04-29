@@ -11,6 +11,7 @@ import { NumberField } from "@/components/NumberField";
 import { formatCoins } from "@/lib/format";
 import { triggerBigWin } from "@/components/WinBurst";
 import { Rocket, TrendingUp } from "lucide-react";
+import { EmotePanel } from "@/components/EmotePanel";
 
 type Round = {
   id: string;
@@ -264,7 +265,8 @@ export default function Crash() {
         : mult;
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6">
+      <EmotePanel channelKey={`crash:${round?.id ?? "lobby"}`} />
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-3xl font-black tracking-tight">

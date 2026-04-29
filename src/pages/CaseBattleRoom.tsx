@@ -10,6 +10,7 @@ import { formatCoins } from "@/lib/format";
 import { toast } from "sonner";
 import { Bot, Crown, Play, LogOut, Swords, X, RotateCcw, Pencil, Trophy, UserPlus, Package, Coins, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { CaseReel, type ReelItem } from "@/components/CaseReel";
+import { EmotePanel } from "@/components/EmotePanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 type Battle = {
@@ -394,7 +395,8 @@ export default function CaseBattleRoom() {
   const slots = battle.player_slots;
 
   return (
-    <div className="space-y-4">
+    <div className="relative space-y-4">
+      <EmotePanel channelKey={`battle:${id}`} />
       {/* Header */}
       <header className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-border bg-card/70 p-4">
         <div className="flex items-center gap-2">

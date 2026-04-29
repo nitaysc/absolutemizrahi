@@ -10,6 +10,7 @@ import { BetControls } from "@/components/BetControls";
 import { formatCoins } from "@/lib/format";
 import { Spade, Users, Clock, Trophy } from "lucide-react";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { EmotePanel } from "@/components/EmotePanel";
 
 type Card = { s: "S" | "H" | "D" | "C"; r: string };
 type Hand = {
@@ -249,7 +250,8 @@ export default function Blackjack() {
   );
 
   return (
-    <div className="space-y-3 sm:space-y-4">
+    <div className="relative space-y-3 sm:space-y-4">
+      <EmotePanel channelKey={`bj:${TABLE_ID}`} />
       <header className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">
