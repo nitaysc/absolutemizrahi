@@ -48,6 +48,7 @@ import Progression from "./pages/Progression";
 import NotFound from "./pages/NotFound";
 import HiLo from "./pages/HiLo";
 import Darts from "./pages/Darts";
+import RPS from "./pages/RPS";
 import Admin from "./pages/Admin";
 import Spectate from "./pages/Spectate";
 
@@ -101,6 +102,7 @@ const App = () => (
             <Route path="/slides" element={<Slides />} />
             <Route path="/hilo" element={<HiLo />} />
             <Route path="/darts" element={<Darts />} />
+            <Route path="/rps" element={<RPS />} />
             <Route path="/chess" element={<ChessLobby />} />
             <Route path="/chess/:gameId" element={<ChessGame />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
