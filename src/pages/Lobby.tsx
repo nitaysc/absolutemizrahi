@@ -30,6 +30,7 @@ import kenoImg from "@/assets/games/keno.png";
 import slidesImg from "@/assets/games/slides.jpg";
 import hiloImg from "@/assets/games/hilo.jpg";
 import dartsImg from "@/assets/games/darts.jpg";
+import rpsImg from "@/assets/games/rps.jpg";
 
 export default function Lobby() {
   const { profile, refetch } = useUserProfile();
@@ -69,6 +70,7 @@ export default function Lobby() {
     { to: "/slides", key: "slides", title: "SLIDES", img: slidesImg },
     { to: "/hilo", key: "hilo", title: "HI-LO", img: hiloImg },
     { to: "/darts", key: "darts", title: "DARTS", img: dartsImg },
+    { to: "/rps", key: "rps", title: "RPS", img: rpsImg },
   ];
 
   return (
