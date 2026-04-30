@@ -117,8 +117,13 @@ export default function CaseBattleRoom() {
     const el = caseTrackRef.current;
     if (!el) return;
     const child = el.children[Math.max(0, currentSpin)] as HTMLElement | undefined;
-    if (child && "scrollIntoView" in child) {
-      child.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    if (child) {
+      // Scroll ONLY the inner track — using child.scrollIntoView() bubbles up
+      // and pushes the whole page horizontally on mobile, making the screen
+      // drift right with every round.
+      const target =
+        child.offsetLeft - (el.clientWidth - child.clientWidth) / 2;
+      el.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
     }
   }, [currentSpin]);
 
