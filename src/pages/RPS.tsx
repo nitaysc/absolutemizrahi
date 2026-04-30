@@ -381,11 +381,6 @@ export default function RPS() {
                 </div>
               )}
 
-              {(phase === "busted" || phase === "cashed") && (
-                <Button onClick={reset} variant="outline" className="w-full">
-                  Play again
-                </Button>
-              )}
             </div>
           )}
         </div>
